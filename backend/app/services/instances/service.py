@@ -848,7 +848,7 @@ class InstanceService:
         if instance.container_id:
             attrs = self._docker.inspect_container(instance.container_id)
             if attrs is not None:
-                self._sync_container_networks(instance)
+                self._sync_container_networks(instance, attrs=attrs)
                 return
             instance.container_id = None
 
@@ -876,11 +876,17 @@ class InstanceService:
         )
         instance.container_id = container_id
 
-    def _sync_container_networks(self, instance: ServiceInstance) -> None:
+    def _sync_container_networks(
+        self,
+        instance: ServiceInstance,
+        *,
+        attrs: dict | None = None,
+    ) -> None:
         """Connect/disconnect/rebind Docker networks to match DB attachments."""
         if not instance.container_id:
             return
-        attrs = self._docker.inspect_container(instance.container_id)
+        if attrs is None:
+            attrs = self._docker.inspect_container(instance.container_id)
         if attrs is None:
             return
 
