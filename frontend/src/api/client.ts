@@ -61,6 +61,20 @@ async function apiFetch<T>(
         const raw = (errorBody as { detail: unknown }).detail;
         if (typeof raw === "string") {
           detail = raw;
+        } else if (Array.isArray(raw)) {
+          detail = raw
+            .map((item) => {
+              if (typeof item === "string") return item;
+              if (typeof item === "object" && item !== null && "msg" in item) {
+                const loc = Array.isArray((item as { loc?: unknown }).loc)
+                  ? (item as { loc: unknown[] }).loc.join(".")
+                  : "";
+                const msg = String((item as { msg: unknown }).msg);
+                return loc ? `${loc}: ${msg}` : msg;
+              }
+              return JSON.stringify(item);
+            })
+            .join("; ");
         } else if (
           typeof raw === "object" &&
           raw !== null &&

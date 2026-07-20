@@ -26,7 +26,7 @@ export function updateFrrConfig(
 ): Promise<FrrConfigPreview> {
   return apiFetch(`${base(instanceId)}/config`, (data) => FrrConfigPreviewSchema.parse(data), {
     method: "PUT",
-    body: JSON.stringify(body),
+    body,
   });
 }
 
