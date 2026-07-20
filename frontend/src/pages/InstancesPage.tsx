@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useMemo, useState, type FormEvent } from "react";
 import {
   useCreateInstance,
@@ -174,6 +175,14 @@ function InstanceRow({
         <button type="button" className="font-medium hover:underline" onClick={onSelect}>
           {instance.name}
         </button>
+        <div className="mt-1">
+          <Link
+            className="font-mono text-xs text-accent hover:underline"
+            to={`/instances/${instance.id}/haproxy`}
+          >
+            HAProxy config
+          </Link>
+        </div>
         {instance.last_error ? (
           <p className="mt-1 max-w-xs truncate font-mono text-xs text-danger">{instance.last_error}</p>
         ) : null}

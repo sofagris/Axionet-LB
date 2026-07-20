@@ -25,6 +25,8 @@ frontend stats
     stats enable
     stats uri /stats
     stats refresh 10s
+    stats show-legends
+    stats show-node
 
 {% for frontend in config.frontends -%}
 frontend {{ frontend.name }}
@@ -38,7 +40,7 @@ backend {{ backend.name }}
     mode {{ backend.mode }}
     balance {{ backend.balance }}
 {% for server in backend.servers %}
-    server {{ server.name }} {{ server.address }}:{{ server.port }}{% if server.check %} check{% endif %}
+    server {{ server.name }} {{ server.address }}:{{ server.port }} weight {{ server.weight }}{% if server.check %} check inter {{ server.inter_ms }}ms rise {{ server.rise }} fall {{ server.fall }}{% endif %}
 {% endfor %}
 
 {% endfor -%}

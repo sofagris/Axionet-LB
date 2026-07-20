@@ -25,4 +25,4 @@ def test_render_custom_ports() -> None:
     )
     rendered = render_haproxy_config(config)
     assert "bind *:8080" in rendered
-    assert "server s1 10.0.0.5:80 check" in rendered
+    assert "server s1 10.0.0.5:80 weight 100 check inter 2000ms rise 2 fall 3" in rendered

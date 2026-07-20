@@ -281,6 +281,30 @@ class DockerClientAdapter:
             if "already exists" not in str(exc).lower():
                 raise DockerException(str(exc)) from exc
 
+    def run_network_sidecar(
+        self,
+        *,
+        image: str,
+        network_container_id: str,
+        command: list[str],
+    ) -> str:
+        """Run a one-shot helper sharing the target container network namespace."""
+        client = self._get_client()
+        self.ensure_image(image)
+        try:
+            output = client.containers.run(
+                image=image,
+                command=command,
+                network_mode=f"container:{network_container_id}",
+                remove=True,
+                labels={MANAGED_LABEL: "true", "axionet.purpose": "runtime-probe"},
+            )
+        except APIError as exc:
+            raise DockerException(str(exc)) from exc
+        if isinstance(output, bytes):
+            return output.decode("utf-8", errors="replace")
+        return str(output)
+
     def close(self) -> None:
         if self._client is not None:
             self._client.close()

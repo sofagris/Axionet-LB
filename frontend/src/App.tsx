@@ -1,6 +1,7 @@
 import { Route, Routes } from "react-router-dom";
 import { AppLayout } from "./layouts/AppLayout";
 import { DashboardPage } from "./pages/DashboardPage";
+import { HaproxyDetailPage } from "./pages/HaproxyDetailPage";
 import { InstancesPage } from "./pages/InstancesPage";
 import { InterfacesPage } from "./pages/InterfacesPage";
 import { NetworksPage } from "./pages/NetworksPage";
@@ -13,6 +14,7 @@ export function App() {
         <Route path="interfaces" element={<InterfacesPage />} />
         <Route path="networks" element={<NetworksPage />} />
         <Route path="instances" element={<InstancesPage />} />
+        <Route path="instances/:instanceId/haproxy" element={<HaproxyDetailPage />} />
       </Route>
     </Routes>
   );

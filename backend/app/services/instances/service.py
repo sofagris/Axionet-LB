@@ -123,11 +123,7 @@ class InstanceService:
 
     def update_instance(self, instance: ServiceInstance, payload: InstanceUpdate) -> ServiceInstance:
         if payload.configuration is not None:
-            instance.configuration = HaproxyConfig.from_dict(payload.configuration).model_dump()
-            self._write_config(instance)
-            validation = self._validator.validate_config_dict(instance.configuration)
-            if not validation.ok:
-                raise ValueError(f"HAProxy config invalid: {validation.output}")
+            return self.apply_configuration(instance, payload.configuration, restart_if_running=True)
         if payload.restart_policy is not None:
             instance.restart_policy = payload.restart_policy
         if payload.desired_state is not None:
@@ -135,6 +131,29 @@ class InstanceService:
         instance.updated_at = datetime.now(UTC)
         self._db.commit()
         self._db.refresh(instance)
+        return instance
+
+    def apply_configuration(
+        self,
+        instance: ServiceInstance,
+        configuration: dict,
+        *,
+        restart_if_running: bool = True,
+    ) -> ServiceInstance:
+        instance.configuration = HaproxyConfig.from_dict(configuration).model_dump()
+        self._write_config(instance)
+        validation = self._validator.validate_config_dict(instance.configuration)
+        if not validation.ok:
+            raise ValueError(f"HAProxy config invalid: {validation.output}")
+        instance.updated_at = datetime.now(UTC)
+        self._db.commit()
+        self._db.refresh(instance)
+        if (
+            restart_if_running
+            and instance.desired_state == DesiredState.RUNNING.value
+            and instance.container_id
+        ):
+            return self.restart_instance(instance)
         return instance
 
     def delete_instance(self, instance: ServiceInstance) -> None:

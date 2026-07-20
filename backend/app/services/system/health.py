@@ -46,6 +46,8 @@ class SystemService:
                 "networks.validate",
                 "instances.haproxy",
                 "instances.lifecycle",
+                "haproxy.structured_config",
+                "haproxy.runtime_status",
             ],
             dataplane_services=["haproxy"],
         )
