@@ -185,6 +185,7 @@ class DockerClientAdapter:
         host_config_dir: str,
         network_ids: list[str],
         restart_policy: str = "unless-stopped",
+        revision: str | None = None,
     ) -> str:
         client = self._get_client()
         self.ensure_image(image)
@@ -193,6 +194,8 @@ class DockerClientAdapter:
             "axionet.instance_id": instance_id,
             "axionet.service_type": service_type,
         }
+        if revision is not None:
+            labels["axionet.revision"] = revision
         kwargs: dict[str, Any] = {
             "image": image,
             "name": name,

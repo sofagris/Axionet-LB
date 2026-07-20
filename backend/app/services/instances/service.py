@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
+from app.models.config_revision import ConfigRevision, DeploymentStatus
 from app.models.network import Network
 from app.models.network_attachment import NetworkAttachment
 from app.models.service_instance import (
@@ -24,6 +25,7 @@ from app.plugins.haproxy.schemas import HaproxyConfig
 from app.plugins.haproxy.validator import HaproxyConfigValidator
 from app.schemas.instances import InstanceCreate, InstanceUpdate, NetworkAttachmentCreate
 from app.services.docker.client import DockerClientAdapter
+from app.services.revisions.service import RevisionService
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +38,7 @@ class InstanceService:
         self._docker = docker
         self._settings = settings
         self._validator = HaproxyConfigValidator(docker)
+        self._revisions = RevisionService(db)
 
     def list_instances(self) -> list[ServiceInstance]:
         return list(self._db.scalars(select(ServiceInstance).order_by(ServiceInstance.name)))
@@ -98,6 +101,13 @@ class InstanceService:
             validation = self._validator.validate_config_dict(instance.configuration)
             if not validation.ok:
                 raise ValueError(f"HAProxy config invalid: {validation.output}")
+            self._revisions.record_revision(
+                instance,
+                validation_ok=True,
+                validation_output=validation.output,
+                deployment_status=DeploymentStatus.DEPLOYED,
+                created_by="system",
+            )
             self._ensure_container(instance, networks)
             if payload.desired_state == DesiredState.RUNNING:
                 self._docker.start_container(instance.container_id or "")
@@ -139,22 +149,77 @@ class InstanceService:
         configuration: dict,
         *,
         restart_if_running: bool = True,
+        created_by: str = "system",
     ) -> ServiceInstance:
         instance.configuration = HaproxyConfig.from_dict(configuration).model_dump()
         self._write_config(instance)
         validation = self._validator.validate_config_dict(instance.configuration)
         if not validation.ok:
             raise ValueError(f"HAProxy config invalid: {validation.output}")
+
+        should_restart = (
+            restart_if_running
+            and instance.desired_state == DesiredState.RUNNING.value
+            and bool(instance.container_id)
+        )
+        deployment_status = DeploymentStatus.DEPLOYED
+        try:
+            if should_restart:
+                self._docker.restart_container(instance.container_id or "")
+                instance.desired_state = DesiredState.RUNNING.value
+                instance.actual_state = ActualState.RUNNING.value
+                instance.started_at = datetime.now(UTC)
+                instance.last_error = None
+                instance.health_status = HealthStatus.HEALTHY.value
+        except DockerException as exc:
+            deployment_status = DeploymentStatus.FAILED
+            instance.actual_state = ActualState.ERROR.value
+            instance.last_error = str(exc)
+            instance.health_status = HealthStatus.UNHEALTHY.value
+            self._revisions.record_revision(
+                instance,
+                validation_ok=True,
+                validation_output=validation.output,
+                deployment_status=deployment_status,
+                created_by=created_by,
+            )
+            instance.updated_at = datetime.now(UTC)
+            self._db.commit()
+            raise RuntimeError(str(exc)) from exc
+
+        self._revisions.record_revision(
+            instance,
+            validation_ok=True,
+            validation_output=validation.output,
+            deployment_status=deployment_status,
+            created_by=created_by,
+        )
         instance.updated_at = datetime.now(UTC)
         self._db.commit()
         self._db.refresh(instance)
-        if (
-            restart_if_running
-            and instance.desired_state == DesiredState.RUNNING.value
-            and instance.container_id
-        ):
-            return self.restart_instance(instance)
         return instance
+
+    def restore_revision(
+        self,
+        instance: ServiceInstance,
+        revision: ConfigRevision,
+        *,
+        created_by: str = "system",
+    ) -> tuple[ServiceInstance, ConfigRevision]:
+        updated = self.apply_configuration(
+            instance,
+            revision.configuration,
+            restart_if_running=True,
+            created_by=created_by,
+        )
+        created = self._revisions.list_revisions(instance.id)[0]
+        return updated, created
+
+    def list_revisions(self, instance_id: str) -> list[ConfigRevision]:
+        return self._revisions.list_revisions(instance_id)
+
+    def get_revision(self, instance_id: str, revision_id: str) -> ConfigRevision | None:
+        return self._revisions.get_revision(instance_id, revision_id)
 
     def delete_instance(self, instance: ServiceInstance) -> None:
         instance.desired_state = DesiredState.DELETED.value
@@ -346,6 +411,8 @@ class InstanceService:
                 return
             instance.container_id = None
 
+        latest = self._revisions.list_revisions(instance.id)
+        revision_label = str(latest[0].revision_number) if latest else "0"
         container_id = self._docker.create_managed_container(
             name=instance.container_name or f"ax-haproxy-{instance.id[:8]}",
             image=instance.image,
@@ -354,6 +421,7 @@ class InstanceService:
             host_config_dir=config_dir,
             network_ids=network_ids,
             restart_policy=instance.restart_policy,
+            revision=revision_label,
         )
         instance.container_id = container_id
         # Connect with optional static IPs (first network already attached at create)

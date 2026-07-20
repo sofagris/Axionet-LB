@@ -47,6 +47,7 @@ function useInvalidate(id: string) {
   const queryClient = useQueryClient();
   return async () => {
     await queryClient.invalidateQueries({ queryKey: ["haproxy", id] });
+    await queryClient.invalidateQueries({ queryKey: ["revisions", id] });
     await queryClient.invalidateQueries({ queryKey: ["instances"] });
   };
 }

@@ -8,8 +8,9 @@ import {
   useHaproxyStatus,
 } from "../features/haproxy/hooks";
 import { useInstances } from "../features/instances/hooks";
+import { useRestoreRevision, useRevision, useRevisions } from "../features/revisions/hooks";
 
-type Tab = "overview" | "frontends" | "backends" | "servers" | "status" | "config";
+type Tab = "overview" | "frontends" | "backends" | "servers" | "status" | "config" | "revisions";
 
 export function HaproxyDetailPage() {
   const { instanceId = "" } = useParams();
@@ -20,10 +21,14 @@ export function HaproxyDetailPage() {
   );
 
   const [tab, setTab] = useState<Tab>("overview");
+  const [selectedRevisionId, setSelectedRevisionId] = useState<string | null>(null);
   const frontendsQuery = useHaproxyFrontends(instanceId);
   const backendsQuery = useHaproxyBackends(instanceId);
   const configQuery = useHaproxyConfig(instanceId);
   const statusQuery = useHaproxyStatus(instanceId);
+  const revisionsQuery = useRevisions(instanceId);
+  const revisionDetailQuery = useRevision(instanceId, selectedRevisionId);
+  const restoreRevision = useRestoreRevision(instanceId);
   const mutations = useHaproxyMutations(instanceId);
 
   const [frontendName, setFrontendName] = useState("web");
@@ -83,6 +88,7 @@ export function HaproxyDetailPage() {
     { id: "servers", label: "Servers" },
     { id: "status", label: "Runtime Status" },
     { id: "config", label: "Config" },
+    { id: "revisions", label: "Revisions" },
   ];
 
   return (
@@ -314,6 +320,68 @@ export function HaproxyDetailPage() {
         <pre className="overflow-auto rounded-lg border border-line bg-ink p-4 font-mono text-xs text-paper">
           {configQuery.data?.rendered ?? "Henter config…"}
         </pre>
+      ) : null}
+
+      {tab === "revisions" ? (
+        <section className="grid gap-4 lg:grid-cols-2">
+          <div className="space-y-3">
+            <EntityTable
+              headers={["#", "Status", "Created", ""]}
+              rows={(revisionsQuery.data ?? []).map((item) => [
+                String(item.revision_number),
+                `${item.deployment_status}/${item.validation_status}`,
+                new Date(item.created_at).toLocaleString(),
+                <div key={`rev-actions-${item.id}`} className="flex gap-3">
+                  <button
+                    type="button"
+                    className="text-accent hover:underline"
+                    onClick={() => setSelectedRevisionId(item.id)}
+                  >
+                    Vis
+                  </button>
+                  {item.deployment_status !== "deployed" ? (
+                    <button
+                      type="button"
+                      className="text-danger hover:underline"
+                      disabled={restoreRevision.isPending}
+                      onClick={() => restoreRevision.mutate(item.id)}
+                    >
+                      Restore
+                    </button>
+                  ) : (
+                    "aktiv"
+                  )}
+                </div>,
+              ])}
+            />
+            {restoreRevision.isError ? (
+              <p className="text-danger">
+                {restoreRevision.error instanceof Error
+                  ? restoreRevision.error.message
+                  : "Restore feilet"}
+              </p>
+            ) : null}
+          </div>
+          <div className="space-y-3">
+            {selectedRevisionId == null ? (
+              <p className="text-ink-muted">Velg en revision for å se diff.</p>
+            ) : revisionDetailQuery.isLoading ? (
+              <p className="text-ink-muted">Henter revision…</p>
+            ) : (
+              <>
+                <p className="font-mono text-xs text-ink-muted">
+                  Revision {revisionDetailQuery.data?.revision_number} ·{" "}
+                  {revisionDetailQuery.data?.deployment_status}
+                </p>
+                <pre className="max-h-[28rem] overflow-auto rounded-lg border border-line bg-ink p-4 font-mono text-xs text-paper">
+                  {revisionDetailQuery.data?.diff_from_previous ||
+                    revisionDetailQuery.data?.rendered_configuration ||
+                    "Ingen diff"}
+                </pre>
+              </>
+            )}
+          </div>
+        </section>
       ) : null}
     </div>
   );

@@ -1,4 +1,5 @@
 from app.models.app_meta import AppMeta
+from app.models.config_revision import ConfigRevision, DeploymentStatus, ValidationStatus
 from app.models.network import Network, NetworkType
 from app.models.network_attachment import NetworkAttachment
 from app.models.physical_interface import AdministrativeState, LinkState, PhysicalInterface
@@ -13,6 +14,8 @@ __all__ = [
     "AppMeta",
     "AdministrativeState",
     "ActualState",
+    "ConfigRevision",
+    "DeploymentStatus",
     "DesiredState",
     "HealthStatus",
     "LinkState",
@@ -21,4 +24,5 @@ __all__ = [
     "NetworkType",
     "PhysicalInterface",
     "ServiceInstance",
+    "ValidationStatus",
 ]
