@@ -1058,7 +1058,7 @@ Første ikke-HAProxy dataplan-plugin. Målet er at FRR kan opprettes, nettkobles
 
 #### FRR-funksjon
 
-- Aktiver FRR i servicekatalog (`frrouting/frr`, pinnet versjon — ikke `latest`)
+- Aktiver FRR i servicekatalog (`quay.io/frrouting/frr`, pinnet versjon — ikke `latest`; Docker Hub `frrouting/frr` er utdatert)
 - Livssyklus: create, start, stop, restart, logs, reconcile
 - Nettverk: samme ipvlan-l2-attachments og valgfri statisk IP som øvrige serviceinstanser
 - Strukturert config: lokal ASN, router-id, neighbors (IP, remote-AS, valgfri MD5), prefixes/networks å annonsere

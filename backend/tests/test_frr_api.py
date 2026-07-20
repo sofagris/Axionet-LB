@@ -97,7 +97,7 @@ def test_create_frr_instance(client: TestClient, docker_adapter: MagicMock) -> N
         json={
             "name": "bgp-edge-1",
             "service_type": "frr",
-            "image_version": "v10.2.1",
+            "image_version": "10.2.6",
             "desired_state": "stopped",
             "networks": [{"network_id": "net-1", "ip_address": "10.50.10.10"}],
             "configuration": {
@@ -118,7 +118,7 @@ def test_create_frr_instance(client: TestClient, docker_adapter: MagicMock) -> N
     assert created.status_code == 201, created.text
     body = created.json()
     assert body["service_type"] == "frr"
-    assert body["image"] == "frrouting/frr:v10.2.1"
+    assert body["image"] == "quay.io/frrouting/frr:10.2.6"
     assert body["container_name"].startswith("ax-frr-")
     assert body["configuration"]["local_as"] == 65001
 

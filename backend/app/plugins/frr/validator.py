@@ -11,7 +11,7 @@ from app.services.docker.client import DockerClientAdapter
 class FrrConfigValidator:
     """Validate FRR config files inside an ephemeral FRR image."""
 
-    def __init__(self, docker: DockerClientAdapter, image: str = "frrouting/frr:v10.2.1") -> None:
+    def __init__(self, docker: DockerClientAdapter, image: str = "quay.io/frrouting/frr:10.2.6") -> None:
         self._docker = docker
         self._image = image
 
