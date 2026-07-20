@@ -4,6 +4,7 @@ import { AppLayout } from "./layouts/AppLayout";
 import { CatalogPage } from "./pages/CatalogPage";
 import { CreateInstanceWizardPage } from "./pages/CreateInstanceWizardPage";
 import { DashboardPage } from "./pages/DashboardPage";
+import { FrrDetailPage } from "./pages/FrrDetailPage";
 import { HaproxyDetailPage } from "./pages/HaproxyDetailPage";
 import { InstancesPage } from "./pages/InstancesPage";
 import { InterfacesPage } from "./pages/InterfacesPage";
@@ -25,6 +26,7 @@ export function App() {
           <Route path="instances" element={<InstancesPage />} />
           <Route path="instances/new" element={<CreateInstanceWizardPage />} />
           <Route path="instances/:instanceId/haproxy" element={<HaproxyDetailPage />} />
+          <Route path="instances/:instanceId/frr" element={<FrrDetailPage />} />
           <Route path="logs" element={<SystemLogsPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>

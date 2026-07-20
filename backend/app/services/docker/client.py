@@ -134,8 +134,10 @@ class DockerClientAdapter:
         image: str,
         command: list[str],
         files: dict[str, str],
+        bind_path: str = "/usr/local/etc/haproxy",
+        entrypoint: list[str] | None = None,
     ) -> str:
-        """Run a one-shot container with files under /usr/local/etc/haproxy."""
+        """Run a one-shot container with files mounted at ``bind_path``."""
         client = self._get_client()
         self.ensure_image(image)
 
@@ -143,25 +145,30 @@ class DockerClientAdapter:
         validate_root.mkdir(parents=True, exist_ok=True)
         work = validate_root / str(uuid.uuid4())
         work.mkdir(parents=True, exist_ok=True)
+        bind_prefix = bind_path.rstrip("/") + "/"
         try:
             for target, content in files.items():
-                # Accept absolute container paths or relative under haproxy root.
                 rel = target
-                prefix = "/usr/local/etc/haproxy/"
-                if rel.startswith(prefix):
-                    rel = rel[len(prefix) :]
+                if rel.startswith(bind_prefix):
+                    rel = rel[len(bind_prefix) :]
+                elif rel.startswith("/"):
+                    # Absolute path outside bind root: use basename tree under work.
+                    rel = rel.lstrip("/")
                 dest = work / rel
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 dest.write_text(content, encoding="utf-8")
                 if rel.startswith("certs/"):
                     dest.chmod(0o600)
-            container = client.containers.create(
-                image=image,
-                command=command,
-                volumes={str(work): {"bind": "/usr/local/etc/haproxy", "mode": "ro"}},
-                network_mode="none",
-                labels={MANAGED_LABEL: "true", "axionet.purpose": "config-validate"},
-            )
+            create_kwargs: dict[str, Any] = {
+                "image": image,
+                "command": command,
+                "volumes": {str(work): {"bind": bind_path, "mode": "ro"}},
+                "network_mode": "none",
+                "labels": {MANAGED_LABEL: "true", "axionet.purpose": "config-validate"},
+            }
+            if entrypoint is not None:
+                create_kwargs["entrypoint"] = entrypoint
+            container = client.containers.create(**create_kwargs)
             try:
                 result = container.wait(timeout=60)
                 logs = container.logs(stdout=True, stderr=True).decode("utf-8", errors="replace")
@@ -199,8 +206,14 @@ class DockerClientAdapter:
         network_ids: list[str] | None = None,
         restart_policy: str = "unless-stopped",
         revision: str | None = None,
+        config_bind: str = "/usr/local/etc/haproxy",
+        volume_mode: str = "ro",
+        command: list[str] | None = None,
+        entrypoint: list[str] | None = None,
+        cap_add: list[str] | None = None,
+        sysctls: dict[str, str] | None = None,
     ) -> str:
-        """Create a managed HAProxy container.
+        """Create a managed dataplane container.
 
         ``network_endpoints`` items: ``{"network_id": "<docker id>", "ipv4_address": "<ip>|None"}``.
         ``network_ids`` is retained for backward compatibility when endpoints are omitted.
@@ -224,10 +237,17 @@ class DockerClientAdapter:
             "name": name,
             "detach": True,
             "labels": labels,
-            "volumes": {host_config_dir: {"bind": "/usr/local/etc/haproxy", "mode": "ro"}},
+            "volumes": {host_config_dir: {"bind": config_bind, "mode": volume_mode}},
             "restart_policy": {"Name": restart_policy},
-            "command": ["haproxy", "-W", "-db", "-f", "/usr/local/etc/haproxy/haproxy.cfg"],
         }
+        if command is not None:
+            kwargs["command"] = command
+        if entrypoint is not None:
+            kwargs["entrypoint"] = entrypoint
+        if cap_add:
+            kwargs["cap_add"] = list(cap_add)
+        if sysctls:
+            kwargs["sysctls"] = dict(sysctls)
         if endpoints:
             first_net = endpoints[0].get("network_id")
             if not first_net:
@@ -283,6 +303,24 @@ class DockerClientAdapter:
         """Send a Unix signal to a container's main process (PID 1)."""
         try:
             self._get_client().containers.get(container_id).kill(signal=signal)
+        except NotFound as exc:
+            raise DockerException(f"Container not found: {container_id}") from exc
+        except APIError as exc:
+            raise DockerException(str(exc)) from exc
+
+    def exec_in_container(self, container_id: str, command: list[str]) -> str:
+        """Run a command in a running container and return combined stdout/stderr."""
+        try:
+            container = self._get_client().containers.get(container_id)
+            exit_code, output = container.exec_run(command, demux=False)
+            text = (
+                output.decode("utf-8", errors="replace")
+                if isinstance(output, (bytes, bytearray))
+                else str(output or "")
+            )
+            if exit_code not in (0, None):
+                raise DockerException(text.strip() or f"exec failed with code {exit_code}")
+            return text.strip()
         except NotFound as exc:
             raise DockerException(f"Container not found: {container_id}") from exc
         except APIError as exc:

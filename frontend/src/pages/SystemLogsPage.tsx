@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useInstanceLogs } from "../features/instances/hooks";
 import { useSystemLogs, useAuditEvents } from "../features/system/hooks";
+import { instanceDetailPath } from "../lib/instancePaths";
 
 function stateTone(state: string): string {
   if (state === "running" || state === "healthy") return "text-ok";
@@ -202,14 +203,12 @@ export function SystemLogsPage() {
                   <p className="font-mono text-xs text-ink-muted">
                     {selected.container_name ?? selected.instance_id}
                   </p>
-                  {selected.service_type === "haproxy" ? (
-                    <Link
-                      to={`/instances/${selected.instance_id}/haproxy`}
-                      className="text-xs text-accent hover:underline"
-                    >
-                      HAProxy
-                    </Link>
-                  ) : null}
+                  <Link
+                    to={instanceDetailPath(selected.instance_id, selected.service_type)}
+                    className="text-xs text-accent hover:underline"
+                  >
+                    {selected.service_type}
+                  </Link>
                 </div>
               ) : null}
               <pre className="max-h-[28rem] overflow-auto bg-ink px-3 py-3 font-mono text-xs text-paper">

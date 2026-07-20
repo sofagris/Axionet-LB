@@ -9,6 +9,7 @@ import {
   useValidateExistingInstance,
 } from "../features/instances/hooks";
 import type { Instance, InstanceValidateResult } from "../types/instances";
+import { instanceDetailPath } from "../lib/instancePaths";
 
 function stateTone(state: string): string {
   if (state === "running" || state === "healthy") return "text-ok";
@@ -163,9 +164,9 @@ function InstanceRow({
         <div className="mt-1">
           <Link
             className="font-mono text-xs text-accent hover:underline"
-            to={`/instances/${instance.id}/haproxy`}
+            to={instanceDetailPath(instance.id, instance.service_type)}
           >
-            HAProxy config
+            {instance.service_type} config
           </Link>
         </div>
         {instance.last_error ? (

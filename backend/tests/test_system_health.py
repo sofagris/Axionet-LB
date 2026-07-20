@@ -41,6 +41,7 @@ def test_capabilities(client: TestClient) -> None:
     payload = response.json()
     assert "system.health" in payload["features"]
     assert "haproxy" in payload["dataplane_services"]
+    assert "frr" in payload["dataplane_services"]
     assert "system.logs" in payload["features"]
     assert "instances.reconcile_loop" in payload["features"]
     assert "haproxy.runtime_control" in payload["features"]

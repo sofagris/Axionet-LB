@@ -20,9 +20,9 @@ from app.models.service_instance import (
     HealthStatus,
     ServiceInstance,
 )
-from app.plugins.haproxy.renderer import render_haproxy_config
+from app.plugins.catalog import get_service_definition
 from app.plugins.haproxy.schemas import HaproxyConfig
-from app.plugins.haproxy.validator import HaproxyConfigValidator
+from app.plugins.registry import get_plugin
 from app.schemas.instances import (
     InstanceCreate,
     InstanceUpdate,
@@ -44,7 +44,6 @@ class InstanceService:
         self._db = db
         self._docker = docker
         self._settings = settings
-        self._validator = HaproxyConfigValidator(docker)
         self._revisions = RevisionService(db)
         self._audit = AuditService(db)
 
@@ -256,8 +255,10 @@ class InstanceService:
         self._db.commit()
 
     def create_instance(self, payload: InstanceCreate) -> ServiceInstance:
-        if payload.service_type != "haproxy":
-            raise ValueError("Only service_type=haproxy is supported in Milestone 4")
+        definition = get_service_definition(payload.service_type)
+        if definition is None or not definition.get("enabled"):
+            raise ValueError(f"Unsupported or disabled service_type={payload.service_type}")
+        plugin = get_plugin(payload.service_type)
         if not NAME_RE.match(payload.name):
             raise ValueError("Invalid instance name")
         if self._db.scalars(
@@ -266,12 +267,13 @@ class InstanceService:
             raise ValueError("Instance name already exists")
 
         networks = self._resolve_networks(payload.networks)
-        config = HaproxyConfig.from_dict(payload.configuration).model_dump()
-        image = f"haproxy:{payload.image_version}"
+        config = plugin.normalize_configuration(payload.configuration)
+        image_name = definition["container_image"]
+        image = f"{image_name}:{payload.image_version}"
 
         instance = ServiceInstance(
             name=payload.name,
-            service_type="haproxy",
+            service_type=payload.service_type,
             desired_state=payload.desired_state.value,
             actual_state=ActualState.CREATING.value,
             image=image,
@@ -283,7 +285,8 @@ class InstanceService:
         )
         self._db.add(instance)
         self._db.flush()
-        instance.container_name = f"ax-haproxy-{instance.id.replace('-', '')[:12]}"
+        short = instance.id.replace("-", "")[:12]
+        instance.container_name = f"ax-{payload.service_type}-{short}"
 
         for index, attachment in enumerate(payload.networks):
             self._db.add(
@@ -299,13 +302,9 @@ class InstanceService:
 
         try:
             self._write_config(instance)
-            validation = self._validator.validate_config_dict(
-                instance.configuration,
-                cert_files=self._load_cert_files(instance),
-                map_files=self._load_map_files(instance),
-            )
+            validation = self._validate_instance_config(instance)
             if not validation.ok:
-                raise ValueError(f"HAProxy config invalid: {validation.output}")
+                raise ValueError(f"Config invalid: {validation.output}")
             self._revisions.record_revision(
                 instance,
                 validation_ok=True,
@@ -367,15 +366,13 @@ class InstanceService:
         restart_if_running: bool = True,
         created_by: str = "system",
     ) -> ServiceInstance:
-        instance.configuration = HaproxyConfig.from_dict(configuration).model_dump()
-        self._write_config(instance)
-        validation = self._validator.validate_config_dict(
-            instance.configuration,
-            cert_files=self._load_cert_files(instance),
-            map_files=self._load_map_files(instance),
+        instance.configuration = get_plugin(instance.service_type).normalize_configuration(
+            configuration
         )
+        self._write_config(instance)
+        validation = self._validate_instance_config(instance)
         if not validation.ok:
-            raise ValueError(f"HAProxy config invalid: {validation.output}")
+            raise ValueError(f"Config invalid: {validation.output}")
 
         should_reload = (
             restart_if_running
@@ -509,18 +506,14 @@ class InstanceService:
         return instance
 
     def reload_instance(self, instance: ServiceInstance) -> ServiceInstance:
-        """Soft-reload HAProxy master-worker (SIGUSR2). Falls back to restart on failure."""
+        """Reload config: soft-signal when supported, otherwise restart."""
         if not instance.container_id:
             return self.start_instance(instance)
 
         self._write_config(instance)
-        validation = self._validator.validate_config_dict(
-            instance.configuration,
-            cert_files=self._load_cert_files(instance),
-            map_files=self._load_map_files(instance),
-        )
+        validation = self._validate_instance_config(instance)
         if not validation.ok:
-            raise ValueError(f"HAProxy config invalid: {validation.output}")
+            raise ValueError(f"Config invalid: {validation.output}")
 
         try:
             self._reload_or_restart(instance)
@@ -571,7 +564,7 @@ class InstanceService:
             runtime.send_admin_command(instance.container_id, "show info")
 
     def _reload_or_restart(self, instance: ServiceInstance) -> None:
-        """Prefer soft reload; fall back to container restart if signal fails."""
+        """Prefer soft reload when the plugin defines a signal; otherwise restart."""
         container_id = instance.container_id or ""
         if not container_id:
             raise DockerException("Instance has no container")
@@ -579,8 +572,12 @@ class InstanceService:
         if status != "running":
             self._docker.restart_container(container_id)
             return
+        signal = get_plugin(instance.service_type).reload_signal()
+        if signal is None:
+            self._docker.restart_container(container_id)
+            return
         try:
-            self._docker.signal_container(container_id, "SIGUSR2")
+            self._docker.signal_container(container_id, signal)
         except DockerException as exc:
             logger.warning(
                 "Soft reload failed for %s (%s); falling back to restart",
@@ -590,12 +587,9 @@ class InstanceService:
             self._docker.restart_container(container_id)
 
     def validate_instance(self, instance: ServiceInstance) -> tuple[bool, str, str]:
-        rendered = render_haproxy_config(HaproxyConfig.from_dict(instance.configuration))
-        result = self._validator.validate_config_dict(
-            instance.configuration,
-            cert_files=self._load_cert_files(instance),
-            map_files=self._load_map_files(instance),
-        )
+        plugin = get_plugin(instance.service_type)
+        rendered = plugin.render(instance.configuration)
+        result = self._validate_instance_config(instance)
         return result.ok, result.output, rendered
 
     def validate_draft(
@@ -605,12 +599,14 @@ class InstanceService:
         image_version: str,
         configuration: dict | None,
     ) -> tuple[bool, str, str]:
-        if service_type != "haproxy":
-            raise ValueError("Only service_type=haproxy can be validated in this milestone")
-        config = HaproxyConfig.from_dict(configuration).model_dump()
-        rendered = render_haproxy_config(HaproxyConfig.from_dict(config))
-        validator = HaproxyConfigValidator(self._docker, image=f"haproxy:{image_version}")
-        result = validator.validate_config_dict(config)
+        definition = get_service_definition(service_type)
+        if definition is None or not definition.get("enabled"):
+            raise ValueError(f"Unsupported or disabled service_type={service_type}")
+        plugin = get_plugin(service_type)
+        config = plugin.normalize_configuration(configuration)
+        rendered = plugin.render(config)
+        image = f"{definition['container_image']}:{image_version}"
+        result = plugin.validate(self._docker, image=image, configuration=config)
         return result.ok, result.output, rendered
 
     def get_logs(self, instance: ServiceInstance, *, tail: int = 200) -> str:
@@ -637,13 +633,9 @@ class InstanceService:
                 instance.container_id = None
             elif instance.desired_state == DesiredState.RUNNING.value:
                 self._write_config(instance)
-                validation = self._validator.validate_config_dict(
-                    instance.configuration,
-                    cert_files=self._load_cert_files(instance),
-                    map_files=self._load_map_files(instance),
-                )
+                validation = self._validate_instance_config(instance)
                 if not validation.ok:
-                    raise RuntimeError(f"HAProxy config invalid: {validation.output}")
+                    raise RuntimeError(f"Config invalid: {validation.output}")
                 self._ensure_container(instance, networks)
                 status = self.get_container_status(instance)
                 if status != "running":
@@ -763,13 +755,32 @@ class InstanceService:
         return path
 
     def _write_config(self, instance: ServiceInstance) -> Path:
-        rendered = render_haproxy_config(HaproxyConfig.from_dict(instance.configuration))
+        plugin = get_plugin(instance.service_type)
         config_dir = self._instance_dir(instance.id) / "config"
         (config_dir / "certs").mkdir(parents=True, exist_ok=True)
         (config_dir / "maps").mkdir(parents=True, exist_ok=True)
-        cfg = config_dir / "haproxy.cfg"
-        cfg.write_text(rendered, encoding="utf-8")
+        for relative, content in plugin.render_files(instance.configuration).items():
+            path = config_dir / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content, encoding="utf-8")
+            if relative.startswith("certs/"):
+                path.chmod(0o600)
         return config_dir
+
+    def _validate_instance_config(self, instance: ServiceInstance):
+        plugin = get_plugin(instance.service_type)
+        extra_files: dict[str, str] = {}
+        if instance.service_type == "haproxy":
+            for name, content in self._load_cert_files(instance).items():
+                extra_files[f"certs/{name}.pem"] = content
+            for name, content in self._load_map_files(instance).items():
+                extra_files[f"maps/{name}.map"] = content
+        return plugin.validate(
+            self._docker,
+            image=instance.image,
+            configuration=instance.configuration,
+            extra_files=extra_files or None,
+        )
 
     def certs_dir(self, instance_id: str) -> Path:
         path = self._instance_dir(instance_id) / "config" / "certs"
@@ -864,8 +875,9 @@ class InstanceService:
                     "ipv4_address": attachment.ip_address,
                 }
             )
+        spec = get_plugin(instance.service_type).container_spec()
         container_id = self._docker.create_managed_container(
-            name=instance.container_name or f"ax-haproxy-{instance.id[:8]}",
+            name=instance.container_name or f"ax-{instance.service_type}-{instance.id[:8]}",
             image=instance.image,
             instance_id=instance.id,
             service_type=instance.service_type,
@@ -873,6 +885,12 @@ class InstanceService:
             network_endpoints=endpoints,
             restart_policy=instance.restart_policy,
             revision=revision_label,
+            config_bind=spec.config_bind,
+            volume_mode=spec.volume_mode,
+            command=spec.command,
+            entrypoint=spec.entrypoint,
+            cap_add=list(spec.cap_add) or None,
+            sysctls=dict(spec.sysctls) or None,
         )
         instance.container_id = container_id
 

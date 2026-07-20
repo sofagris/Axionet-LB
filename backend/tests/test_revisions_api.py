@@ -96,6 +96,8 @@ def docker_adapter(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     adapter.restart_container.return_value = None
 
     from app.plugins.haproxy import validator as validator_mod
+    from app.plugins.haproxy.plugin import HaproxyPlugin
+    from app.plugins.base import ValidationResult as BaseValidationResult
 
     monkeypatch.setattr(
         validator_mod.HaproxyConfigValidator,
@@ -108,6 +110,13 @@ def docker_adapter(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
         validator_mod.HaproxyConfigValidator,
         "validate_rendered",
         lambda self, rendered: ValidationResult(ok=True, output="Configuration file is valid"),
+    )
+    monkeypatch.setattr(
+        HaproxyPlugin,
+        "validate",
+        lambda self, docker, *, image, configuration, extra_files=None: BaseValidationResult(
+            ok=True, output="Configuration file is valid"
+        ),
     )
     return adapter
 

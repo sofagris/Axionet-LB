@@ -67,11 +67,20 @@ def docker_adapter(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     adapter = MagicMock(spec=DockerClientAdapter)
     adapter.run_network_sidecar.return_value = CSV_SAMPLE
     from app.plugins.haproxy import validator as validator_mod
+    from app.plugins.haproxy.plugin import HaproxyPlugin
+    from app.plugins.base import ValidationResult as BaseValidationResult
 
     monkeypatch.setattr(
         validator_mod.HaproxyConfigValidator,
         "validate_config_dict",
         lambda self, configuration, cert_files=None, map_files=None: ValidationResult(ok=True, output="ok"),
+    )
+    monkeypatch.setattr(
+        HaproxyPlugin,
+        "validate",
+        lambda self, docker, *, image, configuration, extra_files=None: BaseValidationResult(
+            ok=True, output="ok"
+        ),
     )
     return adapter
 

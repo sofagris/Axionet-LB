@@ -3,7 +3,8 @@
     "brand": "AxioNet",
     "product": "Load Balancer",
     "loading": "Laster…",
-    "unknownError": "Ukjent feil"
+    "unknownError": "Ukjent feil",
+    "saving": "Lagrer…"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -243,5 +244,35 @@
     "noInstances": "Ingen instanser. Opprett via",
     "hasError": "feil",
     "emptyTail": "(ingen logger)"
+  },
+
+  "frr": {
+    "tabs": {
+      "overview": "Overview",
+      "bgp": "BGP",
+      "logs": "Logs",
+      "revisions": "Revisions"
+    },
+    "configTitle": "BGP-konfigurasjon",
+    "hostname": "Hostname",
+    "routerId": "Router ID",
+    "localAs": "Lokal ASN",
+    "neighbors": "Neighbors",
+    "neighborAddress": "Neighbor IP",
+    "remoteAs": "Remote ASN",
+    "password": "MD5-passord (valgfritt)",
+    "description": "Beskrivelse",
+    "addNeighbor": "Legg til neighbor",
+    "networks": "Networks / prefixes (én per linje)",
+    "saveConfig": "Lagre og deploy",
+    "rendered": "Rendered frr.conf",
+    "bgpSummary": "show bgp summary",
+    "bgpNeighbors": "show bgp neighbors",
+    "noBgpData": "Ingen BGP-data (er instansen startet?)"
+  },
+
+  "revisions": {
+    "restore": "Gjenopprett",
+    "pick": "Velg en revision"
   }
 }

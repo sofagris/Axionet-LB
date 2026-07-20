@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 
 from app.api.v1 import (
     auth,
+    frr,
     haproxy,
     instances,
     interfaces,
@@ -21,3 +22,4 @@ api_router.include_router(service_definitions.router)
 api_router.include_router(instances.router)
 api_router.include_router(revisions.router)
 api_router.include_router(haproxy.router)
+api_router.include_router(frr.router)

@@ -854,7 +854,7 @@ Vis tilgjengelige tjenester som kort:
 - Prometheus
 - Grafana
 
-Bare HAProxy trenger full funksjonalitet i første MVP.
+Bare HAProxy trenger full funksjonalitet i første MVP. FRR aktiveres i Milestone 8.
 
 ### 12.4 Opprett serviceinstans
 
@@ -1045,6 +1045,62 @@ Bygg i denne rekkefølgen.
 - ulike VLAN
 - separat status og logging
 
+### Milestone 8 – FRR (BGP MVP)
+
+Første ikke-HAProxy dataplan-plugin. Målet er at FRR kan opprettes, nettkobles, valideres, startes og etablere BGP-peering — uten full VIP/anycast-orkestrering.
+
+#### Plattformkrav (før eller parallelt)
+
+- Tynn service-plugin-kontrakt: definition, schema, render, validate, container-spec (image, volumes, command, capabilities)
+- Fjern HAProxy-hardkoding i instance lifecycle / Docker-adapter (type-dispatch)
+- Støtte capabilities på dataplan-containere (minst `NET_ADMIN` for FRR)
+- Oppdater capabilities/katalog slik at `frr` er enabled
+
+#### FRR-funksjon
+
+- Aktiver FRR i servicekatalog (`frrouting/frr`, pinnet versjon — ikke `latest`)
+- Livssyklus: create, start, stop, restart, logs, reconcile
+- Nettverk: samme ipvlan-l2-attachments og valgfri statisk IP som øvrige serviceinstanser
+- Strukturert config: lokal ASN, router-id, neighbors (IP, remote-AS, valgfri MD5), prefixes/networks å annonsere
+- Render til FRR-konfigurasjon på disk under instance data-dir
+- Valider config før deploy (ephemeral container / vtysh-sjekk)
+- Revisions: gjenbruk eksisterende revision, diff, deploy og rollback
+- Minimal runtime-status i GUI (f.eks. BGP summary / neighbor state)
+- GUI: wizard-steg for FRR + instance detail (Overview, BGP, Logs, Revisions)
+- Tester: unit, API og mock Docker; lab-smoke når testmiljø er klart
+
+#### Akseptansekriterium (lab)
+
+Fra GUI/API:
+
+1. Opprett FRR-instans
+2. Knytt til dataplan-VLAN med statisk IP
+3. Konfigurer BGP neighbor
+4. Start instans
+5. Peer går til Established
+6. Annonser et lab-test-prefix
+7. Prefix er synlig på peer
+
+#### Utenfor Milestone 8
+
+- Automatisk «annonser VIP fra HAProxy-instans»
+- Anycast-eierskap / VIP-orkestrering
+- VRRP
+- Multi-node / config sync
+- OSPF (kan komme i en senere del-milepæl)
+- IPv6 BGP (kan komme senere)
+
+#### Lab-forutsetninger
+
+Dokumenter og verifiser før lab-smoke:
+
+- Dedikert dataplan-VLAN (ikke bland management med mindre det er bevisst)
+- Planlagte IP-er for FRR-container og BGP-peer i samme L2/subnet (enklest)
+- Én BGP-peer (FRR/BIRD-VM eller lab-ruter) med lokal ASN, remote ASN og peer-IP
+- Lab-only test-prefix som ikke kolliderer med produksjon
+- Reachability: ping FRR↔peer; TCP 179 ikke blokkert
+- Vert støtter ipvlan-l2 mot parent/VLAN som for HAProxy
+
 ---
 
 ## 16. Testkrav
@@ -1154,7 +1210,7 @@ Valider alle navn før de brukes som:
 Ikke implementer disse nå, men unngå arkitekturvalg som blokkerer dem:
 
 - to-node cluster
-- BGP-annonserte VIP-er
+- BGP-annonserte VIP-er (automatisk VIP/anycast knyttet til LB-instanser; grunnleggende BGP-peering er Milestone 8)
 - VRRP
 - config sync
 - PostgreSQL

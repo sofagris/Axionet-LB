@@ -65,6 +65,7 @@ class SystemService:
                 "networks.validate",
                 "catalog.service_definitions",
                 "instances.haproxy",
+                "instances.frr",
                 "instances.lifecycle",
                 "instances.validate_draft",
                 "instances.network_attachments",
@@ -81,13 +82,16 @@ class SystemService:
                 "haproxy.httpchk",
                 "haproxy.compression",
                 "haproxy.stick_tables",
+                "frr.bgp",
+                "frr.structured_config",
+                "frr.revisions",
                 "system.logs",
                 "system.audit",
                 "system.orphans",
                 "auth.local",
                 "instances.reconcile_loop",
             ],
-            dataplane_services=["haproxy"],
+            dataplane_services=["haproxy", "frr"],
         )
 
     def check_health(self, db: Session) -> HealthResponse:

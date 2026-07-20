@@ -16,6 +16,7 @@ import { useInterfaces } from "../features/interfaces/hooks";
 import { useNetworks } from "../features/networks/hooks";
 import { useSystemHealth, useSystemInfo, useSystemMetrics, useLbMetrics } from "../features/system/hooks";
 import { useTelemetryHistory } from "../features/telemetry/useTelemetryHistory";
+import { instanceDetailPath } from "../lib/instancePaths";
 import type { ComponentHealth, HealthResponse } from "../types/system";
 
 function statusTone(status: string): string {
@@ -521,7 +522,7 @@ export function DashboardPage() {
                   <tr key={item.instance_id} className="border-t border-line font-mono text-xs">
                     <td className="py-2 pr-4">
                       <Link
-                        to={`/instances/${item.instance_id}/haproxy`}
+                        to={instanceDetailPath(item.instance_id, "haproxy")}
                         className="text-accent hover:underline"
                       >
                         {item.name}
@@ -608,7 +609,7 @@ export function DashboardPage() {
               {recentErrors.map((item) => (
                 <li key={item.id} className="border-t border-line pt-3 first:border-t-0 first:pt-0">
                   <Link
-                    to={`/instances/${item.id}/haproxy`}
+                    to={instanceDetailPath(item.id, item.service_type)}
                     className="font-medium text-accent hover:underline"
                   >
                     {item.name}

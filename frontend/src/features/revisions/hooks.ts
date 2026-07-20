@@ -24,6 +24,7 @@ export function useRestoreRevision(instanceId: string) {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["revisions", instanceId] });
       await queryClient.invalidateQueries({ queryKey: ["haproxy", instanceId] });
+      await queryClient.invalidateQueries({ queryKey: ["frr", instanceId] });
       await queryClient.invalidateQueries({ queryKey: ["instances"] });
     },
   });

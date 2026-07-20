@@ -3,7 +3,8 @@
     "brand": "AxioNet",
     "product": "Load Balancer",
     "loading": "Loading…",
-    "unknownError": "Unknown error"
+    "unknownError": "Unknown error",
+    "saving": "Saving…"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -243,5 +244,35 @@
     "noInstances": "No instances. Create via",
     "hasError": "error",
     "emptyTail": "(no logs)"
+  },
+
+  "frr": {
+    "tabs": {
+      "overview": "Overview",
+      "bgp": "BGP",
+      "logs": "Logs",
+      "revisions": "Revisions"
+    },
+    "configTitle": "BGP configuration",
+    "hostname": "Hostname",
+    "routerId": "Router ID",
+    "localAs": "Local ASN",
+    "neighbors": "Neighbors",
+    "neighborAddress": "Neighbor IP",
+    "remoteAs": "Remote ASN",
+    "password": "MD5 password (optional)",
+    "description": "Description",
+    "addNeighbor": "Add neighbor",
+    "networks": "Networks / prefixes (one per line)",
+    "saveConfig": "Save and deploy",
+    "rendered": "Rendered frr.conf",
+    "bgpSummary": "show bgp summary",
+    "bgpNeighbors": "show bgp neighbors",
+    "noBgpData": "No BGP data (is the instance running?)"
+  },
+
+  "revisions": {
+    "restore": "Restore",
+    "pick": "Pick a revision"
   }
 }

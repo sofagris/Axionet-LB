@@ -5,6 +5,7 @@ import { useServiceDefinitions } from "../features/catalog/hooks";
 import { useCreateInstance, useValidateInstanceConfig } from "../features/instances/hooks";
 import { useNetworks } from "../features/networks/hooks";
 import type { InstanceValidateResult } from "../types/instances";
+import { instanceDetailPath } from "../lib/instancePaths";
 
 const STEPS = 7;
 
@@ -64,6 +65,39 @@ function buildHaproxyConfig(input: {
   };
 }
 
+function buildFrrConfig(input: {
+  hostname: string;
+  routerId: string;
+  localAs: number;
+  neighborAddress: string;
+  remoteAs: number;
+  password: string;
+  networks: string;
+}) {
+  const networks = input.networks
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return {
+    hostname: input.hostname || "ax-frr",
+    router_id: input.routerId || "1.1.1.1",
+    local_as: input.localAs,
+    neighbors: input.neighborAddress
+      ? [
+          {
+            name: "peer1",
+            address: input.neighborAddress,
+            remote_as: input.remoteAs,
+            password: input.password || null,
+            description: null,
+          },
+        ]
+      : [],
+    networks,
+    log_stdout: true,
+  };
+}
+
 export function CreateInstanceWizardPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -90,6 +124,13 @@ export function CreateInstanceWizardPage() {
   const [bindPort, setBindPort] = useState(80);
   const [serverAddress, setServerAddress] = useState("127.0.0.1");
   const [serverPort, setServerPort] = useState(8080);
+  const [frrHostname, setFrrHostname] = useState("ax-frr");
+  const [frrRouterId, setFrrRouterId] = useState("10.50.10.10");
+  const [frrLocalAs, setFrrLocalAs] = useState(65001);
+  const [frrNeighbor, setFrrNeighbor] = useState("");
+  const [frrRemoteAs, setFrrRemoteAs] = useState(65000);
+  const [frrPassword, setFrrPassword] = useState("");
+  const [frrNetworks, setFrrNetworks] = useState("203.0.113.0/24");
   const [validation, setValidation] = useState<InstanceValidateResult | null>(null);
   const [desiredRunning, setDesiredRunning] = useState(false);
 
@@ -97,16 +138,39 @@ export function CreateInstanceWizardPage() {
   const version = imageVersion || selectedDef?.default_version || "3.2.6";
   const networks = networksQuery.data ?? [];
 
-  const configuration = useMemo(
-    () =>
-      buildHaproxyConfig({
-        mode,
-        bindPort,
-        serverAddress,
-        serverPort,
-      }),
-    [mode, bindPort, serverAddress, serverPort],
-  );
+  const configuration = useMemo(() => {
+    if (serviceType === "frr") {
+      return buildFrrConfig({
+        hostname: frrHostname || name || "ax-frr",
+        routerId: frrRouterId,
+        localAs: frrLocalAs,
+        neighborAddress: frrNeighbor,
+        remoteAs: frrRemoteAs,
+        password: frrPassword,
+        networks: frrNetworks,
+      });
+    }
+    return buildHaproxyConfig({
+      mode,
+      bindPort,
+      serverAddress,
+      serverPort,
+    });
+  }, [
+    serviceType,
+    frrHostname,
+    name,
+    frrRouterId,
+    frrLocalAs,
+    frrNeighbor,
+    frrRemoteAs,
+    frrPassword,
+    frrNetworks,
+    mode,
+    bindPort,
+    serverAddress,
+    serverPort,
+  ]);
 
   function canNext(): boolean {
     if (step === 1) return Boolean(selectedDef?.enabled);
@@ -117,7 +181,12 @@ export function CreateInstanceWizardPage() {
         (item) => !item.network_id || item.network_id.length > 0,
       );
     }
-    if (step === 5) return bindPort > 0 && serverPort > 0;
+    if (step === 5) {
+      if (serviceType === "frr") {
+        return frrLocalAs > 0 && Boolean(frrRouterId.trim());
+      }
+      return bindPort > 0 && serverPort > 0;
+    }
     if (step === 6) return Boolean(validation?.ok);
     return true;
   }
@@ -147,7 +216,7 @@ export function CreateInstanceWizardPage() {
       configuration,
       networks: networksPayload,
     });
-    navigate(`/instances/${created.id}/haproxy`);
+    navigate(instanceDetailPath(created.id, created.service_type));
   }
 
   return (
@@ -316,6 +385,69 @@ export function CreateInstanceWizardPage() {
         ) : null}
 
         {step === 5 ? (
+          serviceType === "frr" ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block text-sm">
+                <span className="text-ink-muted">{t("frr.hostname")}</span>
+                <input
+                  value={frrHostname}
+                  onChange={(e) => setFrrHostname(e.target.value)}
+                  className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="text-ink-muted">{t("frr.routerId")}</span>
+                <input
+                  value={frrRouterId}
+                  onChange={(e) => setFrrRouterId(e.target.value)}
+                  className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="text-ink-muted">{t("frr.localAs")}</span>
+                <input
+                  type="number"
+                  value={frrLocalAs}
+                  onChange={(e) => setFrrLocalAs(Number(e.target.value))}
+                  className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="text-ink-muted">{t("frr.neighborAddress")}</span>
+                <input
+                  value={frrNeighbor}
+                  onChange={(e) => setFrrNeighbor(e.target.value)}
+                  className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                  placeholder="10.50.10.1"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="text-ink-muted">{t("frr.remoteAs")}</span>
+                <input
+                  type="number"
+                  value={frrRemoteAs}
+                  onChange={(e) => setFrrRemoteAs(Number(e.target.value))}
+                  className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="text-ink-muted">{t("frr.password")}</span>
+                <input
+                  value={frrPassword}
+                  onChange={(e) => setFrrPassword(e.target.value)}
+                  className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                />
+              </label>
+              <label className="block text-sm md:col-span-2">
+                <span className="text-ink-muted">{t("frr.networks")}</span>
+                <textarea
+                  value={frrNetworks}
+                  onChange={(e) => setFrrNetworks(e.target.value)}
+                  className="mt-1 h-24 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                />
+              </label>
+            </div>
+          ) : (
           <div className="grid gap-4 md:grid-cols-2">
             <label className="block text-sm">
               <span className="text-ink-muted">{t("wizard.mode")}</span>
@@ -359,6 +491,7 @@ export function CreateInstanceWizardPage() {
               />
             </label>
           </div>
+          )
         ) : null}
 
         {step === 6 ? (

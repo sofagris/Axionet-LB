@@ -9,8 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.models.config_revision import ConfigRevision, DeploymentStatus, ValidationStatus
 from app.models.service_instance import ServiceInstance
-from app.plugins.haproxy.renderer import render_haproxy_config
-from app.plugins.haproxy.schemas import HaproxyConfig
+from app.plugins.registry import get_plugin
 
 
 class RevisionService:
@@ -64,7 +63,8 @@ class RevisionService:
         created_by: str = "system",
         mark_previous_superseded: bool = True,
     ) -> ConfigRevision:
-        rendered = render_haproxy_config(HaproxyConfig.from_dict(instance.configuration))
+        plugin = get_plugin(instance.service_type)
+        rendered = plugin.render(instance.configuration)
         number = self._next_revision_number(instance.id)
 
         if mark_previous_superseded and deployment_status == DeploymentStatus.DEPLOYED:
@@ -100,21 +100,22 @@ class RevisionService:
             ConfigRevision.service_instance_id == instance_id,
             ConfigRevision.deployment_status == DeploymentStatus.DEPLOYED.value,
         )
-        for item in self._db.scalars(stmt):
-            item.deployment_status = DeploymentStatus.SUPERSEDED.value
+        for revision in self._db.scalars(stmt):
+            revision.deployment_status = DeploymentStatus.SUPERSEDED.value
 
 
 def unified_config_diff(
-    previous: str,
-    current: str,
+    old: str,
+    new: str,
     *,
     from_label: str = "previous",
     to_label: str = "current",
 ) -> str:
-    diff = difflib.unified_diff(
-        previous.splitlines(keepends=True),
-        current.splitlines(keepends=True),
-        fromfile=from_label,
-        tofile=to_label,
+    return "".join(
+        difflib.unified_diff(
+            old.splitlines(keepends=True),
+            new.splitlines(keepends=True),
+            fromfile=from_label,
+            tofile=to_label,
+        )
     )
-    return "".join(diff)

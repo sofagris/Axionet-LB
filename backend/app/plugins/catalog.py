@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from app.plugins.frr.definition import FRR_SERVICE
 from app.plugins.haproxy.definition import HAPROXY_SERVICE
 
 STUB_SERVICES: list[dict] = [
@@ -20,15 +21,6 @@ STUB_SERVICES: list[dict] = [
         "description": "Web server / reverse proxy (kommer snart)",
         "container_image": "nginx",
         "default_version": "1.27",
-        "enabled": False,
-        "supported_actions": [],
-    },
-    {
-        "service_type": "frr",
-        "display_name": "FRR",
-        "description": "Routing stack for VIP advertisement (kommer snart)",
-        "container_image": "frrouting/frr",
-        "default_version": "10.2",
         "enabled": False,
         "supported_actions": [],
     },
@@ -54,7 +46,7 @@ STUB_SERVICES: list[dict] = [
 
 
 def list_service_definitions() -> list[dict]:
-    return [HAPROXY_SERVICE, *STUB_SERVICES]
+    return [HAPROXY_SERVICE, FRR_SERVICE, *STUB_SERVICES]
 
 
 def get_service_definition(service_type: str) -> dict | None:

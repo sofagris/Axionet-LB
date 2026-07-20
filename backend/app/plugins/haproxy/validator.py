@@ -1,17 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from docker.errors import ContainerError, DockerException, ImageNotFound
 
+from app.plugins.base import ValidationResult
 from app.plugins.haproxy.schemas import HaproxyConfig
 from app.services.docker.client import DockerClientAdapter
 
-
-@dataclass(frozen=True, slots=True)
-class ValidationResult:
-    ok: bool
-    output: str
+__all__ = ["HaproxyConfigValidator", "ValidationResult"]
 
 
 class HaproxyConfigValidator:
@@ -49,6 +44,7 @@ class HaproxyConfigValidator:
                 image=self._image,
                 command=["haproxy", "-c", "-f", "/usr/local/etc/haproxy/haproxy.cfg"],
                 files=files,
+                bind_path="/usr/local/etc/haproxy",
             )
             return ValidationResult(ok=True, output=output or "Configuration file is valid")
         except ImageNotFound as exc:

@@ -75,6 +75,8 @@ def docker_adapter(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     adapter.container_logs.return_value = "haproxy started"
 
     from app.plugins.haproxy import validator as validator_mod
+    from app.plugins.haproxy.plugin import HaproxyPlugin
+    from app.plugins.base import ValidationResult as BaseValidationResult
 
     monkeypatch.setattr(
         validator_mod.HaproxyConfigValidator,
@@ -85,6 +87,13 @@ def docker_adapter(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
         validator_mod.HaproxyConfigValidator,
         "validate_rendered",
         lambda self, rendered: ValidationResult(ok=True, output="ok"),
+    )
+    monkeypatch.setattr(
+        HaproxyPlugin,
+        "validate",
+        lambda self, docker, *, image, configuration, extra_files=None: BaseValidationResult(
+            ok=True, output="ok"
+        ),
     )
     return adapter
 
@@ -271,9 +280,11 @@ def test_service_definitions(client: TestClient) -> None:
     assert "frr" in types
     assert "prometheus" in types
     assert "grafana" in types
-    assert all(
-        item["enabled"] is False for item in response.json() if item["service_type"] != "haproxy"
-    )
+    by_type = {item["service_type"]: item for item in response.json()}
+    assert by_type["haproxy"]["enabled"] is True
+    assert by_type["frr"]["enabled"] is True
+    assert by_type["varnish"]["enabled"] is False
+    assert by_type["nginx"]["enabled"] is False
 
 
 def test_validate_config_draft(client: TestClient) -> None:
