@@ -32,6 +32,10 @@ export const HaproxyBackendSchema = z.object({
   name: z.string(),
   balance: z.string(),
   mode: z.string(),
+  httpchk: z.boolean().optional().default(false),
+  httpchk_method: z.enum(["OPTIONS", "HEAD", "GET"]).optional().default("GET"),
+  httpchk_uri: z.string().optional().default("/"),
+  httpchk_expect_status: z.number().int().nullable().optional(),
   servers: z.array(HaproxyServerSchema),
 });
 

@@ -89,6 +89,10 @@ export function HaproxyDetailPage() {
   const [backendName, setBackendName] = useState("api");
   const [backendBalance, setBackendBalance] = useState("roundrobin");
   const [backendMode, setBackendMode] = useState("http");
+  const [backendHttpchk, setBackendHttpchk] = useState(false);
+  const [backendHttpchkMethod, setBackendHttpchkMethod] = useState<"OPTIONS" | "HEAD" | "GET">("GET");
+  const [backendHttpchkUri, setBackendHttpchkUri] = useState("/");
+  const [backendHttpchkExpect, setBackendHttpchkExpect] = useState("");
 
   const [editingServer, setEditingServer] = useState<{ backend: string; name: string } | null>(null);
   const [serverBackend, setServerBackend] = useState("app");
@@ -196,6 +200,10 @@ export function HaproxyDetailPage() {
     setBackendName("api");
     setBackendBalance("roundrobin");
     setBackendMode("http");
+    setBackendHttpchk(false);
+    setBackendHttpchkMethod("GET");
+    setBackendHttpchkUri("/");
+    setBackendHttpchkExpect("");
   }
 
   function startEditBackend(item: HaproxyBackend) {
@@ -203,15 +211,26 @@ export function HaproxyDetailPage() {
     setBackendName(item.name);
     setBackendBalance(item.balance);
     setBackendMode(item.mode);
+    setBackendHttpchk(item.httpchk);
+    setBackendHttpchkMethod(item.httpchk_method);
+    setBackendHttpchkUri(item.httpchk_uri);
+    setBackendHttpchkExpect(
+      item.httpchk_expect_status != null ? String(item.httpchk_expect_status) : "",
+    );
   }
 
   async function saveBackend(event: FormEvent) {
     event.preventDefault();
     const existing = backendsQuery.data?.find((item) => item.name === (editingBackend ?? backendName));
+    const expectRaw = backendHttpchkExpect.trim();
     const payload: HaproxyBackend = {
       name: backendName,
       balance: backendBalance,
       mode: backendMode,
+      httpchk: backendMode === "http" ? backendHttpchk : false,
+      httpchk_method: backendHttpchkMethod,
+      httpchk_uri: backendHttpchkUri.trim() || "/",
+      httpchk_expect_status: expectRaw ? Number(expectRaw) : null,
       servers: existing?.servers ?? [],
     };
     if (editingBackend) {
@@ -690,6 +709,52 @@ export function HaproxyDetailPage() {
                 <option value="tcp">tcp</option>
               </select>
             </FormField>
+            <FormField label="HTTP check">
+              <label className="flex items-center gap-2 py-2 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  checked={backendHttpchk && backendMode === "http"}
+                  disabled={backendMode !== "http"}
+                  onChange={(e) => setBackendHttpchk(e.target.checked)}
+                />
+                option httpchk
+              </label>
+            </FormField>
+            {backendMode === "http" && backendHttpchk ? (
+              <>
+                <FormField label="Method">
+                  <select
+                    className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                    value={backendHttpchkMethod}
+                    onChange={(e) =>
+                      setBackendHttpchkMethod(e.target.value as "OPTIONS" | "HEAD" | "GET")
+                    }
+                  >
+                    <option value="GET">GET</option>
+                    <option value="HEAD">HEAD</option>
+                    <option value="OPTIONS">OPTIONS</option>
+                  </select>
+                </FormField>
+                <FormField label="URI">
+                  <input
+                    className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                    value={backendHttpchkUri}
+                    onChange={(e) => setBackendHttpchkUri(e.target.value)}
+                    placeholder="/healthz"
+                    required
+                  />
+                </FormField>
+                <FormField label="Expect status">
+                  <input
+                    className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                    value={backendHttpchkExpect}
+                    onChange={(e) => setBackendHttpchkExpect(e.target.value)}
+                    placeholder="200 (valgfritt)"
+                    inputMode="numeric"
+                  />
+                </FormField>
+              </>
+            ) : null}
             <FormActions>
               <button type="submit" className="border border-accent bg-accent px-3 py-2 text-sm text-white">
                 {editingBackend ? "Oppdater" : "Legg til"}
@@ -702,11 +767,16 @@ export function HaproxyDetailPage() {
             </FormActions>
           </form>
           <EntityTable
-            headers={["Name", "Balance", "Mode", "Servers", ""]}
+            headers={["Name", "Balance", "Mode", "HTTP check", "Servers", ""]}
             rows={(backendsQuery.data ?? []).map((item) => [
               item.name,
               item.balance,
               item.mode,
+              item.mode === "http" && item.httpchk
+                ? `${item.httpchk_method} ${item.httpchk_uri}${
+                    item.httpchk_expect_status != null ? ` → ${item.httpchk_expect_status}` : ""
+                  }`
+                : "—",
               String(item.servers.length),
               <div key={`be-${item.name}`} className="flex gap-3">
                 <button type="button" className="text-accent hover:underline" onClick={() => startEditBackend(item)}>

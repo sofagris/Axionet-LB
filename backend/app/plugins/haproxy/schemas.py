@@ -20,6 +20,10 @@ class HaproxyBackend(BaseModel):
     name: str = "app"
     balance: Literal["roundrobin", "leastconn", "source"] = "roundrobin"
     mode: Literal["http", "tcp"] = "http"
+    httpchk: bool = False
+    httpchk_method: Literal["OPTIONS", "HEAD", "GET"] = "GET"
+    httpchk_uri: str = Field(default="/", min_length=1, max_length=512, pattern=r"^/\S*$")
+    httpchk_expect_status: int | None = Field(default=None, ge=100, le=599)
     servers: list[HaproxyServer] = Field(default_factory=lambda: [HaproxyServer()])
 
 

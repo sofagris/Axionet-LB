@@ -41,6 +41,10 @@ class HaproxyBackendRead(BaseModel):
     name: str
     balance: str
     mode: str
+    httpchk: bool = False
+    httpchk_method: str = "GET"
+    httpchk_uri: str = "/"
+    httpchk_expect_status: int | None = None
     servers: list[HaproxyServerRead] = Field(default_factory=list)
 
 

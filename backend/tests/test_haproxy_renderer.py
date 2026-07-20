@@ -29,6 +29,37 @@ def test_render_custom_ports() -> None:
     assert "server s1 10.0.0.5:80 weight 100 check inter 2000ms rise 2 fall 3" in rendered
 
 
+def test_render_httpchk() -> None:
+    config = HaproxyConfig.model_validate(
+        {
+            "backends": [
+                {
+                    "name": "app",
+                    "mode": "http",
+                    "httpchk": True,
+                    "httpchk_method": "GET",
+                    "httpchk_uri": "/healthz",
+                    "httpchk_expect_status": 200,
+                    "servers": [{"name": "s1", "address": "10.0.0.5", "port": 80}],
+                },
+                {
+                    "name": "tcp_be",
+                    "mode": "tcp",
+                    "httpchk": True,
+                    "httpchk_uri": "/ignored",
+                    "servers": [{"name": "s1", "address": "10.0.0.6", "port": 443}],
+                },
+            ],
+        }
+    )
+    rendered = render_haproxy_config(config)
+    assert "option httpchk GET /healthz" in rendered
+    assert "http-check expect status 200" in rendered
+    # TCP backends must not emit HTTP check directives even if flagged.
+    tcp_section = rendered.split("backend tcp_be", 1)[1]
+    assert "option httpchk" not in tcp_section
+
+
 def test_render_tls_and_acls() -> None:
     config = HaproxyConfig.model_validate(
         {

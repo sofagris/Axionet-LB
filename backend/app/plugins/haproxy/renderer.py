@@ -50,6 +50,12 @@ frontend {{ frontend.name }}
 backend {{ backend.name }}
     mode {{ backend.mode }}
     balance {{ backend.balance }}
+{% if backend.httpchk and backend.mode == "http" %}
+    option httpchk {{ backend.httpchk_method }} {{ backend.httpchk_uri }}
+{% if backend.httpchk_expect_status %}
+    http-check expect status {{ backend.httpchk_expect_status }}
+{% endif %}
+{% endif %}
 {% for server in backend.servers %}
     server {{ server.name }} {{ server.address }}:{{ server.port }} weight {{ server.weight }}{% if server.check %} check inter {{ server.inter_ms }}ms rise {{ server.rise }} fall {{ server.fall }}{% endif %}
 {% endfor %}

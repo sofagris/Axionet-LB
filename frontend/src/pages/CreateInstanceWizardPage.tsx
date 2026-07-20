@@ -37,6 +37,10 @@ function buildHaproxyConfig(input: {
         name: "app",
         balance: "roundrobin",
         mode: input.mode,
+        httpchk: input.mode === "http",
+        httpchk_method: "GET",
+        httpchk_uri: "/",
+        httpchk_expect_status: input.mode === "http" ? 200 : null,
         servers: [
           {
             name: "s1",

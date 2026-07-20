@@ -77,6 +77,7 @@ class SystemService:
                 "haproxy.soft_reload",
                 "haproxy.runtime_control",
                 "haproxy.clear_counters",
+                "haproxy.httpchk",
                 "system.logs",
                 "system.audit",
                 "system.orphans",
