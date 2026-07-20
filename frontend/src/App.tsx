@@ -8,6 +8,7 @@ import { InstancesPage } from "./pages/InstancesPage";
 import { InterfacesPage } from "./pages/InterfacesPage";
 import { NetworksPage } from "./pages/NetworksPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { SystemLogsPage } from "./pages/SystemLogsPage";
 
 export function App() {
   return (
@@ -20,6 +21,7 @@ export function App() {
         <Route path="instances" element={<InstancesPage />} />
         <Route path="instances/new" element={<CreateInstanceWizardPage />} />
         <Route path="instances/:instanceId/haproxy" element={<HaproxyDetailPage />} />
+        <Route path="logs" element={<SystemLogsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
     </Routes>

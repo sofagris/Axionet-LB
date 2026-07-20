@@ -1,7 +1,10 @@
+from __future__ import annotations
+
+import asyncio
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-import logging
 
 from alembic import command
 from alembic.config import Config
@@ -11,6 +14,8 @@ from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.db.session import SessionLocal
+from app.services.docker.client import create_docker_adapter
+from app.services.instances.service import InstanceService
 from app.services.networking.discovery import InterfaceDiscoveryService
 from app.services.networking.host import HostNetworkAdapter
 from app.services.networking.mutation import InterfaceMutationService
@@ -60,13 +65,55 @@ def bootstrap_interface_discovery() -> None:
         db.close()
 
 
+def run_reconcile_pass() -> int:
+    settings = get_settings()
+    db = SessionLocal()
+    try:
+        docker = create_docker_adapter(settings)
+        service = InstanceService(db=db, docker=docker, settings=settings)
+        return service.reconcile_all()
+    finally:
+        db.close()
+
+
+async def reconcile_loop(stop_event: asyncio.Event) -> None:
+    settings = get_settings()
+    interval = settings.reconcile_interval_seconds
+    logger.info("Reconcile loop started (interval=%ss)", interval)
+    while not stop_event.is_set():
+        try:
+            count = await asyncio.to_thread(run_reconcile_pass)
+            if count:
+                logger.info("Reconcile pass updated %s instance(s)", count)
+        except Exception:
+            logger.exception("Reconcile loop pass failed")
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=interval)
+        except TimeoutError:
+            continue
+    logger.info("Reconcile loop stopped")
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     configure_logging(settings.log_level)
     run_migrations()
     bootstrap_interface_discovery()
+
+    stop_event = asyncio.Event()
+    task: asyncio.Task[None] | None = None
+    if settings.reconcile_enabled:
+        task = asyncio.create_task(reconcile_loop(stop_event), name="ax-reconcile-loop")
+
     yield
+
+    stop_event.set()
+    if task is not None:
+        try:
+            await asyncio.wait_for(task, timeout=settings.reconcile_interval_seconds + 5)
+        except TimeoutError:
+            task.cancel()
     stop_pending_store()
 
 

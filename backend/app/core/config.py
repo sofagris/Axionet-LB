@@ -41,6 +41,18 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("HOST_NET_NSENTER", "AX_HOST_NET_NSENTER"),
         description="Use nsenter into PID 1 netns for VLAN device management.",
     )
+    reconcile_interval_seconds: float = Field(
+        default=15.0,
+        ge=5.0,
+        le=600.0,
+        validation_alias=AliasChoices("RECONCILE_INTERVAL_SECONDS", "AX_RECONCILE_INTERVAL_SECONDS"),
+        description="Background reconcile loop interval. Set high to reduce Docker chatter.",
+    )
+    reconcile_enabled: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("RECONCILE_ENABLED", "AX_RECONCILE_ENABLED"),
+        description="Run the background desired/actual reconcile loop.",
+    )
 
 
 @lru_cache

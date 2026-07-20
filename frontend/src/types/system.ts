@@ -132,10 +132,37 @@ export const InstanceMetricsSchema = z.object({
   collected_at: z.string(),
 });
 
+export const SystemLogsSchema = z.object({
+  errors: z.array(
+    z.object({
+      instance_id: z.string(),
+      name: z.string(),
+      service_type: z.string(),
+      actual_state: z.string(),
+      health_status: z.string(),
+      last_error: z.string(),
+      updated_at: z.string(),
+    }),
+  ),
+  instances: z.array(
+    z.object({
+      instance_id: z.string(),
+      name: z.string(),
+      service_type: z.string(),
+      actual_state: z.string(),
+      health_status: z.string(),
+      has_error: z.boolean(),
+      container_name: z.string().nullable().optional(),
+    }),
+  ),
+  collected_at: z.string(),
+});
+
 export type HealthResponse = z.infer<typeof HealthResponseSchema>;
 export type SystemInfo = z.infer<typeof SystemInfoSchema>;
 export type SystemMetrics = z.infer<typeof SystemMetricsSchema>;
 export type LbMetrics = z.infer<typeof LbMetricsSchema>;
 export type Capabilities = z.infer<typeof CapabilitiesSchema>;
 export type InstanceMetrics = z.infer<typeof InstanceMetricsSchema>;
+export type SystemLogs = z.infer<typeof SystemLogsSchema>;
 export type ComponentHealth = z.infer<typeof ComponentHealthSchema>;

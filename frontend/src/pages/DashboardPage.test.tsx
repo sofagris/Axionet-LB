@@ -32,6 +32,11 @@ vi.mock("../api/system", () => ({
     features: ["system.health", "instances.haproxy"],
     dataplane_services: ["haproxy"],
   })),
+  fetchSystemLogs: vi.fn(async () => ({
+    errors: [],
+    instances: [],
+    collected_at: "2026-07-20T16:00:00Z",
+  })),
   fetchSystemMetrics: vi.fn(async () => ({
     cpu_percent: 12.5,
     mem_total_bytes: 16 * 1024 ** 3,

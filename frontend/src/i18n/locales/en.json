@@ -11,6 +11,7 @@
     "networks": "Networks",
     "catalog": "Catalog",
     "instances": "Instances",
+    "logs": "Logs",
     "settings": "Settings"
   },
   "theme": {
@@ -197,5 +198,16 @@
     "capabilities": "Capabilities",
     "features": "Features",
     "dataplane": "Dataplane services"
+  },
+  "logs": {
+    "title": "System Logs",
+    "subtitle": "Instance errors and container logs in one place. Pick an instance to read a live tail.",
+    "errors": "Recent instance errors",
+    "noErrors": "No instance errors reported.",
+    "containerLogs": "Container logs",
+    "tail": "Line count",
+    "noInstances": "No instances. Create via",
+    "hasError": "error",
+    "emptyTail": "(no logs)"
   }
 }

@@ -73,6 +73,8 @@ class SystemService:
                 "haproxy.runtime_status",
                 "haproxy.revisions",
                 "haproxy.soft_reload",
+                "system.logs",
+                "instances.reconcile_loop",
             ],
             dataplane_services=["haproxy"],
         )

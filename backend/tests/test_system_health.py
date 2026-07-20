@@ -41,3 +41,14 @@ def test_capabilities(client: TestClient) -> None:
     payload = response.json()
     assert "system.health" in payload["features"]
     assert "haproxy" in payload["dataplane_services"]
+    assert "system.logs" in payload["features"]
+    assert "instances.reconcile_loop" in payload["features"]
+
+
+def test_system_logs_overview(client: TestClient) -> None:
+    response = client.get("/api/v1/system/logs")
+    assert response.status_code == 200
+    payload = response.json()
+    assert "errors" in payload
+    assert "instances" in payload
+    assert "collected_at" in payload

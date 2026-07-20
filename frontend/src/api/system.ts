@@ -4,11 +4,13 @@ import {
   HealthResponseSchema,
   LbMetricsSchema,
   SystemInfoSchema,
+  SystemLogsSchema,
   SystemMetricsSchema,
   type Capabilities,
   type HealthResponse,
   type LbMetrics,
   type SystemInfo,
+  type SystemLogs,
   type SystemMetrics,
 } from "../types/system";
 
@@ -30,4 +32,8 @@ export function fetchLbMetrics(): Promise<LbMetrics> {
 
 export function fetchCapabilities(): Promise<Capabilities> {
   return apiFetch("/api/v1/system/capabilities", (data) => CapabilitiesSchema.parse(data));
+}
+
+export function fetchSystemLogs(): Promise<SystemLogs> {
+  return apiFetch("/api/v1/system/logs", (data) => SystemLogsSchema.parse(data));
 }

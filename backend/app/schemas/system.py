@@ -38,6 +38,32 @@ class CapabilitiesResponse(BaseModel):
     dataplane_services: list[str] = Field(default_factory=list)
 
 
+class SystemLogError(BaseModel):
+    instance_id: str
+    name: str
+    service_type: str
+    actual_state: str
+    health_status: str
+    last_error: str
+    updated_at: datetime
+
+
+class SystemLogInstance(BaseModel):
+    instance_id: str
+    name: str
+    service_type: str
+    actual_state: str
+    health_status: str
+    has_error: bool
+    container_name: str | None = None
+
+
+class SystemLogsResponse(BaseModel):
+    errors: list[SystemLogError] = Field(default_factory=list)
+    instances: list[SystemLogInstance] = Field(default_factory=list)
+    collected_at: datetime
+
+
 class NetworkTotalsRead(BaseModel):
     rx_bytes: int
     tx_bytes: int

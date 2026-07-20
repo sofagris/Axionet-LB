@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -8,6 +10,9 @@ from app.schemas.system import (
     HealthResponse,
     LbMetricsResponse,
     SystemInfoResponse,
+    SystemLogError,
+    SystemLogInstance,
+    SystemLogsResponse,
     SystemMetricsResponse,
 )
 from app.services.docker.client import DockerClientAdapter, create_docker_adapter
@@ -78,3 +83,40 @@ def get_lb_metrics(
 @router.get("/capabilities", response_model=CapabilitiesResponse)
 def get_capabilities(service: SystemService = Depends(get_system_service)) -> CapabilitiesResponse:
     return service.get_capabilities()
+
+
+@router.get("/logs", response_model=SystemLogsResponse)
+def get_system_logs(
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+    docker: DockerClientAdapter = Depends(get_docker_adapter),
+) -> SystemLogsResponse:
+    """Fleet log overview: instance errors and log sources (container tails via instance logs API)."""
+    instances = InstanceService(db=db, docker=docker, settings=settings).list_instances()
+    errors: list[SystemLogError] = []
+    overview: list[SystemLogInstance] = []
+    for item in instances:
+        overview.append(
+            SystemLogInstance(
+                instance_id=item.id,
+                name=item.name,
+                service_type=item.service_type,
+                actual_state=item.actual_state,
+                health_status=item.health_status,
+                has_error=bool(item.last_error),
+                container_name=item.container_name,
+            )
+        )
+        if item.last_error:
+            errors.append(
+                SystemLogError(
+                    instance_id=item.id,
+                    name=item.name,
+                    service_type=item.service_type,
+                    actual_state=item.actual_state,
+                    health_status=item.health_status,
+                    last_error=item.last_error,
+                    updated_at=item.updated_at,
+                )
+            )
+    return SystemLogsResponse(errors=errors, instances=overview, collected_at=datetime.now(UTC))

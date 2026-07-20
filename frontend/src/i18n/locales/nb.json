@@ -11,6 +11,7 @@
     "networks": "Networks",
     "catalog": "Catalog",
     "instances": "Instances",
+    "logs": "Logs",
     "settings": "Settings"
   },
   "theme": {
@@ -197,5 +198,16 @@
     "capabilities": "Capabilities",
     "features": "Features",
     "dataplane": "Dataplane-tjenester"
+  },
+  "logs": {
+    "title": "System Logs",
+    "subtitle": "Instance-feil og container-logger samlet. Velg en instans for å lese live tail.",
+    "errors": "Siste instance-feil",
+    "noErrors": "Ingen instance-feil rapportert.",
+    "containerLogs": "Container logs",
+    "tail": "Antall linjer",
+    "noInstances": "Ingen instanser. Opprett via",
+    "hasError": "feil",
+    "emptyTail": "(ingen logger)"
   }
 }

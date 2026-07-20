@@ -4,6 +4,7 @@ import {
   fetchHealth,
   fetchLbMetrics,
   fetchSystemInfo,
+  fetchSystemLogs,
   fetchSystemMetrics,
 } from "../../api/system";
 
@@ -42,5 +43,13 @@ export function useCapabilities() {
   return useQuery({
     queryKey: ["system", "capabilities"],
     queryFn: fetchCapabilities,
+  });
+}
+
+export function useSystemLogs() {
+  return useQuery({
+    queryKey: ["system", "logs"],
+    queryFn: fetchSystemLogs,
+    refetchInterval: 10_000,
   });
 }

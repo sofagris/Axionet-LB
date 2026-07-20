@@ -49,7 +49,10 @@ vi.mock("../api/instances", () => ({
   stopInstance: vi.fn(),
   restartInstance: vi.fn(),
   deleteInstance: vi.fn(),
-  fetchInstanceLogs: vi.fn(),
+  fetchInstanceLogs: vi.fn(async () => ({
+    id: "inst-1",
+    logs: "haproxy started\n",
+  })),
 }));
 
 vi.mock("../api/system", () => ({
@@ -77,6 +80,21 @@ vi.mock("../api/system", () => ({
   fetchCapabilities: vi.fn(async () => ({
     features: ["system.health"],
     dataplane_services: ["haproxy"],
+  })),
+  fetchSystemLogs: vi.fn(async () => ({
+    errors: [],
+    instances: [
+      {
+        instance_id: "inst-1",
+        name: "edge-1",
+        service_type: "haproxy",
+        actual_state: "running",
+        health_status: "healthy",
+        has_error: false,
+        container_name: "ax-haproxy-1",
+      },
+    ],
+    collected_at: "2026-07-20T16:00:00Z",
   })),
   fetchSystemMetrics: vi.fn(),
   fetchLbMetrics: vi.fn(),
@@ -134,5 +152,15 @@ describe("Service catalog and wizard", () => {
       expect(screen.getByText("/api/v1")).toBeInTheDocument();
     });
     expect(screen.getByText("/var/lib/ax-lb")).toBeInTheDocument();
+  });
+
+  it("shows system logs page", async () => {
+    renderAt("/logs");
+    await waitFor(() => {
+      expect(screen.getByText("edge-1")).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/haproxy started/)).toBeInTheDocument();
+    });
   });
 });
