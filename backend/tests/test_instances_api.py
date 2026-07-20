@@ -125,6 +125,55 @@ def test_create_start_stop_instance(client: TestClient, docker_adapter: MagicMoc
     docker_adapter.stop_container.assert_called()
 
 
+def test_reload_sends_sigusr2(client: TestClient, docker_adapter: MagicMock) -> None:
+    created = client.post(
+        "/api/v1/instances",
+        json={
+            "name": "edge-reload",
+            "service_type": "haproxy",
+            "desired_state": "stopped",
+            "networks": [{"network_id": "net-1", "ip_address": "172.30.50.20"}],
+        },
+    )
+    assert created.status_code == 201, created.text
+    instance_id = created.json()["id"]
+
+    docker_adapter.inspect_container.side_effect = None
+    docker_adapter.inspect_container.return_value = {"State": {"Status": "running"}}
+    docker_adapter.signal_container.reset_mock()
+    docker_adapter.restart_container.reset_mock()
+
+    reloaded = client.post(f"/api/v1/instances/{instance_id}/reload")
+    assert reloaded.status_code == 200, reloaded.text
+    assert reloaded.json()["desired_state"] == "running"
+    docker_adapter.signal_container.assert_called_once_with("container-1", "SIGUSR2")
+    docker_adapter.restart_container.assert_not_called()
+
+
+def test_reload_falls_back_to_restart(client: TestClient, docker_adapter: MagicMock) -> None:
+    from docker.errors import DockerException
+
+    created = client.post(
+        "/api/v1/instances",
+        json={
+            "name": "edge-reload-fb",
+            "desired_state": "stopped",
+            "networks": [{"network_id": "net-1", "ip_address": "172.30.50.21"}],
+        },
+    )
+    assert created.status_code == 201, created.text
+    instance_id = created.json()["id"]
+
+    docker_adapter.inspect_container.side_effect = None
+    docker_adapter.inspect_container.return_value = {"State": {"Status": "running"}}
+    docker_adapter.signal_container.side_effect = DockerException("signal failed")
+    docker_adapter.restart_container.reset_mock()
+
+    reloaded = client.post(f"/api/v1/instances/{instance_id}/reload")
+    assert reloaded.status_code == 200, reloaded.text
+    docker_adapter.restart_container.assert_called_once_with("container-1")
+
+
 def test_create_two_instances_same_port_different_ips(client: TestClient, docker_adapter: MagicMock) -> None:
     first = client.post(
         "/api/v1/instances",

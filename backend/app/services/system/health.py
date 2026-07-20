@@ -72,6 +72,7 @@ class SystemService:
                 "haproxy.acls",
                 "haproxy.runtime_status",
                 "haproxy.revisions",
+                "haproxy.soft_reload",
             ],
             dataplane_services=["haproxy"],
         )

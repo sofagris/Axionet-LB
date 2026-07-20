@@ -86,6 +86,9 @@ export function HaproxyDetailPage() {
   const [serverPort, setServerPort] = useState("80");
   const [serverWeight, setServerWeight] = useState("100");
   const [serverCheck, setServerCheck] = useState(true);
+  const [serverInterMs, setServerInterMs] = useState("2000");
+  const [serverRise, setServerRise] = useState("2");
+  const [serverFall, setServerFall] = useState("3");
 
   const [certName, setCertName] = useState("site");
   const [certPem, setCertPem] = useState("");
@@ -195,6 +198,9 @@ export function HaproxyDetailPage() {
     setServerPort("80");
     setServerWeight("100");
     setServerCheck(true);
+    setServerInterMs("2000");
+    setServerRise("2");
+    setServerFall("3");
   }
 
   function startEditServer(backend: string, server: HaproxyServer) {
@@ -205,6 +211,9 @@ export function HaproxyDetailPage() {
     setServerPort(String(server.port));
     setServerWeight(String(server.weight));
     setServerCheck(server.check);
+    setServerInterMs(String(server.inter_ms));
+    setServerRise(String(server.rise));
+    setServerFall(String(server.fall));
   }
 
   async function saveServer(event: FormEvent) {
@@ -215,9 +224,9 @@ export function HaproxyDetailPage() {
       port: Number(serverPort),
       check: serverCheck,
       weight: Number(serverWeight),
-      inter_ms: 2000,
-      rise: 2,
-      fall: 3,
+      inter_ms: Number(serverInterMs),
+      rise: Number(serverRise),
+      fall: Number(serverFall),
     };
     if (editingServer) {
       await mutations.updateServer.mutateAsync({
@@ -283,7 +292,7 @@ export function HaproxyDetailPage() {
               className="border border-line px-3 py-1.5 text-sm hover:border-accent disabled:opacity-60"
               onClick={() => actionMutation.mutate({ id: instanceId, action: "reload" })}
             >
-              Reload
+              Soft reload
             </button>
             <button
               type="button"
@@ -558,7 +567,7 @@ export function HaproxyDetailPage() {
         <section className="space-y-4">
           <form
             onSubmit={saveServer}
-            className="grid gap-3 border border-line bg-paper-elevated/40 p-4 md:grid-cols-3 lg:grid-cols-7"
+            className="grid gap-3 border border-line bg-paper-elevated/40 p-4 md:grid-cols-3 lg:grid-cols-5"
           >
             <select
               className="border border-line bg-paper px-3 py-2 font-mono text-sm"
@@ -609,6 +618,39 @@ export function HaproxyDetailPage() {
               />
               check
             </label>
+            <input
+              className="border border-line bg-paper px-3 py-2 font-mono text-sm disabled:opacity-50"
+              type="number"
+              min={100}
+              max={60000}
+              value={serverInterMs}
+              onChange={(e) => setServerInterMs(e.target.value)}
+              placeholder="inter ms"
+              disabled={!serverCheck}
+              title="check interval (ms)"
+            />
+            <input
+              className="border border-line bg-paper px-3 py-2 font-mono text-sm disabled:opacity-50"
+              type="number"
+              min={1}
+              max={100}
+              value={serverRise}
+              onChange={(e) => setServerRise(e.target.value)}
+              placeholder="rise"
+              disabled={!serverCheck}
+              title="rise"
+            />
+            <input
+              className="border border-line bg-paper px-3 py-2 font-mono text-sm disabled:opacity-50"
+              type="number"
+              min={1}
+              max={100}
+              value={serverFall}
+              onChange={(e) => setServerFall(e.target.value)}
+              placeholder="fall"
+              disabled={!serverCheck}
+              title="fall"
+            />
             <div className="flex gap-2">
               <button type="submit" className="flex-1 border border-accent bg-accent px-3 py-2 text-sm text-white">
                 {editingServer ? "Oppdater" : "Legg til"}
@@ -627,7 +669,9 @@ export function HaproxyDetailPage() {
                 backend.name,
                 server.name,
                 `${server.address}:${server.port}`,
-                server.check ? `yes/${server.inter_ms}ms` : "no",
+                server.check
+                  ? `yes/${server.inter_ms}ms r${server.rise}/f${server.fall}`
+                  : "no",
                 String(server.weight),
                 <div key={`sv-${backend.name}-${server.name}`} className="flex gap-3">
                   <button

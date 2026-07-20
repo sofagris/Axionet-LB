@@ -164,18 +164,18 @@ class InstanceService:
         if not validation.ok:
             raise ValueError(f"HAProxy config invalid: {validation.output}")
 
-        should_restart = (
+        should_reload = (
             restart_if_running
             and instance.desired_state == DesiredState.RUNNING.value
             and bool(instance.container_id)
         )
         deployment_status = DeploymentStatus.DEPLOYED
         try:
-            if should_restart:
-                self._docker.restart_container(instance.container_id or "")
+            if should_reload:
+                self._reload_or_restart(instance)
                 instance.desired_state = DesiredState.RUNNING.value
                 instance.actual_state = ActualState.RUNNING.value
-                instance.started_at = datetime.now(UTC)
+                instance.started_at = instance.started_at or datetime.now(UTC)
                 instance.last_error = None
                 instance.health_status = HealthStatus.HEALTHY.value
         except DockerException as exc:
@@ -271,8 +271,54 @@ class InstanceService:
         return instance
 
     def reload_instance(self, instance: ServiceInstance) -> ServiceInstance:
-        # MVP: restart; architecture ready for true HAProxy reload later
-        return self.restart_instance(instance)
+        """Soft-reload HAProxy master-worker (SIGUSR2). Falls back to restart on failure."""
+        if not instance.container_id:
+            return self.start_instance(instance)
+
+        self._write_config(instance)
+        validation = self._validator.validate_config_dict(
+            instance.configuration,
+            cert_files=self._load_cert_files(instance),
+        )
+        if not validation.ok:
+            raise ValueError(f"HAProxy config invalid: {validation.output}")
+
+        try:
+            self._reload_or_restart(instance)
+            instance.desired_state = DesiredState.RUNNING.value
+            instance.actual_state = ActualState.RUNNING.value
+            instance.started_at = instance.started_at or datetime.now(UTC)
+            instance.last_error = None
+            instance.health_status = HealthStatus.HEALTHY.value
+        except DockerException as exc:
+            instance.actual_state = ActualState.ERROR.value
+            instance.last_error = str(exc)
+            instance.health_status = HealthStatus.UNHEALTHY.value
+            self._db.commit()
+            raise RuntimeError(str(exc)) from exc
+        instance.updated_at = datetime.now(UTC)
+        self._db.commit()
+        self._db.refresh(instance)
+        return instance
+
+    def _reload_or_restart(self, instance: ServiceInstance) -> None:
+        """Prefer soft reload; fall back to container restart if signal fails."""
+        container_id = instance.container_id or ""
+        if not container_id:
+            raise DockerException("Instance has no container")
+        status = self.get_container_status(instance)
+        if status != "running":
+            self._docker.restart_container(container_id)
+            return
+        try:
+            self._docker.signal_container(container_id, "SIGUSR2")
+        except DockerException as exc:
+            logger.warning(
+                "Soft reload failed for %s (%s); falling back to restart",
+                instance.name,
+                exc,
+            )
+            self._docker.restart_container(container_id)
 
     def validate_instance(self, instance: ServiceInstance) -> tuple[bool, str, str]:
         rendered = render_haproxy_config(HaproxyConfig.from_dict(instance.configuration))

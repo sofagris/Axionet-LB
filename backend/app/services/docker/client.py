@@ -279,6 +279,15 @@ class DockerClientAdapter:
         except APIError as exc:
             raise DockerException(str(exc)) from exc
 
+    def signal_container(self, container_id: str, signal: str = "SIGUSR2") -> None:
+        """Send a Unix signal to a container's main process (PID 1)."""
+        try:
+            self._get_client().containers.get(container_id).kill(signal=signal)
+        except NotFound as exc:
+            raise DockerException(f"Container not found: {container_id}") from exc
+        except APIError as exc:
+            raise DockerException(str(exc)) from exc
+
     def remove_container(self, container_id: str) -> None:
         try:
             container = self._get_client().containers.get(container_id)
