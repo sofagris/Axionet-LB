@@ -1,0 +1,61 @@
+# AxioNet Load Balancer
+
+Modulær Linux-basert ADC-/lastbalanseringsplattform for gjenbrukte Citrix NetScaler SDX-appliances.
+
+Blank installasjon kjører kun kontrollplanet:
+
+- `ax-api` — FastAPI
+- `ax-gui` — React GUI
+
+Dataplan-containere (HAProxy, Varnish, …) opprettes senere via API/GUI.
+
+## Krav
+
+- Docker Engine 24+
+- Docker Compose plugin (`docker compose`)
+
+## Oppstart
+
+```bash
+cp .env.example .env
+docker compose up --build -d
+```
+
+GUI: http://\<vert\>/  
+API health: http://\<vert\>/api/v1/system/health
+
+## Utvikling lokalt
+
+### Backend
+
+```bash
+cd backend
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+source .venv/bin/activate
+pip install -e ".[dev]"
+export DATABASE_URL=sqlite:///./ax-lb.dev.db
+export AX_LB_DATA_DIR=.
+uvicorn app.main:app --reload --port 8000
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Vite proxier `/api` til `http://127.0.0.1:8000`.
+
+## Tester
+
+```bash
+cd backend && pytest
+cd frontend && npm test
+```
+
+## Repo
+
+https://github.com/Sofagris/axionet-lb

@@ -1,0 +1,45 @@
+services:
+  api:
+    build: ./backend
+    container_name: ax-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: sqlite:////var/lib/ax-lb/ax-lb.db
+      AX_LB_DATA_DIR: /var/lib/ax-lb
+      DOCKER_HOST: unix:///var/run/docker.sock
+      AX_LOG_LEVEL: INFO
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ax-lb-data:/var/lib/ax-lb
+      - ax-lb-run:/run/ax-lb
+    networks:
+      - control
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/v1/system/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 25s
+
+  gui:
+    build: ./frontend
+    container_name: ax-gui
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "80:80"
+    networks:
+      - control
+
+networks:
+  control:
+    driver: bridge
+    name: ax-control
+
+volumes:
+  ax-lb-data:
+    name: ax-lb-data
+  ax-lb-run:
+    name: ax-lb-run

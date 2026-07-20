@@ -1,0 +1,39 @@
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
+from app.core.config import Settings, get_settings
+from app.db.session import get_db
+from app.schemas.system import CapabilitiesResponse, HealthResponse, SystemInfoResponse
+from app.services.docker.client import DockerClientAdapter, create_docker_adapter
+from app.services.system.health import SystemService
+
+router = APIRouter(prefix="/system", tags=["system"])
+
+
+def get_docker_adapter(settings: Settings = Depends(get_settings)) -> DockerClientAdapter:
+    return create_docker_adapter(settings)
+
+
+def get_system_service(
+    settings: Settings = Depends(get_settings),
+    docker_adapter: DockerClientAdapter = Depends(get_docker_adapter),
+) -> SystemService:
+    return SystemService(settings=settings, docker_adapter=docker_adapter)
+
+
+@router.get("", response_model=SystemInfoResponse)
+def get_system(service: SystemService = Depends(get_system_service)) -> SystemInfoResponse:
+    return service.get_info()
+
+
+@router.get("/health", response_model=HealthResponse)
+def get_health(
+    db: Session = Depends(get_db),
+    service: SystemService = Depends(get_system_service),
+) -> HealthResponse:
+    return service.check_health(db)
+
+
+@router.get("/capabilities", response_model=CapabilitiesResponse)
+def get_capabilities(service: SystemService = Depends(get_system_service)) -> CapabilitiesResponse:
+    return service.get_capabilities()
