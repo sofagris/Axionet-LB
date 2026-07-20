@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
@@ -111,12 +111,12 @@ def update_frontend(
     return HaproxyFrontendRead.model_validate(item.model_dump())
 
 
-@router.delete("/frontends/{frontend_name}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/frontends/{frontend_name}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
 def delete_frontend(
     instance_id: str,
     frontend_name: str,
     service: InstanceService = Depends(get_instance_service),
-) -> None:
+) -> Response:
     instance = _require_instance(service, instance_id)
     editor = HaproxyConfigEditor(instance.configuration)
     try:
@@ -124,6 +124,7 @@ def delete_frontend(
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     _save(service, instance, editor)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/backends", response_model=list[HaproxyBackendRead])
@@ -171,12 +172,12 @@ def update_backend(
     return HaproxyBackendRead.model_validate(item.model_dump())
 
 
-@router.delete("/backends/{backend_name}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/backends/{backend_name}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
 def delete_backend(
     instance_id: str,
     backend_name: str,
     service: InstanceService = Depends(get_instance_service),
-) -> None:
+) -> Response:
     instance = _require_instance(service, instance_id)
     editor = HaproxyConfigEditor(instance.configuration)
     try:
@@ -184,6 +185,7 @@ def delete_backend(
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     _save(service, instance, editor)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/backends/{backend_name}/servers", response_model=list[HaproxyServerRead])
@@ -248,13 +250,14 @@ def update_server(
 @router.delete(
     "/backends/{backend_name}/servers/{server_name}",
     status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
 )
 def delete_server(
     instance_id: str,
     backend_name: str,
     server_name: str,
     service: InstanceService = Depends(get_instance_service),
-) -> None:
+) -> Response:
     instance = _require_instance(service, instance_id)
     editor = HaproxyConfigEditor(instance.configuration)
     try:
@@ -262,6 +265,7 @@ def delete_server(
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     _save(service, instance, editor)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/status", response_model=HaproxyRuntimeStatus)
