@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
@@ -11,6 +11,9 @@ from app.schemas.system import (
     CapabilitiesResponse,
     HealthResponse,
     LbMetricsResponse,
+    OrphanPruneRequest,
+    OrphanPruneResult,
+    OrphanReport,
     SystemInfoResponse,
     SystemLogError,
     SystemLogInstance,
@@ -23,6 +26,7 @@ from app.services.instances.metrics import HaproxyMetricsCollector
 from app.services.instances.service import InstanceService
 from app.services.system.health import SystemService
 from app.services.system.metrics import HostMetricsCollector
+from app.services.system.orphans import OrphanService
 
 router = APIRouter(prefix="/system", tags=["system"])
 
@@ -146,3 +150,33 @@ def list_audit_events(
         limit=min(max(limit, 1), 500),
         offset=max(offset, 0),
     )
+
+
+def get_orphan_service(
+    db: Session = Depends(get_db),
+    docker_adapter: DockerClientAdapter = Depends(get_docker_adapter),
+) -> OrphanService:
+    return OrphanService(db=db, docker=docker_adapter)
+
+
+@router.get("/orphans", response_model=OrphanReport)
+def get_orphans(service: OrphanService = Depends(get_orphan_service)) -> OrphanReport:
+    return OrphanReport.model_validate(service.scan())
+
+
+@router.post("/orphans/prune", response_model=OrphanPruneResult)
+def prune_orphans(
+    payload: OrphanPruneRequest,
+    service: OrphanService = Depends(get_orphan_service),
+) -> OrphanPruneResult:
+    try:
+        result = service.prune(
+            container_ids=payload.container_ids,
+            network_ids=payload.network_ids,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    return OrphanPruneResult.model_validate(result)

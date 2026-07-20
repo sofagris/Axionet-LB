@@ -158,3 +158,47 @@ class LbMetricsResponse(BaseModel):
     totals: LbMetricsTotals
     instances: list[LbInstanceMetricsRead] = Field(default_factory=list)
     collected_at: datetime
+
+
+class OrphanContainer(BaseModel):
+    kind: Literal["container"] = "container"
+    id: str
+    name: str
+    status: str
+    image: str = ""
+    instance_id: str | None = None
+    service_type: str | None = None
+    reason: str
+    prunable: bool = False
+
+
+class OrphanNetwork(BaseModel):
+    kind: Literal["network"] = "network"
+    id: str
+    name: str
+    driver: str = ""
+    network_id: str | None = None
+    network_type: str | None = None
+    reason: str
+    prunable: bool = False
+
+
+class OrphanReport(BaseModel):
+    docker_ok: bool
+    docker_error: str | None = None
+    orphan_containers: list[OrphanContainer] = Field(default_factory=list)
+    orphan_networks: list[OrphanNetwork] = Field(default_factory=list)
+    missing_containers: list[OrphanContainer] = Field(default_factory=list)
+    missing_networks: list[OrphanNetwork] = Field(default_factory=list)
+    collected_at: datetime
+
+
+class OrphanPruneRequest(BaseModel):
+    container_ids: list[str] = Field(default_factory=list)
+    network_ids: list[str] = Field(default_factory=list)
+
+
+class OrphanPruneResult(BaseModel):
+    removed_containers: list[str] = Field(default_factory=list)
+    removed_networks: list[str] = Field(default_factory=list)
+    errors: list[str] = Field(default_factory=list)

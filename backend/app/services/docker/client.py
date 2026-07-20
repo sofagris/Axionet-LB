@@ -302,6 +302,53 @@ class DockerClientAdapter:
         except APIError as exc:
             raise DockerException(str(exc)) from exc
 
+    def list_managed_containers(self) -> list[dict[str, Any]]:
+        """Return AxioNet-managed containers (excludes ephemeral validate/runtime probes)."""
+        client = self._get_client()
+        try:
+            containers = client.containers.list(all=True, filters={"label": f"{MANAGED_LABEL}=true"})
+        except APIError as exc:
+            raise DockerException(str(exc)) from exc
+        rows: list[dict[str, Any]] = []
+        for container in containers:
+            labels = dict(container.labels or {})
+            purpose = labels.get("axionet.purpose", "")
+            if purpose in {"config-validate", "runtime-probe"}:
+                continue
+            rows.append(
+                {
+                    "id": container.id,
+                    "name": (container.name or "").lstrip("/"),
+                    "status": container.status,
+                    "image": (
+                        container.image.tags[0]
+                        if container.image.tags
+                        else (container.attrs.get("Config", {}) or {}).get("Image", "")
+                    ),
+                    "labels": labels,
+                }
+            )
+        return rows
+
+    def list_managed_networks(self) -> list[dict[str, Any]]:
+        client = self._get_client()
+        try:
+            networks = client.networks.list(filters={"label": f"{MANAGED_LABEL}=true"})
+        except APIError as exc:
+            raise DockerException(str(exc)) from exc
+        rows: list[dict[str, Any]] = []
+        for network in networks:
+            labels = dict(network.attrs.get("Labels") or {})
+            rows.append(
+                {
+                    "id": network.id,
+                    "name": network.name,
+                    "driver": (network.attrs.get("Driver") or ""),
+                    "labels": labels,
+                }
+            )
+        return rows
+
     def inspect_container(self, container_id: str) -> dict[str, Any] | None:
         try:
             container = self._get_client().containers.get(container_id)

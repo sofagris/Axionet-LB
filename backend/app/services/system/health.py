@@ -79,6 +79,7 @@ class SystemService:
                 "haproxy.clear_counters",
                 "system.logs",
                 "system.audit",
+                "system.orphans",
                 "instances.reconcile_loop",
             ],
             dataplane_services=["haproxy"],

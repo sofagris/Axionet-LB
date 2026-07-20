@@ -197,8 +197,24 @@
     "checkedAt": "Sist sjekket {{time}}",
     "capabilities": "Capabilities",
     "features": "Features",
-    "dataplane": "Dataplane-tjenester"
+    "dataplane": "Dataplane-tjenester",
+    "orphans": "Orphan-ressurser",
+    "orphansHint": "Managed Docker-containere og -nettverk uten match i kontrollplanet, samt DB-rader der Docker-objektet mangler.",
+    "orphansRefresh": "Skann på nytt",
+    "orphansSelectAll": "Velg alle",
+    "orphansPrune": "Slett valgte",
+    "orphansPruning": "Sletter…",
+    "orphansConfirm": "Slette valgte orphan-containere/nettverk permanent? Dette kan ikke angres.",
+    "orphansPruneResult": "Fjernet {{containers}} containere og {{networks}} nettverk",
+    "orphansDockerError": "Docker utilgjengelig: {{detail}}",
+    "orphansSummary": "{{orphans}} orphans · {{missing}} manglende · {{time}}",
+    "orphanContainers": "Orphan-containere",
+    "orphanNetworks": "Orphan-nettverk",
+    "missingContainers": "DB-containere mangler i Docker",
+    "missingNetworks": "DB-nettverk mangler i Docker",
+    "orphansNone": "Ingen."
   },
+
   "logs": {
     "title": "System Logs",
     "subtitle": "Instance-feil, audit-hendelser og container-logger samlet. Velg en instans for å lese live tail.",

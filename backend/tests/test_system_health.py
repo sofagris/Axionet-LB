@@ -48,6 +48,7 @@ def test_capabilities(client: TestClient) -> None:
     assert "haproxy.clear_counters" in payload["features"]
     assert "haproxy.defaults" in payload["features"]
     assert "system.audit" in payload["features"]
+    assert "system.orphans" in payload["features"]
 
 
 def test_system_logs_overview(client: TestClient) -> None:

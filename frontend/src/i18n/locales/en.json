@@ -197,8 +197,24 @@
     "checkedAt": "Last checked {{time}}",
     "capabilities": "Capabilities",
     "features": "Features",
-    "dataplane": "Dataplane services"
+    "dataplane": "Dataplane services",
+    "orphans": "Orphan resources",
+    "orphansHint": "Managed Docker containers and networks with no control-plane match, plus DB rows whose Docker object is gone.",
+    "orphansRefresh": "Rescan",
+    "orphansSelectAll": "Select all",
+    "orphansPrune": "Delete selected",
+    "orphansPruning": "Deleting…",
+    "orphansConfirm": "Permanently delete the selected orphan containers/networks? This cannot be undone.",
+    "orphansPruneResult": "Removed {{containers}} containers and {{networks}} networks",
+    "orphansDockerError": "Docker unavailable: {{detail}}",
+    "orphansSummary": "{{orphans}} orphans · {{missing}} missing · {{time}}",
+    "orphanContainers": "Orphan containers",
+    "orphanNetworks": "Orphan networks",
+    "missingContainers": "DB containers missing in Docker",
+    "missingNetworks": "DB networks missing in Docker",
+    "orphansNone": "None."
   },
+
   "logs": {
     "title": "System Logs",
     "subtitle": "Instance errors, audit events, and container logs in one place. Pick an instance to read a live tail.",

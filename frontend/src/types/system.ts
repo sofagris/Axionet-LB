@@ -175,6 +175,45 @@ export const AuditEventListSchema = z.object({
   offset: z.number().int(),
 });
 
+export const OrphanContainerSchema = z.object({
+  kind: z.literal("container").default("container"),
+  id: z.string(),
+  name: z.string(),
+  status: z.string(),
+  image: z.string().optional().default(""),
+  instance_id: z.string().nullable().optional(),
+  service_type: z.string().nullable().optional(),
+  reason: z.string(),
+  prunable: z.boolean().optional().default(false),
+});
+
+export const OrphanNetworkSchema = z.object({
+  kind: z.literal("network").default("network"),
+  id: z.string(),
+  name: z.string(),
+  driver: z.string().optional().default(""),
+  network_id: z.string().nullable().optional(),
+  network_type: z.string().nullable().optional(),
+  reason: z.string(),
+  prunable: z.boolean().optional().default(false),
+});
+
+export const OrphanReportSchema = z.object({
+  docker_ok: z.boolean(),
+  docker_error: z.string().nullable().optional(),
+  orphan_containers: z.array(OrphanContainerSchema).default([]),
+  orphan_networks: z.array(OrphanNetworkSchema).default([]),
+  missing_containers: z.array(OrphanContainerSchema).default([]),
+  missing_networks: z.array(OrphanNetworkSchema).default([]),
+  collected_at: z.string(),
+});
+
+export const OrphanPruneResultSchema = z.object({
+  removed_containers: z.array(z.string()).default([]),
+  removed_networks: z.array(z.string()).default([]),
+  errors: z.array(z.string()).default([]),
+});
+
 export type HealthResponse = z.infer<typeof HealthResponseSchema>;
 export type SystemInfo = z.infer<typeof SystemInfoSchema>;
 export type SystemMetrics = z.infer<typeof SystemMetricsSchema>;
@@ -185,3 +224,5 @@ export type SystemLogs = z.infer<typeof SystemLogsSchema>;
 export type AuditEvent = z.infer<typeof AuditEventSchema>;
 export type AuditEventList = z.infer<typeof AuditEventListSchema>;
 export type ComponentHealth = z.infer<typeof ComponentHealthSchema>;
+export type OrphanReport = z.infer<typeof OrphanReportSchema>;
+export type OrphanPruneResult = z.infer<typeof OrphanPruneResultSchema>;

@@ -1,11 +1,14 @@
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   useCapabilities,
+  useOrphans,
+  usePruneOrphans,
   useSystemHealth,
   useSystemInfo,
 } from "../features/system/hooks";
-import type { ComponentHealth } from "../types/system";
+import type { ComponentHealth, OrphanReport } from "../types/system";
 
 function statusTone(status: string): string {
   if (status === "ok") return "text-ok";
@@ -19,10 +22,61 @@ export function SettingsPage() {
   const infoQuery = useSystemInfo();
   const healthQuery = useSystemHealth();
   const capsQuery = useCapabilities();
+  const orphansQuery = useOrphans();
+  const pruneMutation = usePruneOrphans();
+
+  const [selectedContainers, setSelectedContainers] = useState<Set<string>>(new Set());
+  const [selectedNetworks, setSelectedNetworks] = useState<Set<string>>(new Set());
 
   const info = infoQuery.data;
   const health = healthQuery.data;
   const caps = capsQuery.data;
+  const orphans = orphansQuery.data;
+
+  const orphanCount = useMemo(() => {
+    if (!orphans) return 0;
+    return orphans.orphan_containers.length + orphans.orphan_networks.length;
+  }, [orphans]);
+
+  const missingCount = useMemo(() => {
+    if (!orphans) return 0;
+    return orphans.missing_containers.length + orphans.missing_networks.length;
+  }, [orphans]);
+
+  function toggleContainer(id: string) {
+    setSelectedContainers((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleNetwork(id: string) {
+    setSelectedNetworks((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAllPrunable(report: OrphanReport) {
+    setSelectedContainers(new Set(report.orphan_containers.filter((c) => c.prunable).map((c) => c.id)));
+    setSelectedNetworks(new Set(report.orphan_networks.filter((n) => n.prunable).map((n) => n.id)));
+  }
+
+  async function handlePrune() {
+    if (selectedContainers.size === 0 && selectedNetworks.size === 0) return;
+    const confirmed = window.confirm(t("settings.orphansConfirm"));
+    if (!confirmed) return;
+    await pruneMutation.mutateAsync({
+      container_ids: [...selectedContainers],
+      network_ids: [...selectedNetworks],
+    });
+    setSelectedContainers(new Set());
+    setSelectedNetworks(new Set());
+  }
 
   return (
     <div className="space-y-8">
@@ -96,6 +150,134 @@ export function SettingsPage() {
       </section>
 
       <section className="border border-line bg-paper-elevated p-5 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-semibold text-ink">{t("settings.orphans")}</h3>
+            <p className="mt-1 max-w-2xl text-sm text-ink-muted">{t("settings.orphansHint")}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="border border-line px-3 py-1.5 text-sm text-ink hover:bg-paper"
+              onClick={() => void orphansQuery.refetch()}
+              disabled={orphansQuery.isFetching}
+            >
+              {t("settings.orphansRefresh")}
+            </button>
+            {orphans && orphanCount > 0 ? (
+              <button
+                type="button"
+                className="border border-line px-3 py-1.5 text-sm text-ink hover:bg-paper"
+                onClick={() => selectAllPrunable(orphans)}
+              >
+                {t("settings.orphansSelectAll")}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="border border-danger/40 bg-danger/10 px-3 py-1.5 text-sm text-danger disabled:opacity-40"
+              onClick={() => void handlePrune()}
+              disabled={
+                pruneMutation.isPending ||
+                (selectedContainers.size === 0 && selectedNetworks.size === 0)
+              }
+            >
+              {pruneMutation.isPending ? t("settings.orphansPruning") : t("settings.orphansPrune")}
+            </button>
+          </div>
+        </div>
+
+        {orphansQuery.isLoading ? <p className="mt-3 text-ink-muted">{t("common.loading")}</p> : null}
+        {orphansQuery.isError ? (
+          <p className="mt-3 text-sm text-danger">
+            {orphansQuery.error instanceof Error
+              ? orphansQuery.error.message
+              : t("common.unknownError")}
+          </p>
+        ) : null}
+        {pruneMutation.isError ? (
+          <p className="mt-3 text-sm text-danger">
+            {pruneMutation.error instanceof Error
+              ? pruneMutation.error.message
+              : t("common.unknownError")}
+          </p>
+        ) : null}
+        {pruneMutation.isSuccess && pruneMutation.data ? (
+          <p className="mt-3 text-sm text-ok">
+            {t("settings.orphansPruneResult", {
+              containers: pruneMutation.data.removed_containers.length,
+              networks: pruneMutation.data.removed_networks.length,
+            })}
+            {pruneMutation.data.errors.length > 0
+              ? ` — ${pruneMutation.data.errors.join("; ")}`
+              : null}
+          </p>
+        ) : null}
+
+        {orphans ? (
+          <div className="mt-4 space-y-4">
+            {!orphans.docker_ok ? (
+              <p className="text-sm text-warn">
+                {t("settings.orphansDockerError", {
+                  detail: orphans.docker_error ?? t("common.unknownError"),
+                })}
+              </p>
+            ) : null}
+
+            <p className="font-mono text-xs text-ink-muted">
+              {t("settings.orphansSummary", {
+                orphans: orphanCount,
+                missing: missingCount,
+                time: new Date(orphans.collected_at).toLocaleString(),
+              })}
+            </p>
+
+            <OrphanGroup
+              title={t("settings.orphanContainers")}
+              empty={t("settings.orphansNone")}
+              items={orphans.orphan_containers}
+              selected={selectedContainers}
+              onToggle={toggleContainer}
+              renderMeta={(item) =>
+                `${item.status}${item.service_type ? ` · ${item.service_type}` : ""} · ${item.reason}`
+              }
+            />
+
+            <OrphanGroup
+              title={t("settings.orphanNetworks")}
+              empty={t("settings.orphansNone")}
+              items={orphans.orphan_networks}
+              selected={selectedNetworks}
+              onToggle={toggleNetwork}
+              renderMeta={(item) =>
+                `${item.driver || "—"}${item.network_type ? ` · ${item.network_type}` : ""} · ${item.reason}`
+              }
+            />
+
+            <OrphanGroup
+              title={t("settings.missingContainers")}
+              empty={t("settings.orphansNone")}
+              items={orphans.missing_containers}
+              selectable={false}
+              renderMeta={(item) =>
+                `${item.instance_id ?? "—"} · ${item.reason}`
+              }
+            />
+
+            <OrphanGroup
+              title={t("settings.missingNetworks")}
+              empty={t("settings.orphansNone")}
+              items={orphans.missing_networks}
+              selectable={false}
+              renderMeta={(item) =>
+                `${item.network_id ?? "—"} · ${item.reason}`
+              }
+            />
+          </div>
+        ) : null}
+      </section>
+
+      <section className="border border-line bg-paper-elevated p-5 shadow-sm">
         <h3 className="font-semibold text-ink">{t("settings.capabilities")}</h3>
         {capsQuery.isLoading ? <p className="mt-3 text-ink-muted">{t("common.loading")}</p> : null}
         {caps ? (
@@ -161,6 +343,56 @@ function ComponentRow({ name, component }: { name: string; component: ComponentH
           <p className="mt-1 font-mono text-xs text-ink-muted">{component.latency_ms.toFixed(1)} ms</p>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+function OrphanGroup<T extends { id: string; name: string; prunable?: boolean }>({
+  title,
+  empty,
+  items,
+  selected,
+  onToggle,
+  selectable = true,
+  renderMeta,
+}: {
+  title: string;
+  empty: string;
+  items: T[];
+  selected?: Set<string>;
+  onToggle?: (id: string) => void;
+  selectable?: boolean;
+  renderMeta: (item: T) => string;
+}) {
+  return (
+    <div>
+      <p className="text-xs tracking-wide text-ink-muted uppercase">
+        {title} ({items.length})
+      </p>
+      {items.length === 0 ? (
+        <p className="mt-2 text-sm text-ink-muted">{empty}</p>
+      ) : (
+        <ul className="mt-2 divide-y divide-line border border-line">
+          {items.map((item) => (
+            <li key={item.id} className="flex items-start gap-3 px-3 py-2 text-sm">
+              {selectable ? (
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={selected?.has(item.id) ?? false}
+                  disabled={!item.prunable}
+                  onChange={() => onToggle?.(item.id)}
+                />
+              ) : null}
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-ink">{item.name}</p>
+                <p className="mt-0.5 truncate font-mono text-xs text-ink-muted">{item.id}</p>
+                <p className="mt-0.5 font-mono text-xs text-ink-muted">{renderMeta(item)}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
