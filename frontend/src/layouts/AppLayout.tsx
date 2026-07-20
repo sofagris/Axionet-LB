@@ -41,6 +41,9 @@ export function AppLayout() {
               <NavLink className={navClass} to="/instances">
                 {t("nav.instances")}
               </NavLink>
+              <NavLink className={navClass} to="/settings">
+                {t("nav.settings")}
+              </NavLink>
             </nav>
             <div className="flex items-center gap-2 border-l border-line pl-4">
               <label className="sr-only" htmlFor="locale-select">

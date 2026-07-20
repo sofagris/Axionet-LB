@@ -9,7 +9,8 @@ import {
   useHaproxyMutations,
   useHaproxyStatus,
 } from "../features/haproxy/hooks";
-import { useInstanceLogs, useInstances } from "../features/instances/hooks";
+import { useInstanceLogs, useInstanceMetrics, useInstanceAction, useInstances, useValidateExistingInstance } from "../features/instances/hooks";
+import type { InstanceValidateResult } from "../types/instances";
 import { useRestoreRevision, useRevision, useRevisions } from "../features/revisions/hooks";
 import type { HaproxyAcl, HaproxyBackend, HaproxyFrontend, HaproxyServer } from "../types/haproxy";
 
@@ -59,6 +60,10 @@ export function HaproxyDetailPage() {
   const revisionDetailQuery = useRevision(instanceId, selectedRevisionId);
   const restoreRevision = useRestoreRevision(instanceId);
   const logsQuery = useInstanceLogs(tab === "logs" ? instanceId : null, logTail);
+  const metricsQuery = useInstanceMetrics(tab === "overview" ? instanceId : null);
+  const actionMutation = useInstanceAction();
+  const validateMutation = useValidateExistingInstance();
+  const [overviewValidation, setOverviewValidation] = useState<InstanceValidateResult | null>(null);
   const mutations = useHaproxyMutations(instanceId);
 
   const [editingFrontend, setEditingFrontend] = useState<string | null>(null);
@@ -271,6 +276,52 @@ export function HaproxyDetailPage() {
 
       {tab === "overview" ? (
         <section className="space-y-6">
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              disabled={actionMutation.isPending}
+              className="border border-line px-3 py-1.5 text-sm hover:border-accent disabled:opacity-60"
+              onClick={() => actionMutation.mutate({ id: instanceId, action: "reload" })}
+            >
+              Reload
+            </button>
+            <button
+              type="button"
+              disabled={actionMutation.isPending}
+              className="border border-line px-3 py-1.5 text-sm hover:border-accent disabled:opacity-60"
+              onClick={() => actionMutation.mutate({ id: instanceId, action: "reconcile" })}
+            >
+              Reconcile
+            </button>
+            <button
+              type="button"
+              disabled={validateMutation.isPending}
+              className="border border-line px-3 py-1.5 text-sm hover:border-accent disabled:opacity-60"
+              onClick={() => {
+                void validateMutation.mutateAsync(instanceId).then(setOverviewValidation);
+              }}
+            >
+              Validate
+            </button>
+            <button
+              type="button"
+              disabled={actionMutation.isPending}
+              className="border border-line px-3 py-1.5 text-sm hover:border-accent disabled:opacity-60"
+              onClick={() => actionMutation.mutate({ id: instanceId, action: "restart" })}
+            >
+              Restart
+            </button>
+          </div>
+          {actionMutation.isError ? (
+            <p className="text-sm text-danger">
+              {actionMutation.error instanceof Error ? actionMutation.error.message : "Feil"}
+            </p>
+          ) : null}
+          {overviewValidation ? (
+            <p className={`font-mono text-sm ${overviewValidation.ok ? "text-ok" : "text-danger"}`}>
+              {overviewValidation.ok ? "Config valid" : "Config invalid"}: {overviewValidation.output}
+            </p>
+          ) : null}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard label="Frontends" value={String(frontendsQuery.data?.length ?? "…")} />
             <StatCard label="Backends" value={String(backendsQuery.data?.length ?? "…")} />
@@ -290,7 +341,38 @@ export function HaproxyDetailPage() {
             <StatCard label="Image" value={instance?.image ?? "—"} />
             <StatCard label="Desired" value={instance?.desired_state ?? "—"} />
             <StatCard label="Health" value={instance?.health_status ?? "—"} />
+            <StatCard
+              label="Sessions"
+              value={
+                metricsQuery.data?.available
+                  ? String(metricsQuery.data.current_sessions)
+                  : metricsQuery.data?.detail
+                    ? "—"
+                    : "…"
+              }
+            />
+            <StatCard
+              label="Session rate"
+              value={metricsQuery.data?.available ? String(metricsQuery.data.session_rate) : "—"}
+            />
+            <StatCard
+              label="Servers up"
+              value={
+                metricsQuery.data?.available
+                  ? `${metricsQuery.data.servers_up}/${metricsQuery.data.servers_total}`
+                  : "—"
+              }
+            />
+            <StatCard
+              label="Bytes out"
+              value={
+                metricsQuery.data?.available ? String(metricsQuery.data.bytes_out) : "—"
+              }
+            />
           </div>
+          {metricsQuery.data && !metricsQuery.data.available && metricsQuery.data.detail ? (
+            <p className="font-mono text-xs text-ink-muted">{metricsQuery.data.detail}</p>
+          ) : null}
           {instance?.last_error ? (
             <p className="font-mono text-xs text-danger">{instance.last_error}</p>
           ) : null}

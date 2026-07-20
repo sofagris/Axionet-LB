@@ -10,7 +10,8 @@
     "interfaces": "Interfaces",
     "networks": "Networks",
     "catalog": "Catalog",
-    "instances": "Instances"
+    "instances": "Instances",
+    "settings": "Settings"
   },
   "theme": {
     "toLight": "Switch to light mode",
@@ -170,6 +171,31 @@
     "start": "Start",
     "stop": "Stop",
     "restart": "Restart",
+    "reload": "Reload",
+    "reconcile": "Reconcile",
+    "validate": "Validate",
+    "validateResult": "Validation result",
     "delete": "Delete"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Control-plane info, health, and capabilities. Change the management NIC under Interfaces.",
+    "systemInfo": "System info",
+    "name": "Name",
+    "version": "Version",
+    "apiPrefix": "API prefix",
+    "dataDir": "Data directory",
+    "database": "Database",
+    "docker": "Docker",
+    "configured": "configured",
+    "missing": "missing",
+    "mgmtInterface": "Management interface",
+    "mgmtBindIp": "Management bind IP",
+    "mgmtHint": "Change the management interface under",
+    "health": "System health",
+    "checkedAt": "Last checked {{time}}",
+    "capabilities": "Capabilities",
+    "features": "Features",
+    "dataplane": "Dataplane services"
   }
 }

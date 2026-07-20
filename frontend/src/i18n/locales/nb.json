@@ -10,7 +10,8 @@
     "interfaces": "Interfaces",
     "networks": "Networks",
     "catalog": "Catalog",
-    "instances": "Instances"
+    "instances": "Instances",
+    "settings": "Settings"
   },
   "theme": {
     "toLight": "Bytt til lys modus",
@@ -170,6 +171,31 @@
     "start": "Start",
     "stop": "Stop",
     "restart": "Restart",
+    "reload": "Reload",
+    "reconcile": "Reconcile",
+    "validate": "Validate",
+    "validateResult": "Valideringsresultat",
     "delete": "Slett"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Kontrollplan-informasjon, health og capabilities. Management-NIC endres under Interfaces.",
+    "systemInfo": "Systeminfo",
+    "name": "Navn",
+    "version": "Versjon",
+    "apiPrefix": "API-prefix",
+    "dataDir": "Data-katalog",
+    "database": "Database",
+    "docker": "Docker",
+    "configured": "konfigurert",
+    "missing": "mangler",
+    "mgmtInterface": "Management-interface",
+    "mgmtBindIp": "Management bind-IP",
+    "mgmtHint": "Bytt management-interface under",
+    "health": "System health",
+    "checkedAt": "Sist sjekket {{time}}",
+    "capabilities": "Capabilities",
+    "features": "Features",
+    "dataplane": "Dataplane-tjenester"
   }
 }

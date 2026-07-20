@@ -28,6 +28,10 @@ vi.mock("../api/system", () => ({
     management_interface: "eth0",
     management_bind_ip: "192.168.50.195",
   })),
+  fetchCapabilities: vi.fn(async () => ({
+    features: ["system.health", "instances.haproxy"],
+    dataplane_services: ["haproxy"],
+  })),
   fetchSystemMetrics: vi.fn(async () => ({
     cpu_percent: 12.5,
     mem_total_bytes: 16 * 1024 ** 3,

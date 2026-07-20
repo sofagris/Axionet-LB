@@ -2,11 +2,13 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  type InstanceAction,
   useInstanceAction,
   useInstanceLogs,
   useInstances,
+  useValidateExistingInstance,
 } from "../features/instances/hooks";
-import type { Instance } from "../types/instances";
+import type { Instance, InstanceValidateResult } from "../types/instances";
 
 function stateTone(state: string): string {
   if (state === "running" || state === "healthy") return "text-ok";
@@ -26,8 +28,16 @@ export function InstancesPage() {
   const { t } = useTranslation();
   const instancesQuery = useInstances();
   const actionMutation = useInstanceAction();
+  const validateMutation = useValidateExistingInstance();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [validation, setValidation] = useState<InstanceValidateResult | null>(null);
   const logsQuery = useInstanceLogs(selectedId);
+
+  async function onValidate(id: string) {
+    setSelectedId(id);
+    const result = await validateMutation.mutateAsync(id);
+    setValidation(result);
+  }
 
   return (
     <div className="space-y-8">
@@ -72,9 +82,13 @@ export function InstancesPage() {
                     key={instance.id}
                     instance={instance}
                     selected={selectedId === instance.id}
-                    busy={actionMutation.isPending}
-                    onSelect={() => setSelectedId(instance.id)}
+                    busy={actionMutation.isPending || validateMutation.isPending}
+                    onSelect={() => {
+                      setSelectedId(instance.id);
+                      setValidation(null);
+                    }}
                     onAction={(action) => actionMutation.mutate({ id: instance.id, action })}
+                    onValidate={() => void onValidate(instance.id)}
                   />
                 ))}
               </tbody>
@@ -87,7 +101,26 @@ export function InstancesPage() {
                 : t("common.unknownError")}
             </p>
           ) : null}
+          {validateMutation.isError ? (
+            <p className="mt-3 text-sm text-danger">
+              {validateMutation.error instanceof Error
+                ? validateMutation.error.message
+                : t("common.unknownError")}
+            </p>
+          ) : null}
         </div>
+      ) : null}
+
+      {validation ? (
+        <section className="border border-line bg-paper-elevated p-4 shadow-sm">
+          <h3 className="font-semibold text-ink">{t("instances.validateResult")}</h3>
+          <p className={`mt-2 font-mono text-sm ${validation.ok ? "text-ok" : "text-danger"}`}>
+            {validation.ok ? t("wizard.validOk") : t("wizard.validFail")}
+          </p>
+          <pre className="mt-3 max-h-40 overflow-auto bg-ink px-3 py-3 font-mono text-xs text-paper">
+            {validation.output}
+          </pre>
+        </section>
       ) : null}
 
       {selectedId ? (
@@ -111,12 +144,14 @@ function InstanceRow({
   busy,
   onSelect,
   onAction,
+  onValidate,
 }: {
   instance: Instance;
   selected: boolean;
   busy: boolean;
   onSelect: () => void;
-  onAction: (action: "start" | "stop" | "restart" | "delete") => void;
+  onAction: (action: InstanceAction) => void;
+  onValidate: () => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -175,6 +210,30 @@ function InstanceRow({
             onClick={() => onAction("restart")}
           >
             {t("instances.restart")}
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            className="text-xs text-ink-muted hover:underline"
+            onClick={() => onAction("reload")}
+          >
+            {t("instances.reload")}
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            className="text-xs text-ink-muted hover:underline"
+            onClick={() => onAction("reconcile")}
+          >
+            {t("instances.reconcile")}
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            className="text-xs text-ink-muted hover:underline"
+            onClick={onValidate}
+          >
+            {t("instances.validate")}
           </button>
           <button
             type="button"

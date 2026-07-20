@@ -3,13 +3,21 @@ import {
   createInstance,
   deleteInstance,
   fetchInstanceLogs,
+  fetchInstanceMetrics,
   fetchInstances,
+  reconcileInstance,
+  reloadInstance,
   restartInstance,
   startInstance,
   stopInstance,
+  validateInstance,
   validateInstanceConfig,
 } from "../../api/instances";
-import type { InstanceCreatePayload, InstanceValidateDraftPayload } from "../../types/instances";
+import type {
+  InstanceCreatePayload,
+  InstanceValidateDraftPayload,
+  InstanceValidateResult,
+} from "../../types/instances";
 
 export function useInstances() {
   return useQuery({
@@ -35,19 +43,38 @@ export function useValidateInstanceConfig() {
   });
 }
 
+export function useInstanceMetrics(id: string | null) {
+  return useQuery({
+    queryKey: ["instances", id, "metrics"],
+    queryFn: () => fetchInstanceMetrics(id!),
+    enabled: Boolean(id),
+    refetchInterval: 5_000,
+  });
+}
+
+export function useValidateExistingInstance() {
+  return useMutation({
+    mutationFn: (id: string) => validateInstance(id),
+  });
+}
+
+export type InstanceAction =
+  | "start"
+  | "stop"
+  | "restart"
+  | "reload"
+  | "reconcile"
+  | "delete";
+
 export function useInstanceAction() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({
-      id,
-      action,
-    }: {
-      id: string;
-      action: "start" | "stop" | "restart" | "delete";
-    }) => {
+    mutationFn: async ({ id, action }: { id: string; action: InstanceAction }) => {
       if (action === "start") return startInstance(id);
       if (action === "stop") return stopInstance(id);
       if (action === "restart") return restartInstance(id);
+      if (action === "reload") return reloadInstance(id);
+      if (action === "reconcile") return reconcileInstance(id);
       await deleteInstance(id);
       return null;
     },
@@ -65,3 +92,5 @@ export function useInstanceLogs(id: string | null, tail = 200) {
     refetchInterval: 5_000,
   });
 }
+
+export type { InstanceValidateResult };

@@ -74,6 +74,10 @@ vi.mock("../api/system", () => ({
     management_interface: null,
     management_bind_ip: null,
   })),
+  fetchCapabilities: vi.fn(async () => ({
+    features: ["system.health"],
+    dataplane_services: ["haproxy"],
+  })),
   fetchSystemMetrics: vi.fn(),
   fetchLbMetrics: vi.fn(),
 }));
@@ -122,5 +126,13 @@ describe("Service catalog and wizard", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /Neste|Next/ }));
     expect(screen.getByPlaceholderText("edge-haproxy-1")).toBeInTheDocument();
+  });
+
+  it("shows settings system info", async () => {
+    renderAt("/settings");
+    await waitFor(() => {
+      expect(screen.getByText("/api/v1")).toBeInTheDocument();
+    });
+    expect(screen.getByText("/var/lib/ax-lb")).toBeInTheDocument();
   });
 });

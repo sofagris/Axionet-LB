@@ -1,9 +1,11 @@
 import { apiFetch } from "./client";
 import {
+  CapabilitiesSchema,
   HealthResponseSchema,
   LbMetricsSchema,
   SystemInfoSchema,
   SystemMetricsSchema,
+  type Capabilities,
   type HealthResponse,
   type LbMetrics,
   type SystemInfo,
@@ -24,4 +26,8 @@ export function fetchSystemMetrics(): Promise<SystemMetrics> {
 
 export function fetchLbMetrics(): Promise<LbMetrics> {
   return apiFetch("/api/v1/system/lb-metrics", (data) => LbMetricsSchema.parse(data));
+}
+
+export function fetchCapabilities(): Promise<Capabilities> {
+  return apiFetch("/api/v1/system/capabilities", (data) => CapabilitiesSchema.parse(data));
 }

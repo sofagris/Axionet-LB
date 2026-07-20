@@ -7,6 +7,7 @@ import { HaproxyDetailPage } from "./pages/HaproxyDetailPage";
 import { InstancesPage } from "./pages/InstancesPage";
 import { InterfacesPage } from "./pages/InterfacesPage";
 import { NetworksPage } from "./pages/NetworksPage";
+import { SettingsPage } from "./pages/SettingsPage";
 
 export function App() {
   return (
@@ -19,6 +20,7 @@ export function App() {
         <Route path="instances" element={<InstancesPage />} />
         <Route path="instances/new" element={<CreateInstanceWizardPage />} />
         <Route path="instances/:instanceId/haproxy" element={<HaproxyDetailPage />} />
+        <Route path="settings" element={<SettingsPage />} />
       </Route>
     </Routes>
   );

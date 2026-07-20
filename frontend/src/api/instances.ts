@@ -8,6 +8,7 @@ import {
   type InstanceValidateDraftPayload,
   type InstanceValidateResult,
 } from "../types/instances";
+import { InstanceMetricsSchema, type InstanceMetrics } from "../types/system";
 
 export function fetchInstances(): Promise<Instance[]> {
   return apiFetch("/api/v1/instances", (data) => z.array(InstanceSchema).parse(data));
@@ -58,6 +59,33 @@ export function restartInstance(id: string): Promise<Instance> {
   });
 }
 
+export function reloadInstance(id: string): Promise<Instance> {
+  return apiFetch(`/api/v1/instances/${id}/reload`, (data) => InstanceSchema.parse(data), {
+    method: "POST",
+  });
+}
+
+export function reconcileInstance(id: string): Promise<Instance> {
+  return apiFetch(`/api/v1/instances/${id}/reconcile`, (data) => InstanceSchema.parse(data), {
+    method: "POST",
+  });
+}
+
+export function validateInstance(id: string): Promise<InstanceValidateResult> {
+  return apiFetch(
+    `/api/v1/instances/${id}/validate`,
+    (data) =>
+      z
+        .object({
+          ok: z.boolean(),
+          output: z.string(),
+          rendered_preview: z.string().nullable(),
+        })
+        .parse(data),
+    { method: "POST" },
+  );
+}
+
 export function deleteInstance(id: string): Promise<void> {
   return apiFetch(`/api/v1/instances/${id}`, () => undefined, { method: "DELETE" });
 }
@@ -70,4 +98,8 @@ export function fetchInstanceLogs(
     `/api/v1/instances/${id}/logs?tail=${tail}`,
     (data) => InstanceLogsSchema.parse(data),
   );
+}
+
+export function fetchInstanceMetrics(id: string): Promise<InstanceMetrics> {
+  return apiFetch(`/api/v1/instances/${id}/metrics`, (data) => InstanceMetricsSchema.parse(data));
 }

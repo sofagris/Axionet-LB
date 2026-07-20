@@ -1,5 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchHealth, fetchLbMetrics, fetchSystemInfo, fetchSystemMetrics } from "../../api/system";
+import {
+  fetchCapabilities,
+  fetchHealth,
+  fetchLbMetrics,
+  fetchSystemInfo,
+  fetchSystemMetrics,
+} from "../../api/system";
 
 export function useSystemHealth() {
   return useQuery({
@@ -29,5 +35,12 @@ export function useLbMetrics() {
     queryKey: ["system", "lb-metrics"],
     queryFn: fetchLbMetrics,
     refetchInterval: 5_000,
+  });
+}
+
+export function useCapabilities() {
+  return useQuery({
+    queryKey: ["system", "capabilities"],
+    queryFn: fetchCapabilities,
   });
 }
