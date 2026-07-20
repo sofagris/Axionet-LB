@@ -5,6 +5,8 @@ import {
   InstanceSchema,
   type Instance,
   type InstanceCreatePayload,
+  type InstanceValidateDraftPayload,
+  type InstanceValidateResult,
 } from "../types/instances";
 
 export function fetchInstances(): Promise<Instance[]> {
@@ -16,6 +18,26 @@ export function createInstance(payload: InstanceCreatePayload): Promise<Instance
     method: "POST",
     body: payload,
   });
+}
+
+export function validateInstanceConfig(
+  payload: InstanceValidateDraftPayload,
+): Promise<InstanceValidateResult> {
+  return apiFetch(
+    "/api/v1/instances/validate-config",
+    (data) =>
+      z
+        .object({
+          ok: z.boolean(),
+          output: z.string(),
+          rendered_preview: z.string().nullable(),
+        })
+        .parse(data),
+    {
+      method: "POST",
+      body: payload,
+    },
+  );
 }
 
 export function startInstance(id: string): Promise<Instance> {

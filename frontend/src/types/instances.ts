@@ -54,5 +54,18 @@ export type InstanceCreatePayload = {
   service_type?: string;
   desired_state?: "running" | "stopped";
   image_version?: string;
+  configuration?: Record<string, unknown>;
   networks?: Array<{ network_id: string; ip_address?: string | null }>;
+};
+
+export type InstanceValidateDraftPayload = {
+  service_type?: string;
+  image_version?: string;
+  configuration?: Record<string, unknown> | null;
+};
+
+export type InstanceValidateResult = {
+  ok: boolean;
+  output: string;
+  rendered_preview: string | null;
 };

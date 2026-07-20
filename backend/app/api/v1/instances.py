@@ -10,6 +10,7 @@ from app.schemas.instances import (
     InstanceRead,
     InstanceStatus,
     InstanceUpdate,
+    InstanceValidateDraft,
     InstanceValidateResult,
     NetworkAttachmentRead,
 )
@@ -59,6 +60,22 @@ def create_instance(
     except RuntimeError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
     return _to_read(service, instance)
+
+
+@router.post("/validate-config", response_model=InstanceValidateResult)
+def validate_config_draft(
+    payload: InstanceValidateDraft,
+    service: InstanceService = Depends(get_instance_service),
+) -> InstanceValidateResult:
+    try:
+        ok, output, rendered = service.validate_draft(
+            service_type=payload.service_type,
+            image_version=payload.image_version,
+            configuration=payload.configuration,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return InstanceValidateResult(ok=ok, output=output, rendered_preview=rendered)
 
 
 @router.get("/{instance_id}", response_model=InstanceRead)

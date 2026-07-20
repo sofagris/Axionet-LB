@@ -110,6 +110,14 @@ class InstanceValidateResult(BaseModel):
     rendered_preview: str | None = None
 
 
+class InstanceValidateDraft(BaseModel):
+    """Pre-create validation payload used by the instance wizard."""
+
+    service_type: str = "haproxy"
+    image_version: str = "3.2.6"
+    configuration: dict[str, Any] | None = None
+
+
 class ServiceDefinitionRead(BaseModel):
     service_type: str
     display_name: str

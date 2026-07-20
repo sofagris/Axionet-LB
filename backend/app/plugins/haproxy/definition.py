@@ -7,13 +7,3 @@ HAPROXY_SERVICE = {
     "enabled": True,
     "supported_actions": ["start", "stop", "restart", "reload", "validate", "reconcile", "logs"],
 }
-
-
-def list_service_definitions() -> list[dict]:
-    return [HAPROXY_SERVICE]
-
-
-def get_service_definition(service_type: str) -> dict | None:
-    if service_type == "haproxy":
-        return HAPROXY_SERVICE
-    return None

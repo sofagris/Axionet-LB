@@ -200,4 +200,26 @@ def test_create_two_instances_same_port_different_ips(client: TestClient, docker
 def test_service_definitions(client: TestClient) -> None:
     response = client.get("/api/v1/service-definitions")
     assert response.status_code == 200
-    assert response.json()[0]["service_type"] == "haproxy"
+    types = [item["service_type"] for item in response.json()]
+    assert types[0] == "haproxy"
+    assert response.json()[0]["enabled"] is True
+    assert "varnish" in types
+    assert "nginx" in types
+    assert "frr" in types
+    assert "prometheus" in types
+    assert "grafana" in types
+    assert all(
+        item["enabled"] is False for item in response.json() if item["service_type"] != "haproxy"
+    )
+
+
+def test_validate_config_draft(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/instances/validate-config",
+        json={"service_type": "haproxy", "image_version": "3.2.6", "configuration": None},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["ok"] is True
+    assert body["rendered_preview"]
+    assert "frontend" in body["rendered_preview"]

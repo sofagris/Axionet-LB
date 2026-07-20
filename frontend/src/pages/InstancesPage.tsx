@@ -1,12 +1,11 @@
 import { Link } from "react-router-dom";
-import { useMemo, useState, type FormEvent } from "react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
-  useCreateInstance,
   useInstanceAction,
   useInstanceLogs,
   useInstances,
 } from "../features/instances/hooks";
-import { useNetworks } from "../features/networks/hooks";
 import type { Instance } from "../types/instances";
 
 function stateTone(state: string): string {
@@ -24,128 +23,47 @@ function formatAttachments(instance: Instance): string {
 }
 
 export function InstancesPage() {
+  const { t } = useTranslation();
   const instancesQuery = useInstances();
-  const networksQuery = useNetworks();
-  const createMutation = useCreateInstance();
   const actionMutation = useInstanceAction();
-
-  const [name, setName] = useState("");
-  const [networkId, setNetworkId] = useState("");
-  const [ipAddress, setIpAddress] = useState("");
-  const [desiredRunning, setDesiredRunning] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const logsQuery = useInstanceLogs(selectedId);
 
-  const networks = useMemo(() => networksQuery.data ?? [], [networksQuery.data]);
-  const selectedNetwork = networks.find((item) => item.id === networkId);
-
-  async function onSubmit(event: FormEvent) {
-    event.preventDefault();
-    const created = await createMutation.mutateAsync({
-      name,
-      service_type: "haproxy",
-      desired_state: desiredRunning ? "running" : "stopped",
-      networks: networkId
-        ? [{ network_id: networkId, ip_address: ipAddress.trim() || null }]
-        : [],
-    });
-    setName("");
-    setIpAddress("");
-    setSelectedId(created.id);
-  }
-
   return (
     <div className="space-y-8">
-      <section>
-        <h2 className="text-xl font-semibold tracking-tight text-ink">Service instances</h2>
-        <p className="mt-1 max-w-2xl text-ink-muted">
-          Flere HAProxy-containere kan bruke samme port på separate IP-er. Angi VIP/IP per
-          nettverkstilknytning.
-        </p>
+      <section className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight text-ink">{t("instances.title")}</h2>
+          <p className="mt-1 max-w-2xl text-ink-muted">{t("instances.subtitle")}</p>
+        </div>
+        <Link
+          to="/catalog"
+          className="border border-accent bg-accent px-4 py-2 text-sm font-medium text-white"
+        >
+          {t("instances.newFromCatalog")}
+        </Link>
       </section>
 
-      <form
-        onSubmit={onSubmit}
-        className="grid gap-4 rounded-lg border border-line bg-paper-elevated p-5 shadow-sm md:grid-cols-2"
-      >
-        <label className="block text-sm">
-          <span className="text-ink-muted">Navn</span>
-          <input
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
-            placeholder="edge-haproxy-1"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="text-ink-muted">Nettverk</span>
-          <select
-            value={networkId}
-            onChange={(e) => setNetworkId(e.target.value)}
-            className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
-          >
-            <option value="">Ingen (default bridge)</option>
-            {networks.map((network) => (
-              <option key={network.id} value={network.id}>
-                {network.name} ({network.network_type}
-                {network.subnet ? ` · ${network.subnet}` : ""})
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm md:col-span-2">
-          <span className="text-ink-muted">
-            Statisk IP / VIP
-            {selectedNetwork?.subnet ? ` (subnet ${selectedNetwork.subnet})` : ""}
-          </span>
-          <input
-            value={ipAddress}
-            onChange={(e) => setIpAddress(e.target.value)}
-            disabled={!networkId}
-            className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm disabled:opacity-50"
-            placeholder={selectedNetwork?.gateway ? selectedNetwork.gateway.replace(/\.\d+$/, ".10") : "172.30.60.10"}
-          />
-        </label>
-        <label className="flex items-center gap-2 text-sm md:col-span-2">
-          <input
-            type="checkbox"
-            checked={desiredRunning}
-            onChange={(e) => setDesiredRunning(e.target.checked)}
-          />
-          Start umiddelbart (desired_state=running)
-        </label>
-        <div className="md:col-span-2">
-          <button
-            type="submit"
-            disabled={createMutation.isPending}
-            className="border border-accent bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-          >
-            {createMutation.isPending ? "Oppretter…" : "Opprett HAProxy"}
-          </button>
-          {createMutation.isError ? (
-            <p className="mt-2 text-sm text-danger">
-              {createMutation.error instanceof Error ? createMutation.error.message : "Feil"}
-            </p>
-          ) : null}
-        </div>
-      </form>
-
       {instancesQuery.data ? (
-        <div className="overflow-x-auto rounded-lg border border-line bg-paper-elevated p-4 shadow-sm">
+        <div className="overflow-x-auto border border-line bg-paper-elevated p-4 shadow-sm">
           {instancesQuery.data.length === 0 ? (
-            <p className="text-ink-muted">Ingen instanser ennå.</p>
+            <p className="text-ink-muted">
+              {t("instances.empty")}{" "}
+              <Link to="/catalog" className="text-accent hover:underline">
+                {t("catalog.title")}
+              </Link>
+            </p>
           ) : (
             <table className="w-full min-w-[860px] text-left text-sm">
               <thead>
                 <tr className="text-xs tracking-wide text-ink-muted uppercase">
-                  <th className="pb-2 pr-4 font-medium">Name</th>
-                  <th className="pb-2 pr-4 font-medium">IP / VIP</th>
-                  <th className="pb-2 pr-4 font-medium">Desired</th>
-                  <th className="pb-2 pr-4 font-medium">Actual</th>
-                  <th className="pb-2 pr-4 font-medium">Health</th>
-                  <th className="pb-2 pr-4 font-medium">Container</th>
-                  <th className="pb-2 font-medium">Actions</th>
+                  <th className="pb-2 pr-4 font-medium">{t("instances.colName")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("instances.colIp")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("instances.colDesired")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("instances.colActual")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("instances.colHealth")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("instances.colContainer")}</th>
+                  <th className="pb-2 font-medium">{t("instances.colActions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -164,20 +82,22 @@ export function InstancesPage() {
           )}
           {actionMutation.isError ? (
             <p className="mt-3 text-sm text-danger">
-              {actionMutation.error instanceof Error ? actionMutation.error.message : "Feil"}
+              {actionMutation.error instanceof Error
+                ? actionMutation.error.message
+                : t("common.unknownError")}
             </p>
           ) : null}
         </div>
       ) : null}
 
       {selectedId ? (
-        <section className="rounded-lg border border-line bg-paper-elevated p-4 shadow-sm">
-          <h3 className="font-semibold text-ink">Container logs</h3>
+        <section className="border border-line bg-paper-elevated p-4 shadow-sm">
+          <h3 className="font-semibold text-ink">{t("instances.logs")}</h3>
           <p className="mt-1 font-mono text-xs text-ink-muted">{selectedId}</p>
           <pre className="mt-3 max-h-80 overflow-auto bg-ink px-3 py-3 font-mono text-xs text-paper">
             {logsQuery.isLoading
-              ? "Henter logger…"
-              : logsQuery.data?.logs || "(ingen logger)"}
+              ? t("common.loading")
+              : logsQuery.data?.logs || t("instances.noLogs")}
           </pre>
         </section>
       ) : null}
@@ -198,6 +118,7 @@ function InstanceRow({
   onSelect: () => void;
   onAction: (action: "start" | "stop" | "restart" | "delete") => void;
 }) {
+  const { t } = useTranslation();
   return (
     <tr className={`border-t border-line align-top ${selected ? "bg-accent-soft/40" : ""}`}>
       <td className="py-3 pr-4">
@@ -237,7 +158,7 @@ function InstanceRow({
             className="text-xs text-accent hover:underline"
             onClick={() => onAction("start")}
           >
-            Start
+            {t("instances.start")}
           </button>
           <button
             type="button"
@@ -245,7 +166,7 @@ function InstanceRow({
             className="text-xs text-ink-muted hover:underline"
             onClick={() => onAction("stop")}
           >
-            Stop
+            {t("instances.stop")}
           </button>
           <button
             type="button"
@@ -253,7 +174,7 @@ function InstanceRow({
             className="text-xs text-ink-muted hover:underline"
             onClick={() => onAction("restart")}
           >
-            Restart
+            {t("instances.restart")}
           </button>
           <button
             type="button"
@@ -261,7 +182,7 @@ function InstanceRow({
             className="text-xs text-danger hover:underline"
             onClick={() => onAction("delete")}
           >
-            Slett
+            {t("instances.delete")}
           </button>
         </div>
       </td>

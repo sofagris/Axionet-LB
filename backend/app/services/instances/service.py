@@ -282,6 +282,21 @@ class InstanceService:
         )
         return result.ok, result.output, rendered
 
+    def validate_draft(
+        self,
+        *,
+        service_type: str,
+        image_version: str,
+        configuration: dict | None,
+    ) -> tuple[bool, str, str]:
+        if service_type != "haproxy":
+            raise ValueError("Only service_type=haproxy can be validated in this milestone")
+        config = HaproxyConfig.from_dict(configuration).model_dump()
+        rendered = render_haproxy_config(HaproxyConfig.from_dict(config))
+        validator = HaproxyConfigValidator(self._docker, image=f"haproxy:{image_version}")
+        result = validator.validate_config_dict(config)
+        return result.ok, result.output, rendered
+
     def get_logs(self, instance: ServiceInstance, *, tail: int = 200) -> str:
         if not instance.container_id:
             return ""

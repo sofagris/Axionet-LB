@@ -7,8 +7,9 @@ import {
   restartInstance,
   startInstance,
   stopInstance,
+  validateInstanceConfig,
 } from "../../api/instances";
-import type { InstanceCreatePayload } from "../../types/instances";
+import type { InstanceCreatePayload, InstanceValidateDraftPayload } from "../../types/instances";
 
 export function useInstances() {
   return useQuery({
@@ -25,6 +26,12 @@ export function useCreateInstance() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["instances"] });
     },
+  });
+}
+
+export function useValidateInstanceConfig() {
+  return useMutation({
+    mutationFn: (payload: InstanceValidateDraftPayload) => validateInstanceConfig(payload),
   });
 }
 

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 
-from app.plugins.haproxy.definition import get_service_definition, list_service_definitions
+from app.plugins.catalog import get_service_definition, list_service_definitions
 from app.schemas.instances import ServiceDefinitionRead
 
 router = APIRouter(prefix="/service-definitions", tags=["service-definitions"])
