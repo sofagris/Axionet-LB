@@ -4,6 +4,8 @@ services:
     container_name: ax-api
     restart: unless-stopped
     pid: host
+    # Required so nsenter can enter host netns for NIC/VLAN management (caps alone are insufficient).
+    privileged: true
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
