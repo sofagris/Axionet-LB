@@ -37,6 +37,11 @@ vi.mock("../api/system", () => ({
     instances: [],
     collected_at: "2026-07-20T16:00:00Z",
   })),
+  fetchAuditEvents: vi.fn(async () => ({
+    events: [],
+    limit: 50,
+    offset: 0,
+  })),
   fetchSystemMetrics: vi.fn(async () => ({
     cpu_percent: 12.5,
     mem_total_bytes: 16 * 1024 ** 3,

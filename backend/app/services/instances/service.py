@@ -24,6 +24,7 @@ from app.plugins.haproxy.renderer import render_haproxy_config
 from app.plugins.haproxy.schemas import HaproxyConfig
 from app.plugins.haproxy.validator import HaproxyConfigValidator
 from app.schemas.instances import InstanceCreate, InstanceUpdate, NetworkAttachmentCreate
+from app.services.audit.service import AuditService
 from app.services.docker.client import DockerClientAdapter
 from app.services.instances.attachments import validate_network_attachments
 from app.services.revisions.service import RevisionService
@@ -40,6 +41,26 @@ class InstanceService:
         self._settings = settings
         self._validator = HaproxyConfigValidator(docker)
         self._revisions = RevisionService(db)
+        self._audit = AuditService(db)
+
+    def _record_audit(
+        self,
+        *,
+        event_type: str,
+        resource_id: str | None,
+        payload: dict | None = None,
+        result: str = "ok",
+        actor: str = "system",
+    ) -> None:
+        self._audit.record(
+            event_type=event_type,
+            resource_type="instance",
+            resource_id=resource_id,
+            actor=actor,
+            payload=payload or {},
+            result=result,
+            commit=False,
+        )
 
     def list_instances(self) -> list[ServiceInstance]:
         return list(self._db.scalars(select(ServiceInstance).order_by(ServiceInstance.name)))
@@ -128,10 +149,21 @@ class InstanceService:
             instance.actual_state = ActualState.ERROR.value
             instance.last_error = str(exc)
             instance.health_status = HealthStatus.UNHEALTHY.value
+            self._record_audit(
+                event_type="instance.create",
+                resource_id=instance.id,
+                payload={"name": instance.name},
+                result="error",
+            )
             self._db.commit()
             raise RuntimeError(str(exc)) from exc
 
         instance.updated_at = datetime.now(UTC)
+        self._record_audit(
+            event_type="instance.create",
+            resource_id=instance.id,
+            payload={"name": instance.name, "desired_state": instance.desired_state},
+        )
         self._db.commit()
         self._db.refresh(instance)
         return instance
@@ -204,6 +236,12 @@ class InstanceService:
             created_by=created_by,
         )
         instance.updated_at = datetime.now(UTC)
+        self._record_audit(
+            event_type="instance.config.apply",
+            resource_id=instance.id,
+            actor=created_by,
+            payload={"name": instance.name, "deployment_status": deployment_status.value},
+        )
         self._db.commit()
         self._db.refresh(instance)
         return instance
@@ -231,6 +269,8 @@ class InstanceService:
         return self._revisions.get_revision(instance_id, revision_id)
 
     def delete_instance(self, instance: ServiceInstance) -> None:
+        instance_id = instance.id
+        instance_name = instance.name
         instance.desired_state = DesiredState.DELETED.value
         instance.actual_state = ActualState.DELETING.value
         self._db.flush()
@@ -238,9 +278,21 @@ class InstanceService:
             try:
                 self._docker.remove_container(instance.container_id)
             except DockerException as exc:
+                self._record_audit(
+                    event_type="instance.delete",
+                    resource_id=instance_id,
+                    payload={"name": instance_name},
+                    result="error",
+                )
+                self._db.commit()
                 raise RuntimeError(str(exc)) from exc
-        shutil.rmtree(self._instance_dir(instance.id), ignore_errors=True)
+        shutil.rmtree(self._instance_dir(instance_id), ignore_errors=True)
         self._db.delete(instance)
+        self._record_audit(
+            event_type="instance.delete",
+            resource_id=instance_id,
+            payload={"name": instance_name},
+        )
         self._db.commit()
 
     def start_instance(self, instance: ServiceInstance) -> ServiceInstance:
@@ -268,6 +320,11 @@ class InstanceService:
             self._db.commit()
             raise RuntimeError(str(exc)) from exc
         instance.updated_at = datetime.now(UTC)
+        self._record_audit(
+            event_type="instance.restart",
+            resource_id=instance.id,
+            payload={"name": instance.name},
+        )
         self._db.commit()
         self._db.refresh(instance)
         return instance
@@ -297,9 +354,20 @@ class InstanceService:
             instance.actual_state = ActualState.ERROR.value
             instance.last_error = str(exc)
             instance.health_status = HealthStatus.UNHEALTHY.value
+            self._record_audit(
+                event_type="instance.reload",
+                resource_id=instance.id,
+                payload={"name": instance.name},
+                result="error",
+            )
             self._db.commit()
             raise RuntimeError(str(exc)) from exc
         instance.updated_at = datetime.now(UTC)
+        self._record_audit(
+            event_type="instance.reload",
+            resource_id=instance.id,
+            payload={"name": instance.name},
+        )
         self._db.commit()
         self._db.refresh(instance)
         return instance
@@ -380,6 +448,7 @@ class InstanceService:
         return attrs.get("State", {}).get("Status")
 
     def reconcile(self, instance: ServiceInstance) -> ServiceInstance:
+        previous_state = instance.actual_state
         try:
             networks = self._networks_for_instance(instance.id)
             if instance.desired_state == DesiredState.DELETED.value:
@@ -420,10 +489,32 @@ class InstanceService:
             instance.actual_state = ActualState.ERROR.value
             instance.last_error = str(exc)
             instance.health_status = HealthStatus.UNHEALTHY.value
+            self._record_audit(
+                event_type="instance.reconcile",
+                resource_id=instance.id,
+                payload={
+                    "name": instance.name,
+                    "desired_state": instance.desired_state,
+                    "from": previous_state,
+                    "to": instance.actual_state,
+                },
+                result="error",
+            )
             self._db.commit()
             raise RuntimeError(str(exc)) from exc
 
         instance.updated_at = datetime.now(UTC)
+        if previous_state != instance.actual_state:
+            self._record_audit(
+                event_type="instance.reconcile",
+                resource_id=instance.id,
+                payload={
+                    "name": instance.name,
+                    "desired_state": instance.desired_state,
+                    "from": previous_state,
+                    "to": instance.actual_state,
+                },
+            )
         self._db.commit()
         self._db.refresh(instance)
         return instance

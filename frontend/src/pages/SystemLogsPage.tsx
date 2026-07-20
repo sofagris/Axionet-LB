@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useInstanceLogs } from "../features/instances/hooks";
-import { useSystemLogs } from "../features/system/hooks";
+import { useSystemLogs, useAuditEvents } from "../features/system/hooks";
 
 function stateTone(state: string): string {
   if (state === "running" || state === "healthy") return "text-ok";
@@ -14,6 +14,7 @@ function stateTone(state: string): string {
 export function SystemLogsPage() {
   const { t } = useTranslation();
   const logsOverview = useSystemLogs();
+  const auditQuery = useAuditEvents(50);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tail, setTail] = useState(200);
   const containerLogs = useInstanceLogs(selectedId, tail);
@@ -76,6 +77,72 @@ export function SystemLogsPage() {
               </li>
             ))}
           </ul>
+        ) : null}
+      </section>
+
+      <section className="border border-line bg-paper-elevated p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="font-semibold text-ink">{t("logs.audit")}</h3>
+          <button
+            type="button"
+            className="border border-line px-3 py-1.5 text-sm"
+            onClick={() => void auditQuery.refetch()}
+            disabled={auditQuery.isFetching}
+          >
+            {auditQuery.isFetching ? t("common.loading") : t("logs.refreshAudit")}
+          </button>
+        </div>
+        <p className="mt-1 text-sm text-ink-muted">{t("logs.auditHint")}</p>
+        {auditQuery.isError ? (
+          <p className="mt-3 text-sm text-danger">
+            {auditQuery.error instanceof Error
+              ? auditQuery.error.message
+              : t("common.unknownError")}
+          </p>
+        ) : null}
+        {auditQuery.data && auditQuery.data.events.length === 0 ? (
+          <p className="mt-3 text-sm text-ink-muted">{t("logs.noAudit")}</p>
+        ) : null}
+        {auditQuery.data && auditQuery.data.events.length > 0 ? (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <thead>
+                <tr className="text-xs tracking-wide text-ink-muted uppercase">
+                  <th className="pb-2 pr-3 font-medium">{t("logs.auditWhen")}</th>
+                  <th className="pb-2 pr-3 font-medium">{t("logs.auditType")}</th>
+                  <th className="pb-2 pr-3 font-medium">{t("logs.auditResource")}</th>
+                  <th className="pb-2 pr-3 font-medium">{t("logs.auditResult")}</th>
+                  <th className="pb-2 font-medium">{t("logs.auditPayload")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {auditQuery.data.events.map((event) => (
+                  <tr key={event.id} className="border-t border-line align-top">
+                    <td className="py-2 pr-3 font-mono text-xs whitespace-nowrap">
+                      {new Date(event.created_at).toLocaleString()}
+                    </td>
+                    <td className="py-2 pr-3 font-mono text-xs">{event.event_type}</td>
+                    <td className="py-2 pr-3 font-mono text-xs">
+                      {event.resource_type}
+                      {event.resource_id ? `/${event.resource_id.slice(0, 8)}` : ""}
+                    </td>
+                    <td
+                      className={`py-2 pr-3 font-mono text-xs uppercase ${
+                        event.result === "ok" ? "text-ok" : "text-danger"
+                      }`}
+                    >
+                      {event.result}
+                    </td>
+                    <td className="py-2 font-mono text-[11px] text-ink-muted">
+                      {Object.keys(event.payload).length
+                        ? JSON.stringify(event.payload)
+                        : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : null}
       </section>
 

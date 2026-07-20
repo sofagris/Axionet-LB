@@ -158,6 +158,23 @@ export const SystemLogsSchema = z.object({
   collected_at: z.string(),
 });
 
+export const AuditEventSchema = z.object({
+  id: z.string(),
+  event_type: z.string(),
+  actor: z.string(),
+  resource_type: z.string(),
+  resource_id: z.string().nullable().optional(),
+  payload: z.record(z.unknown()),
+  result: z.string(),
+  created_at: z.string(),
+});
+
+export const AuditEventListSchema = z.object({
+  events: z.array(AuditEventSchema),
+  limit: z.number().int(),
+  offset: z.number().int(),
+});
+
 export type HealthResponse = z.infer<typeof HealthResponseSchema>;
 export type SystemInfo = z.infer<typeof SystemInfoSchema>;
 export type SystemMetrics = z.infer<typeof SystemMetricsSchema>;
@@ -165,4 +182,6 @@ export type LbMetrics = z.infer<typeof LbMetricsSchema>;
 export type Capabilities = z.infer<typeof CapabilitiesSchema>;
 export type InstanceMetrics = z.infer<typeof InstanceMetricsSchema>;
 export type SystemLogs = z.infer<typeof SystemLogsSchema>;
+export type AuditEvent = z.infer<typeof AuditEventSchema>;
+export type AuditEventList = z.infer<typeof AuditEventListSchema>;
 export type ComponentHealth = z.infer<typeof ComponentHealthSchema>;

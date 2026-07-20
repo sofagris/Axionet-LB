@@ -1,11 +1,13 @@
 import { apiFetch } from "./client";
 import {
+  AuditEventListSchema,
   CapabilitiesSchema,
   HealthResponseSchema,
   LbMetricsSchema,
   SystemInfoSchema,
   SystemLogsSchema,
   SystemMetricsSchema,
+  type AuditEventList,
   type Capabilities,
   type HealthResponse,
   type LbMetrics,
@@ -36,4 +38,21 @@ export function fetchCapabilities(): Promise<Capabilities> {
 
 export function fetchSystemLogs(): Promise<SystemLogs> {
   return apiFetch("/api/v1/system/logs", (data) => SystemLogsSchema.parse(data));
+}
+
+export function fetchAuditEvents(params?: {
+  limit?: number;
+  offset?: number;
+  event_type?: string;
+  resource_type?: string;
+}): Promise<AuditEventList> {
+  const search = new URLSearchParams();
+  if (params?.limit != null) search.set("limit", String(params.limit));
+  if (params?.offset != null) search.set("offset", String(params.offset));
+  if (params?.event_type) search.set("event_type", params.event_type);
+  if (params?.resource_type) search.set("resource_type", params.resource_type);
+  const qs = search.toString();
+  return apiFetch(`/api/v1/system/audit${qs ? `?${qs}` : ""}`, (data) =>
+    AuditEventListSchema.parse(data),
+  );
 }

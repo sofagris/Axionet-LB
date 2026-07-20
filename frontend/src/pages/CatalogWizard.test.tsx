@@ -96,6 +96,11 @@ vi.mock("../api/system", () => ({
     ],
     collected_at: "2026-07-20T16:00:00Z",
   })),
+  fetchAuditEvents: vi.fn(async () => ({
+    events: [],
+    limit: 50,
+    offset: 0,
+  })),
   fetchSystemMetrics: vi.fn(),
   fetchLbMetrics: vi.fn(),
 }));

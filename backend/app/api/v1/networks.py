@@ -10,6 +10,7 @@ from app.schemas.networks import (
     NetworkUpdate,
     NetworkValidationResult,
 )
+from app.services.audit.service import AuditService
 from app.services.docker.client import DockerClientAdapter, create_docker_adapter
 from app.services.networking.host import HostNetworkAdapter
 from app.services.networking.networks import NetworkService
@@ -48,6 +49,7 @@ def list_networks(service: NetworkService = Depends(get_network_service)) -> lis
 def create_network(
     payload: NetworkCreate,
     service: NetworkService = Depends(get_network_service),
+    db: Session = Depends(get_db),
 ) -> NetworkRead:
     try:
         network = service.create_network(payload)
@@ -55,6 +57,13 @@ def create_network(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+    AuditService(db).record(
+        event_type="network.create",
+        resource_type="network",
+        resource_id=network.id,
+        payload={"name": network.name, "vlan_id": network.vlan_id},
+        commit=True,
+    )
     found = service.get_network(network.id)
     assert found is not None
     return _to_read(found)
@@ -99,17 +108,26 @@ def update_network(
 def delete_network(
     network_id: str,
     service: NetworkService = Depends(get_network_service),
+    db: Session = Depends(get_db),
 ) -> None:
     found = service.get_network(network_id)
     if found is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Network not found")
     network, _ = found
+    name = network.name
     try:
         service.delete_network(network)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+    AuditService(db).record(
+        event_type="network.delete",
+        resource_type="network",
+        resource_id=network_id,
+        payload={"name": name},
+        commit=True,
+    )
 
 
 @router.post("/{network_id}/validate", response_model=NetworkValidationResult)

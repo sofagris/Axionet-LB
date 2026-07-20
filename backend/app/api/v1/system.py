@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings, get_settings
 from app.db.session import get_db
 from app.schemas.system import (
+    AuditEventListResponse,
+    AuditEventRead,
     CapabilitiesResponse,
     HealthResponse,
     LbMetricsResponse,
@@ -15,6 +17,7 @@ from app.schemas.system import (
     SystemLogsResponse,
     SystemMetricsResponse,
 )
+from app.services.audit.service import AuditService
 from app.services.docker.client import DockerClientAdapter, create_docker_adapter
 from app.services.instances.metrics import HaproxyMetricsCollector
 from app.services.instances.service import InstanceService
@@ -120,3 +123,26 @@ def get_system_logs(
                 )
             )
     return SystemLogsResponse(errors=errors, instances=overview, collected_at=datetime.now(UTC))
+
+
+@router.get("/audit", response_model=AuditEventListResponse)
+def list_audit_events(
+    limit: int = 100,
+    offset: int = 0,
+    event_type: str | None = None,
+    resource_type: str | None = None,
+    resource_id: str | None = None,
+    db: Session = Depends(get_db),
+) -> AuditEventListResponse:
+    events = AuditService(db).list_events(
+        limit=limit,
+        offset=offset,
+        event_type=event_type,
+        resource_type=resource_type,
+        resource_id=resource_id,
+    )
+    return AuditEventListResponse(
+        events=[AuditEventRead.model_validate(item, from_attributes=True) for item in events],
+        limit=min(max(limit, 1), 500),
+        offset=max(offset, 0),
+    )

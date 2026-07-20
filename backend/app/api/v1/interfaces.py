@@ -11,6 +11,7 @@ from app.schemas.interfaces import (
     PhysicalInterfaceUpdate,
     PromoteManagementResult,
 )
+from app.services.audit.service import AuditService
 from app.services.networking.discovery import InterfaceDiscoveryService
 from app.services.networking.host import HostNetworkAdapter
 from app.services.networking.mutation import InterfaceMutationService
@@ -157,6 +158,13 @@ def promote_management(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": exc.code, "message": exc.message},
         ) from exc
+    AuditService(db).record(
+        event_type="interface.promote_management",
+        resource_type="interface",
+        resource_id=interface.id,
+        payload={"name": interface.name, "bind_ip": result.management_bind_ip},
+        commit=False,
+    )
     db.commit()
     db.refresh(interface)
     result.interface = PhysicalInterfaceRead.model_validate(interface)

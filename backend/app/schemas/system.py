@@ -64,6 +64,23 @@ class SystemLogsResponse(BaseModel):
     collected_at: datetime
 
 
+class AuditEventRead(BaseModel):
+    id: str
+    event_type: str
+    actor: str
+    resource_type: str
+    resource_id: str | None = None
+    payload: dict = Field(default_factory=dict)
+    result: str
+    created_at: datetime
+
+
+class AuditEventListResponse(BaseModel):
+    events: list[AuditEventRead] = Field(default_factory=list)
+    limit: int
+    offset: int
+
+
 class NetworkTotalsRead(BaseModel):
     rx_bytes: int
     tx_bytes: int

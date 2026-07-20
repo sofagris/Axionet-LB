@@ -34,6 +34,7 @@ from app.schemas.haproxy import (
     HaproxyServerRuntimeResult,
     HaproxyStatRow,
 )
+from app.services.audit.service import AuditService
 from app.services.docker.client import DockerClientAdapter, create_docker_adapter
 from app.services.instances.service import InstanceService
 
@@ -604,6 +605,7 @@ def runtime_server_action(
     payload: HaproxyServerRuntimeRequest,
     service: InstanceService = Depends(get_instance_service),
     docker: DockerClientAdapter = Depends(get_docker_adapter),
+    db: Session = Depends(get_db),
 ) -> HaproxyServerRuntimeResult:
     """Ephemeral runtime control via HAProxy admin socket (does not persist in config)."""
     instance = _require_instance(service, instance_id)
@@ -632,6 +634,18 @@ def runtime_server_action(
     except RuntimeError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
+    AuditService(db).record(
+        event_type="haproxy.runtime.server",
+        resource_type="instance",
+        resource_id=instance.id,
+        payload={
+            "backend": backend_name,
+            "server": server_name,
+            "action": payload.action,
+            "weight": payload.weight,
+        },
+        commit=True,
+    )
     return HaproxyServerRuntimeResult(
         ok=True,
         backend=backend_name,
@@ -647,6 +661,7 @@ def clear_counters(
     instance_id: str,
     service: InstanceService = Depends(get_instance_service),
     docker: DockerClientAdapter = Depends(get_docker_adapter),
+    db: Session = Depends(get_db),
 ) -> HaproxyClearCountersResult:
     """Reset HAProxy stats counters via admin socket (ephemeral until next clear/reload)."""
     instance = _require_instance(service, instance_id)
@@ -661,4 +676,11 @@ def clear_counters(
         output = runtime.clear_counters(instance.container_id)
     except RuntimeError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+    AuditService(db).record(
+        event_type="haproxy.runtime.clear_counters",
+        resource_type="instance",
+        resource_id=instance.id,
+        payload={"name": instance.name},
+        commit=True,
+    )
     return HaproxyClearCountersResult(ok=True, output=output, ephemeral=True)

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  fetchAuditEvents,
   fetchCapabilities,
   fetchHealth,
   fetchLbMetrics,
@@ -50,6 +51,14 @@ export function useSystemLogs() {
   return useQuery({
     queryKey: ["system", "logs"],
     queryFn: fetchSystemLogs,
+    refetchInterval: 10_000,
+  });
+}
+
+export function useAuditEvents(limit = 50) {
+  return useQuery({
+    queryKey: ["system", "audit", limit],
+    queryFn: () => fetchAuditEvents({ limit }),
     refetchInterval: 10_000,
   });
 }
