@@ -13,6 +13,7 @@ from fastapi import FastAPI
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
+from app.core.security import ensure_default_admin
 from app.db.session import SessionLocal
 from app.services.docker.client import create_docker_adapter
 from app.services.instances.service import InstanceService
@@ -31,6 +32,18 @@ def run_migrations() -> None:
     alembic_cfg = Config(str(Path(__file__).resolve().parent.parent / "alembic.ini"))
     alembic_cfg.set_main_option("sqlalchemy.url", settings.database_url)
     command.upgrade(alembic_cfg, "head")
+
+
+def bootstrap_default_admin() -> None:
+    settings = get_settings()
+    db = SessionLocal()
+    try:
+        user = ensure_default_admin(db, settings)
+        logger.info("Default admin ready: username=%s", user.username)
+    except Exception:
+        logger.exception("Failed to ensure default admin user")
+    finally:
+        db.close()
 
 
 def bootstrap_interface_discovery() -> None:
@@ -99,6 +112,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     configure_logging(settings.log_level)
     run_migrations()
+    bootstrap_default_admin()
     bootstrap_interface_discovery()
 
     stop_event = asyncio.Event()

@@ -53,6 +53,7 @@ def test_capabilities(client: TestClient) -> None:
     assert "instances.network_attachments" in payload["features"]
     assert "system.audit" in payload["features"]
     assert "system.orphans" in payload["features"]
+    assert "auth.local" in payload["features"]
 
 
 def test_system_logs_overview(client: TestClient) -> None:

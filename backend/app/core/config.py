@@ -53,6 +53,25 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("RECONCILE_ENABLED", "AX_RECONCILE_ENABLED"),
         description="Run the background desired/actual reconcile loop.",
     )
+    auth_secret_key: str = Field(
+        default="axionet-lb-dev-secret-change-me",
+        validation_alias=AliasChoices("AX_AUTH_SECRET_KEY", "AUTH_SECRET_KEY"),
+        description="HMAC secret for JWT access tokens.",
+    )
+    auth_token_expire_hours: int = Field(
+        default=12,
+        ge=1,
+        le=168,
+        validation_alias=AliasChoices("AX_AUTH_TOKEN_EXPIRE_HOURS", "AUTH_TOKEN_EXPIRE_HOURS"),
+    )
+    auth_default_admin_username: str = Field(
+        default="Admin",
+        validation_alias=AliasChoices("AX_AUTH_DEFAULT_ADMIN_USERNAME"),
+    )
+    auth_default_admin_password: str = Field(
+        default="Password",
+        validation_alias=AliasChoices("AX_AUTH_DEFAULT_ADMIN_PASSWORD"),
+    )
 
 
 @lru_cache

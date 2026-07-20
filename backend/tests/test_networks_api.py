@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api.v1 import networks as networks_routes
+from app.core.security import enforce_auth
 from app.db.session import get_db
 from app.main import create_app
 from app.services.docker.client import DockerClientAdapter
@@ -83,6 +84,7 @@ def client(
     from app.api.v1 import system as system_routes
 
     app.dependency_overrides[system_routes.get_docker_adapter] = lambda: docker_adapter
+    app.dependency_overrides[enforce_auth] = lambda: None
 
     with TestClient(app) as test_client:
         yield test_client

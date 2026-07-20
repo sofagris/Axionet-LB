@@ -19,6 +19,15 @@
     "toDark": "Bytt til mørk modus",
     "language": "Språk"
   },
+  "auth": {
+    "title": "Logg inn",
+    "subtitle": "Tilgang til AxioNet LB kontrollplan.",
+    "username": "Brukernavn",
+    "password": "Passord",
+    "signIn": "Logg inn",
+    "signingIn": "Logger inn…",
+    "signOut": "Logg ut"
+  },
   "dashboard": {
     "title": "Dashboard",
     "subtitle": "Kontrollplan for AxioNet LB. Dataplan-instanser administreres under Instances.",

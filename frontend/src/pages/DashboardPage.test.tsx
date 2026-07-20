@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { App } from "../App";
+import { AuthProvider } from "../features/auth/AuthProvider";
 import { ThemeProvider } from "../features/theme/ThemeProvider";
 import "../i18n";
 
@@ -140,6 +141,18 @@ vi.mock("../api/instances", () => ({
   fetchInstanceLogs: vi.fn(),
 }));
 
+vi.mock("../api/auth", () => ({
+  fetchMe: vi.fn(async () => ({
+    id: "user-1",
+    username: "Admin",
+    role: "admin",
+    is_active: true,
+    created_at: "2026-07-20T16:00:00Z",
+  })),
+  login: vi.fn(),
+  logout: vi.fn(async () => undefined),
+}));
+
 function renderApp() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -148,7 +161,9 @@ function renderApp() {
     <QueryClientProvider client={client}>
       <ThemeProvider>
         <MemoryRouter>
-          <App />
+          <AuthProvider>
+            <App />
+          </AuthProvider>
         </MemoryRouter>
       </ThemeProvider>
     </QueryClientProvider>,
@@ -158,6 +173,7 @@ function renderApp() {
 describe("Dashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.setItem("ax-lb-token", "test-token");
   });
 
   it("shows brand and health status", async () => {

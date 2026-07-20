@@ -10,6 +10,7 @@ from sqlalchemy.pool import StaticPool
 from app.api.v1 import instances as instances_routes
 from app.api.v1 import revisions as revisions_routes
 from app.api.v1 import system as system_routes
+from app.core.security import enforce_auth
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import create_app
@@ -125,6 +126,7 @@ def client(db_session: Session, docker_adapter: MagicMock) -> Generator[TestClie
     app.dependency_overrides[system_routes.get_docker_adapter] = _override_docker
     app.dependency_overrides[instances_routes.get_docker_adapter] = _override_docker
     app.dependency_overrides[revisions_routes.get_docker_adapter] = _override_docker
+    app.dependency_overrides[enforce_auth] = lambda: None
 
     with TestClient(app) as test_client:
         yield test_client

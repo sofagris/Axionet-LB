@@ -84,6 +84,7 @@ class SystemService:
                 "system.logs",
                 "system.audit",
                 "system.orphans",
+                "auth.local",
                 "instances.reconcile_loop",
             ],
             dataplane_services=["haproxy"],

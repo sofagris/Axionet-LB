@@ -19,6 +19,15 @@
     "toDark": "Switch to dark mode",
     "language": "Language"
   },
+  "auth": {
+    "title": "Sign in",
+    "subtitle": "Access the AxioNet LB control plane.",
+    "username": "Username",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signingIn": "Signing in…",
+    "signOut": "Sign out"
+  },
   "dashboard": {
     "title": "Dashboard",
     "subtitle": "Control plane for AxioNet LB. Dataplane instances are managed under Instances.",

@@ -1,5 +1,6 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "../features/auth/AuthProvider";
 import { useTheme } from "../features/theme/ThemeProvider";
 import { setAppLocale, type AppLocale } from "../i18n";
 
@@ -12,6 +13,8 @@ function navClass({ isActive }: { isActive: boolean }): string {
 export function AppLayout() {
   const { t, i18n } = useTranslation();
   const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const locale = (i18n.language === "en" ? "en" : "nb") as AppLocale;
 
   return (
@@ -49,6 +52,9 @@ export function AppLayout() {
               </NavLink>
             </nav>
             <div className="flex items-center gap-2 border-l border-line pl-4">
+              {user ? (
+                <span className="font-mono text-xs text-ink-muted">{user.username}</span>
+              ) : null}
               <label className="sr-only" htmlFor="locale-select">
                 {t("theme.language")}
               </label>
@@ -68,6 +74,15 @@ export function AppLayout() {
                 className="border border-line bg-paper px-2.5 py-1 font-mono text-xs text-ink hover:border-accent"
               >
                 {theme === "light" ? "☾" : "☀"}
+              </button>
+              <button
+                type="button"
+                className="border border-line bg-paper px-2.5 py-1 font-mono text-xs text-ink hover:border-accent"
+                onClick={() => {
+                  void logout().then(() => navigate("/login", { replace: true }));
+                }}
+              >
+                {t("auth.signOut")}
               </button>
             </div>
           </div>

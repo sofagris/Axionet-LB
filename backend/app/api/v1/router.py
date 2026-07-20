@@ -1,8 +1,19 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
-from app.api.v1 import haproxy, instances, interfaces, networks, revisions, service_definitions, system
+from app.api.v1 import (
+    auth,
+    haproxy,
+    instances,
+    interfaces,
+    networks,
+    revisions,
+    service_definitions,
+    system,
+)
+from app.core.security import enforce_auth
 
-api_router = APIRouter()
+api_router = APIRouter(dependencies=[Depends(enforce_auth)])
+api_router.include_router(auth.router)
 api_router.include_router(system.router)
 api_router.include_router(interfaces.router)
 api_router.include_router(networks.router)

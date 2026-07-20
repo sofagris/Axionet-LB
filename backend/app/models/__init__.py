@@ -10,6 +10,7 @@ from app.models.service_instance import (
     HealthStatus,
     ServiceInstance,
 )
+from app.models.user import User
 
 __all__ = [
     "AppMeta",
@@ -26,5 +27,6 @@ __all__ = [
     "NetworkType",
     "PhysicalInterface",
     "ServiceInstance",
+    "User",
     "ValidationStatus",
 ]
