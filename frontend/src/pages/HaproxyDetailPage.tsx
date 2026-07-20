@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
+  useHaproxyAcls,
   useHaproxyBackends,
+  useHaproxyCertificates,
   useHaproxyConfig,
   useHaproxyFrontends,
   useHaproxyMutations,
@@ -9,7 +11,7 @@ import {
 } from "../features/haproxy/hooks";
 import { useInstanceLogs, useInstances } from "../features/instances/hooks";
 import { useRestoreRevision, useRevision, useRevisions } from "../features/revisions/hooks";
-import type { HaproxyBackend, HaproxyFrontend, HaproxyServer } from "../types/haproxy";
+import type { HaproxyAcl, HaproxyBackend, HaproxyFrontend, HaproxyServer } from "../types/haproxy";
 
 type Tab =
   | "overview"
@@ -49,6 +51,8 @@ export function HaproxyDetailPage() {
 
   const frontendsQuery = useHaproxyFrontends(instanceId);
   const backendsQuery = useHaproxyBackends(instanceId);
+  const certificatesQuery = useHaproxyCertificates(instanceId);
+  const aclsQuery = useHaproxyAcls(instanceId);
   const configQuery = useHaproxyConfig(instanceId);
   const statusQuery = useHaproxyStatus(instanceId);
   const revisionsQuery = useRevisions(instanceId);
@@ -63,6 +67,7 @@ export function HaproxyDetailPage() {
   const [frontendBind, setFrontendBind] = useState("*");
   const [frontendMode, setFrontendMode] = useState("http");
   const [frontendBackend, setFrontendBackend] = useState("app");
+  const [frontendCertificate, setFrontendCertificate] = useState("");
 
   const [editingBackend, setEditingBackend] = useState<string | null>(null);
   const [backendName, setBackendName] = useState("api");
@@ -77,6 +82,15 @@ export function HaproxyDetailPage() {
   const [serverWeight, setServerWeight] = useState("100");
   const [serverCheck, setServerCheck] = useState(true);
 
+  const [certName, setCertName] = useState("site");
+  const [certPem, setCertPem] = useState("");
+
+  const [editingAcl, setEditingAcl] = useState<string | null>(null);
+  const [aclName, setAclName] = useState("is_api");
+  const [aclFrontend, setAclFrontend] = useState("web");
+  const [aclExpression, setAclExpression] = useState("path_beg /api");
+  const [aclBackend, setAclBackend] = useState("");
+
   useEffect(() => {
     const backends = backendsQuery.data;
     if (!backends?.length) return;
@@ -87,6 +101,14 @@ export function HaproxyDetailPage() {
       setFrontendBackend(backends[0].name);
     }
   }, [backendsQuery.data, serverBackend, frontendBackend]);
+
+  useEffect(() => {
+    const frontends = frontendsQuery.data;
+    if (!frontends?.length) return;
+    if (!frontends.some((item) => item.name === aclFrontend)) {
+      setAclFrontend(frontends[0].name);
+    }
+  }, [frontendsQuery.data, aclFrontend]);
 
   if (!instanceId) {
     return <p className="text-danger">Mangler instance id</p>;
@@ -99,6 +121,7 @@ export function HaproxyDetailPage() {
     setFrontendBind("*");
     setFrontendMode("http");
     setFrontendBackend(backendsQuery.data?.[0]?.name ?? "app");
+    setFrontendCertificate("");
   }
 
   function startEditFrontend(item: HaproxyFrontend) {
@@ -108,6 +131,7 @@ export function HaproxyDetailPage() {
     setFrontendBind(item.bind_address);
     setFrontendMode(item.mode);
     setFrontendBackend(item.default_backend);
+    setFrontendCertificate(item.certificate ?? "");
   }
 
   async function saveFrontend(event: FormEvent) {
@@ -118,6 +142,7 @@ export function HaproxyDetailPage() {
       bind_port: Number(frontendPort),
       mode: frontendMode,
       default_backend: frontendBackend,
+      certificate: frontendCertificate || null,
     };
     if (editingFrontend) {
       await mutations.updateFrontend.mutateAsync({ name: editingFrontend, payload });
@@ -290,7 +315,7 @@ export function HaproxyDetailPage() {
         <section className="space-y-4">
           <form
             onSubmit={saveFrontend}
-            className="grid gap-3 border border-line bg-paper-elevated/40 p-4 md:grid-cols-3 lg:grid-cols-6"
+            className="grid gap-3 border border-line bg-paper-elevated/40 p-4 md:grid-cols-3 lg:grid-cols-7"
           >
             <input
               className="border border-line bg-paper px-3 py-2 font-mono text-sm"
@@ -333,6 +358,18 @@ export function HaproxyDetailPage() {
                 </option>
               ))}
             </select>
+            <select
+              className="border border-line bg-paper px-3 py-2 font-mono text-sm"
+              value={frontendCertificate}
+              onChange={(e) => setFrontendCertificate(e.target.value)}
+            >
+              <option value="">no TLS</option>
+              {(certificatesQuery.data ?? []).map((cert) => (
+                <option key={cert.name} value={cert.name}>
+                  {cert.name}
+                </option>
+              ))}
+            </select>
             <div className="flex gap-2">
               <button type="submit" className="flex-1 border border-accent bg-accent px-3 py-2 text-sm text-white">
                 {editingFrontend ? "Oppdater" : "Legg til"}
@@ -345,12 +382,13 @@ export function HaproxyDetailPage() {
             </div>
           </form>
           <EntityTable
-            headers={["Name", "Bind", "Mode", "Backend", ""]}
+            headers={["Name", "Bind", "Mode", "Backend", "TLS", ""]}
             rows={(frontendsQuery.data ?? []).map((item) => [
               item.name,
               `${item.bind_address}:${item.bind_port}`,
               item.mode,
               item.default_backend,
+              item.certificate ?? "—",
               <div key={`fe-${item.name}`} className="flex gap-3">
                 <button type="button" className="text-accent hover:underline" onClick={() => startEditFrontend(item)}>
                   Rediger
@@ -534,17 +572,171 @@ export function HaproxyDetailPage() {
       ) : null}
 
       {tab === "certificates" ? (
-        <PlaceholderPanel
-          title="Certificates"
-          body="TLS-sertifikatbinding kommer i en senere leveranse. Backend-API for /haproxy/certificates er ikke implementert ennå."
-        />
+        <section className="space-y-4">
+          <form
+            onSubmit={async (event) => {
+              event.preventDefault();
+              await mutations.createCertificate.mutateAsync({ name: certName, pem: certPem });
+              setCertPem("");
+            }}
+            className="space-y-3 border border-line bg-paper-elevated/40 p-4"
+          >
+            <p className="text-sm text-ink-muted">
+              Last opp kombinert PEM (sertifikat + privat nøkkel). Filen lagres under{" "}
+              <span className="font-mono">config/certs/</span> med restriktive rettigheter.
+            </p>
+            <input
+              className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+              value={certName}
+              onChange={(e) => setCertName(e.target.value)}
+              placeholder="certificate name"
+              required
+            />
+            <textarea
+              className="min-h-40 w-full border border-line bg-paper px-3 py-2 font-mono text-xs"
+              value={certPem}
+              onChange={(e) => setCertPem(e.target.value)}
+              placeholder={"-----BEGIN CERTIFICATE-----\n...\n-----BEGIN PRIVATE KEY-----\n..."}
+              required
+            />
+            <button type="submit" className="border border-accent bg-accent px-3 py-2 text-sm text-white">
+              Last opp sertifikat
+            </button>
+            {mutations.createCertificate.isError ? (
+              <p className="text-sm text-danger">
+                {mutations.createCertificate.error instanceof Error
+                  ? mutations.createCertificate.error.message
+                  : "Opplasting feilet"}
+              </p>
+            ) : null}
+          </form>
+          <EntityTable
+            headers={["Name", "Filename", "Size", ""]}
+            rows={(certificatesQuery.data ?? []).map((item) => [
+              item.name,
+              item.filename,
+              `${item.size_bytes} B`,
+              <button
+                key={`cert-${item.name}`}
+                type="button"
+                className="text-danger hover:underline"
+                onClick={() => mutations.deleteCertificate.mutate(item.name)}
+              >
+                Slett
+              </button>,
+            ])}
+          />
+        </section>
       ) : null}
 
       {tab === "acls" ? (
-        <PlaceholderPanel
-          title="ACLs"
-          body="ACL-redigering kommer i en senere leveranse. Backend-API for /haproxy/acls er ikke implementert ennå."
-        />
+        <section className="space-y-4">
+          <form
+            onSubmit={async (event) => {
+              event.preventDefault();
+              const payload: HaproxyAcl = {
+                name: aclName,
+                frontend: aclFrontend,
+                expression: aclExpression,
+                use_backend: aclBackend || null,
+              };
+              if (editingAcl) {
+                await mutations.updateAcl.mutateAsync({ name: editingAcl, payload });
+              } else {
+                await mutations.createAcl.mutateAsync(payload);
+              }
+              setEditingAcl(null);
+              setAclName("is_api");
+              setAclExpression("path_beg /api");
+              setAclBackend("");
+            }}
+            className="grid gap-3 border border-line bg-paper-elevated/40 p-4 md:grid-cols-2 lg:grid-cols-5"
+          >
+            <input
+              className="border border-line bg-paper px-3 py-2 font-mono text-sm"
+              value={aclName}
+              onChange={(e) => setAclName(e.target.value)}
+              placeholder="acl name"
+              required
+              disabled={editingAcl != null}
+            />
+            <select
+              className="border border-line bg-paper px-3 py-2 font-mono text-sm"
+              value={aclFrontend}
+              onChange={(e) => setAclFrontend(e.target.value)}
+            >
+              {(frontendsQuery.data ?? []).map((item) => (
+                <option key={item.name} value={item.name}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+            <input
+              className="border border-line bg-paper px-3 py-2 font-mono text-sm lg:col-span-1"
+              value={aclExpression}
+              onChange={(e) => setAclExpression(e.target.value)}
+              placeholder="path_beg /api"
+              required
+            />
+            <select
+              className="border border-line bg-paper px-3 py-2 font-mono text-sm"
+              value={aclBackend}
+              onChange={(e) => setAclBackend(e.target.value)}
+            >
+              <option value="">no use_backend</option>
+              {(backendsQuery.data ?? []).map((item) => (
+                <option key={item.name} value={item.name}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+            <div className="flex gap-2">
+              <button type="submit" className="flex-1 border border-accent bg-accent px-3 py-2 text-sm text-white">
+                {editingAcl ? "Oppdater" : "Legg til"}
+              </button>
+              {editingAcl ? (
+                <button
+                  type="button"
+                  className="border border-line px-3 py-2 text-sm"
+                  onClick={() => setEditingAcl(null)}
+                >
+                  Avbryt
+                </button>
+              ) : null}
+            </div>
+          </form>
+          <EntityTable
+            headers={["Name", "Frontend", "Expression", "use_backend", ""]}
+            rows={(aclsQuery.data ?? []).map((item) => [
+              item.name,
+              item.frontend,
+              item.expression,
+              item.use_backend ?? "—",
+              <div key={`acl-${item.name}`} className="flex gap-3">
+                <button
+                  type="button"
+                  className="text-accent hover:underline"
+                  onClick={() => {
+                    setEditingAcl(item.name);
+                    setAclName(item.name);
+                    setAclFrontend(item.frontend);
+                    setAclExpression(item.expression);
+                    setAclBackend(item.use_backend ?? "");
+                  }}
+                >
+                  Rediger
+                </button>
+                <button
+                  type="button"
+                  className="text-danger hover:underline"
+                  onClick={() => mutations.deleteAcl.mutate(item.name)}
+                >
+                  Slett
+                </button>
+              </div>,
+            ])}
+          />
+        </section>
       ) : null}
 
       {tab === "status" ? (
@@ -682,15 +874,6 @@ export function HaproxyDetailPage() {
         </section>
       ) : null}
     </div>
-  );
-}
-
-function PlaceholderPanel({ title, body }: { title: string; body: string }) {
-  return (
-    <section className="border-l-2 border-line bg-paper-elevated/40 p-5">
-      <h3 className="text-lg font-semibold text-ink">{title}</h3>
-      <p className="mt-2 max-w-2xl text-sm text-ink-muted">{body}</p>
-    </section>
   );
 }
 

@@ -99,7 +99,10 @@ class InstanceService:
 
         try:
             self._write_config(instance)
-            validation = self._validator.validate_config_dict(instance.configuration)
+            validation = self._validator.validate_config_dict(
+                instance.configuration,
+                cert_files=self._load_cert_files(instance),
+            )
             if not validation.ok:
                 raise ValueError(f"HAProxy config invalid: {validation.output}")
             self._revisions.record_revision(
@@ -154,7 +157,10 @@ class InstanceService:
     ) -> ServiceInstance:
         instance.configuration = HaproxyConfig.from_dict(configuration).model_dump()
         self._write_config(instance)
-        validation = self._validator.validate_config_dict(instance.configuration)
+        validation = self._validator.validate_config_dict(
+            instance.configuration,
+            cert_files=self._load_cert_files(instance),
+        )
         if not validation.ok:
             raise ValueError(f"HAProxy config invalid: {validation.output}")
 
@@ -270,7 +276,10 @@ class InstanceService:
 
     def validate_instance(self, instance: ServiceInstance) -> tuple[bool, str, str]:
         rendered = render_haproxy_config(HaproxyConfig.from_dict(instance.configuration))
-        result = self._validator.validate_rendered(rendered)
+        result = self._validator.validate_config_dict(
+            instance.configuration,
+            cert_files=self._load_cert_files(instance),
+        )
         return result.ok, result.output, rendered
 
     def get_logs(self, instance: ServiceInstance, *, tail: int = 200) -> str:
@@ -296,7 +305,10 @@ class InstanceService:
                 instance.container_id = None
             elif instance.desired_state == DesiredState.RUNNING.value:
                 self._write_config(instance)
-                validation = self._validator.validate_config_dict(instance.configuration)
+                validation = self._validator.validate_config_dict(
+                    instance.configuration,
+                    cert_files=self._load_cert_files(instance),
+                )
                 if not validation.ok:
                     raise RuntimeError(f"HAProxy config invalid: {validation.output}")
                 self._ensure_container(instance, networks)
@@ -398,9 +410,42 @@ class InstanceService:
     def _write_config(self, instance: ServiceInstance) -> Path:
         rendered = render_haproxy_config(HaproxyConfig.from_dict(instance.configuration))
         config_dir = self._instance_dir(instance.id) / "config"
+        (config_dir / "certs").mkdir(parents=True, exist_ok=True)
         cfg = config_dir / "haproxy.cfg"
         cfg.write_text(rendered, encoding="utf-8")
         return config_dir
+
+    def certs_dir(self, instance_id: str) -> Path:
+        path = self._instance_dir(instance_id) / "config" / "certs"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def write_certificate_pem(self, instance: ServiceInstance, name: str, pem: str) -> Path:
+        if "BEGIN CERTIFICATE" not in pem:
+            raise ValueError("PEM must include a certificate block")
+        if "BEGIN" not in pem or "PRIVATE KEY" not in pem:
+            raise ValueError("PEM must include a private key block (HAProxy expects a combined bundle)")
+        path = self.certs_dir(instance.id) / f"{name}.pem"
+        path.write_text(pem.strip() + "\n", encoding="utf-8")
+        path.chmod(0o600)
+        return path
+
+    def delete_certificate_pem(self, instance: ServiceInstance, name: str) -> None:
+        path = self.certs_dir(instance.id) / f"{name}.pem"
+        path.unlink(missing_ok=True)
+
+    def certificate_size(self, instance: ServiceInstance, name: str) -> int:
+        path = self.certs_dir(instance.id) / f"{name}.pem"
+        return path.stat().st_size if path.exists() else 0
+
+    def _load_cert_files(self, instance: ServiceInstance) -> dict[str, str]:
+        config = HaproxyConfig.from_dict(instance.configuration)
+        files: dict[str, str] = {}
+        for cert in config.certificates:
+            path = self.certs_dir(instance.id) / f"{cert.name}.pem"
+            if path.exists():
+                files[cert.name] = path.read_text(encoding="utf-8")
+        return files
 
     def _ensure_container(self, instance: ServiceInstance, networks: list[Network]) -> None:
         config_dir = str(self._instance_dir(instance.id) / "config")

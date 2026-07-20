@@ -135,7 +135,7 @@ class DockerClientAdapter:
         command: list[str],
         files: dict[str, str],
     ) -> str:
-        """Run one-shot container with config files from a host-visible data dir."""
+        """Run a one-shot container with files under /usr/local/etc/haproxy."""
         client = self._get_client()
         self.ensure_image(image)
 
@@ -144,8 +144,17 @@ class DockerClientAdapter:
         work = validate_root / str(uuid.uuid4())
         work.mkdir(parents=True, exist_ok=True)
         try:
-            content = next(iter(files.values()))
-            (work / "haproxy.cfg").write_text(content, encoding="utf-8")
+            for target, content in files.items():
+                # Accept absolute container paths or relative under haproxy root.
+                rel = target
+                prefix = "/usr/local/etc/haproxy/"
+                if rel.startswith(prefix):
+                    rel = rel[len(prefix) :]
+                dest = work / rel
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                dest.write_text(content, encoding="utf-8")
+                if rel.startswith("certs/"):
+                    dest.chmod(0o600)
             container = client.containers.create(
                 image=image,
                 command=command,
@@ -166,7 +175,10 @@ class DockerClientAdapter:
             for path in sorted(work.rglob("*"), reverse=True):
                 if path.is_file():
                     path.unlink(missing_ok=True)
-            work.rmdir()
+                elif path.is_dir():
+                    path.rmdir()
+            if work.exists():
+                work.rmdir()
 
     def ensure_image(self, image: str) -> None:
         client = self._get_client()

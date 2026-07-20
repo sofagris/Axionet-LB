@@ -11,6 +11,7 @@ class HaproxyFrontendRead(BaseModel):
     bind_port: int
     mode: str
     default_backend: str
+    certificate: str | None = None
 
 
 class HaproxyServerRead(BaseModel):
@@ -33,6 +34,24 @@ class HaproxyBackendRead(BaseModel):
     balance: str
     mode: str
     servers: list[HaproxyServerRead] = Field(default_factory=list)
+
+
+class HaproxyCertificateCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    pem: str = Field(min_length=64)
+
+
+class HaproxyCertificateRead(BaseModel):
+    name: str
+    filename: str
+    size_bytes: int = 0
+
+
+class HaproxyAclRead(BaseModel):
+    name: str
+    frontend: str
+    expression: str
+    use_backend: str | None = None
 
 
 class HaproxyConfigPreview(BaseModel):

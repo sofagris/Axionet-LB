@@ -1,20 +1,27 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  createHaproxyAcl,
   createHaproxyBackend,
+  createHaproxyCertificate,
   createHaproxyFrontend,
   createHaproxyServer,
+  deleteHaproxyAcl,
   deleteHaproxyBackend,
+  deleteHaproxyCertificate,
   deleteHaproxyFrontend,
   deleteHaproxyServer,
+  fetchHaproxyAcls,
   fetchHaproxyBackends,
+  fetchHaproxyCertificates,
   fetchHaproxyConfig,
   fetchHaproxyFrontends,
   fetchHaproxyStatus,
+  updateHaproxyAcl,
   updateHaproxyBackend,
   updateHaproxyFrontend,
   updateHaproxyServer,
 } from "../../api/haproxy";
-import type { HaproxyBackend, HaproxyFrontend, HaproxyServer } from "../../types/haproxy";
+import type { HaproxyAcl, HaproxyBackend, HaproxyFrontend, HaproxyServer } from "../../types/haproxy";
 
 export function useHaproxyFrontends(id: string) {
   return useQuery({
@@ -27,6 +34,20 @@ export function useHaproxyBackends(id: string) {
   return useQuery({
     queryKey: ["haproxy", id, "backends"],
     queryFn: () => fetchHaproxyBackends(id),
+  });
+}
+
+export function useHaproxyCertificates(id: string) {
+  return useQuery({
+    queryKey: ["haproxy", id, "certificates"],
+    queryFn: () => fetchHaproxyCertificates(id),
+  });
+}
+
+export function useHaproxyAcls(id: string) {
+  return useQuery({
+    queryKey: ["haproxy", id, "acls"],
+    queryFn: () => fetchHaproxyAcls(id),
   });
 }
 
@@ -104,6 +125,27 @@ export function useHaproxyMutations(id: string) {
     deleteServer: useMutation({
       mutationFn: ({ backend, server }: { backend: string; server: string }) =>
         deleteHaproxyServer(id, backend, server),
+      onSuccess: invalidate,
+    }),
+    createCertificate: useMutation({
+      mutationFn: (payload: { name: string; pem: string }) => createHaproxyCertificate(id, payload),
+      onSuccess: invalidate,
+    }),
+    deleteCertificate: useMutation({
+      mutationFn: (name: string) => deleteHaproxyCertificate(id, name),
+      onSuccess: invalidate,
+    }),
+    createAcl: useMutation({
+      mutationFn: (payload: HaproxyAcl) => createHaproxyAcl(id, payload),
+      onSuccess: invalidate,
+    }),
+    updateAcl: useMutation({
+      mutationFn: ({ name, payload }: { name: string; payload: HaproxyAcl }) =>
+        updateHaproxyAcl(id, name, payload),
+      onSuccess: invalidate,
+    }),
+    deleteAcl: useMutation({
+      mutationFn: (name: string) => deleteHaproxyAcl(id, name),
       onSuccess: invalidate,
     }),
   };

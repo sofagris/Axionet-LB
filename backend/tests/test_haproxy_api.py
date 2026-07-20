@@ -171,6 +171,20 @@ def test_haproxy_structured_crud_and_status(
     assert updated_srv.json()["weight"] == 50
     assert updated_srv.json()["address"] == "10.10.0.6"
 
+    acl = client.post(
+        "/api/v1/instances/inst-1/haproxy/acls",
+        json={
+            "name": "is_api",
+            "frontend": "api",
+            "expression": "path_beg /api",
+            "use_backend": "app",
+        },
+    )
+    assert acl.status_code == 201, acl.text
+    listed_acls = client.get("/api/v1/instances/inst-1/haproxy/acls")
+    assert listed_acls.status_code == 200
+    assert any(item["name"] == "is_api" for item in listed_acls.json())
+
     metrics = client.get("/api/v1/instances/inst-1/metrics")
     assert metrics.status_code == 200
     mbody = metrics.json()

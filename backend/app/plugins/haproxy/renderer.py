@@ -30,8 +30,18 @@ frontend stats
 
 {% for frontend in config.frontends -%}
 frontend {{ frontend.name }}
+{% if frontend.certificate %}
+    bind {{ frontend.bind_address }}:{{ frontend.bind_port }} ssl crt /usr/local/etc/haproxy/certs/{{ frontend.certificate }}.pem
+{% else %}
     bind {{ frontend.bind_address }}:{{ frontend.bind_port }}
+{% endif %}
     mode {{ frontend.mode }}
+{% for acl in config.acls if acl.frontend == frontend.name %}
+    acl {{ acl.name }} {{ acl.expression }}
+{% endfor %}
+{% for acl in config.acls if acl.frontend == frontend.name and acl.use_backend %}
+    use_backend {{ acl.use_backend }} if {{ acl.name }}
+{% endfor %}
     default_backend {{ frontend.default_backend }}
 
 {% endfor -%}

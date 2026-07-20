@@ -6,6 +6,7 @@ export const HaproxyFrontendSchema = z.object({
   bind_port: z.number(),
   mode: z.string(),
   default_backend: z.string(),
+  certificate: z.string().nullable().optional(),
 });
 
 export const HaproxyServerSchema = z.object({
@@ -24,6 +25,19 @@ export const HaproxyBackendSchema = z.object({
   balance: z.string(),
   mode: z.string(),
   servers: z.array(HaproxyServerSchema),
+});
+
+export const HaproxyCertificateSchema = z.object({
+  name: z.string(),
+  filename: z.string(),
+  size_bytes: z.number().int(),
+});
+
+export const HaproxyAclSchema = z.object({
+  name: z.string(),
+  frontend: z.string(),
+  expression: z.string(),
+  use_backend: z.string().nullable().optional(),
 });
 
 export const HaproxyConfigPreviewSchema = z.object({
@@ -57,4 +71,6 @@ export const HaproxyRuntimeStatusSchema = z.object({
 export type HaproxyFrontend = z.infer<typeof HaproxyFrontendSchema>;
 export type HaproxyBackend = z.infer<typeof HaproxyBackendSchema>;
 export type HaproxyServer = z.infer<typeof HaproxyServerSchema>;
+export type HaproxyCertificate = z.infer<typeof HaproxyCertificateSchema>;
+export type HaproxyAcl = z.infer<typeof HaproxyAclSchema>;
 export type HaproxyRuntimeStatus = z.infer<typeof HaproxyRuntimeStatusSchema>;

@@ -26,3 +26,32 @@ def test_render_custom_ports() -> None:
     rendered = render_haproxy_config(config)
     assert "bind *:8080" in rendered
     assert "server s1 10.0.0.5:80 weight 100 check inter 2000ms rise 2 fall 3" in rendered
+
+
+def test_render_tls_and_acls() -> None:
+    config = HaproxyConfig.model_validate(
+        {
+            "frontends": [
+                {
+                    "name": "web",
+                    "bind_port": 443,
+                    "default_backend": "app",
+                    "certificate": "site",
+                }
+            ],
+            "backends": [{"name": "app"}, {"name": "api"}],
+            "certificates": [{"name": "site", "filename": "certs/site.pem"}],
+            "acls": [
+                {
+                    "name": "is_api",
+                    "frontend": "web",
+                    "expression": "path_beg /api",
+                    "use_backend": "api",
+                }
+            ],
+        }
+    )
+    rendered = render_haproxy_config(config)
+    assert "ssl crt /usr/local/etc/haproxy/certs/site.pem" in rendered
+    assert "acl is_api path_beg /api" in rendered
+    assert "use_backend api if is_api" in rendered
