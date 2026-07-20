@@ -5,6 +5,7 @@ from app.plugins.haproxy.schemas import HaproxyConfig
 def test_render_default_haproxy_config() -> None:
     rendered = render_haproxy_config(HaproxyConfig())
     assert "master-worker" in rendered
+    assert "ipv4@127.0.0.1:9999" in rendered
     assert "frontend main" in rendered
     assert "backend app" in rendered
     assert "bind *:80" in rendered

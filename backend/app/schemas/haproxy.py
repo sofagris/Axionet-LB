@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -80,3 +80,17 @@ class HaproxyRuntimeStatus(BaseModel):
     frontends: list[HaproxyStatRow] = Field(default_factory=list)
     backends: list[HaproxyStatRow] = Field(default_factory=list)
     servers: list[HaproxyStatRow] = Field(default_factory=list)
+
+
+class HaproxyServerRuntimeRequest(BaseModel):
+    action: Literal["enable", "disable", "drain", "set_weight"]
+    weight: int | None = Field(default=None, ge=0, le=256)
+
+
+class HaproxyServerRuntimeResult(BaseModel):
+    ok: bool
+    backend: str
+    server: str
+    action: str
+    output: str
+    ephemeral: bool = True

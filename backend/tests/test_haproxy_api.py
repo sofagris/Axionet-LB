@@ -208,3 +208,38 @@ def test_haproxy_structured_crud_and_status(
     assert fbody["totals"]["instances_available"] == 1
     assert fbody["totals"]["current_sessions"] == 5
     assert fbody["totals"]["bytes_out"] == 10_000
+
+
+def test_haproxy_runtime_server_action(
+    client: TestClient,
+    docker_adapter: MagicMock,
+) -> None:
+    docker_adapter.run_network_sidecar.return_value = "ok"
+    docker_adapter.inspect_container.return_value = {"State": {"Status": "running"}}
+
+    drained = client.post(
+        "/api/v1/instances/inst-1/haproxy/runtime/servers/app/s1",
+        json={"action": "drain"},
+    )
+    assert drained.status_code == 200, drained.text
+    body = drained.json()
+    assert body["ok"] is True
+    assert body["action"] == "drain"
+    assert body["backend"] == "app"
+    assert body["server"] == "s1"
+    assert body["ephemeral"] is True
+
+    weighted = client.post(
+        "/api/v1/instances/inst-1/haproxy/runtime/servers/app/s1",
+        json={"action": "set_weight", "weight": 50},
+    )
+    assert weighted.status_code == 200, weighted.text
+    assert weighted.json()["action"] == "set_weight"
+
+    missing_weight = client.post(
+        "/api/v1/instances/inst-1/haproxy/runtime/servers/app/s1",
+        json={"action": "set_weight"},
+    )
+    assert missing_weight.status_code == 400
+
+    assert docker_adapter.run_network_sidecar.call_count >= 2

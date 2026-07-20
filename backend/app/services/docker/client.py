@@ -339,18 +339,22 @@ class DockerClientAdapter:
         image: str,
         network_container_id: str,
         command: list[str],
+        entrypoint: list[str] | None = None,
     ) -> str:
         """Run a one-shot helper sharing the target container network namespace."""
         client = self._get_client()
         self.ensure_image(image)
+        kwargs: dict[str, Any] = {
+            "image": image,
+            "command": command,
+            "network_mode": f"container:{network_container_id}",
+            "remove": True,
+            "labels": {MANAGED_LABEL: "true", "axionet.purpose": "runtime-probe"},
+        }
+        if entrypoint is not None:
+            kwargs["entrypoint"] = entrypoint
         try:
-            output = client.containers.run(
-                image=image,
-                command=command,
-                network_mode=f"container:{network_container_id}",
-                remove=True,
-                labels={MANAGED_LABEL: "true", "axionet.purpose": "runtime-probe"},
-            )
+            output = client.containers.run(**kwargs)
         except APIError as exc:
             raise DockerException(str(exc)) from exc
         if isinstance(output, bytes):

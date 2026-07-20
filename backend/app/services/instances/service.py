@@ -301,6 +301,25 @@ class InstanceService:
         self._db.refresh(instance)
         return instance
 
+    def ensure_runtime_admin_socket(self, instance: ServiceInstance) -> None:
+        """Ensure live HAProxy has TCP admin socket (rewrite config + soft-reload if needed)."""
+        if not instance.container_id:
+            raise RuntimeError("Instance has no container")
+        config_dir = self._write_config(instance)
+        rendered = (config_dir / "haproxy.cfg").read_text(encoding="utf-8")
+        if "ipv4@127.0.0.1:9999" not in rendered:
+            raise RuntimeError("Rendered HAProxy config is missing TCP admin socket")
+
+        from app.plugins.haproxy.runtime import HaproxyRuntimeClient
+
+        runtime = HaproxyRuntimeClient(self._docker)
+        try:
+            runtime.send_admin_command(instance.container_id, "show info")
+        except RuntimeError:
+            logger.info("Admin socket unavailable for %s; soft-reloading", instance.name)
+            self._reload_or_restart(instance)
+            runtime.send_admin_command(instance.container_id, "show info")
+
     def _reload_or_restart(self, instance: ServiceInstance) -> None:
         """Prefer soft reload; fall back to container restart if signal fails."""
         container_id = instance.container_id or ""

@@ -25,6 +25,8 @@ from app.schemas.haproxy import (
     HaproxyFrontendRead,
     HaproxyRuntimeStatus,
     HaproxyServerRead,
+    HaproxyServerRuntimeRequest,
+    HaproxyServerRuntimeResult,
     HaproxyStatRow,
 )
 from app.services.docker.client import DockerClientAdapter, create_docker_adapter
@@ -471,4 +473,53 @@ def get_runtime_status(
         frontends=[to_stat(row) for row in frontends],
         backends=[to_stat(row) for row in backends],
         servers=[to_stat(row) for row in servers],
+    )
+
+
+@router.post(
+    "/runtime/servers/{backend_name}/{server_name}",
+    response_model=HaproxyServerRuntimeResult,
+)
+def runtime_server_action(
+    instance_id: str,
+    backend_name: str,
+    server_name: str,
+    payload: HaproxyServerRuntimeRequest,
+    service: InstanceService = Depends(get_instance_service),
+    docker: DockerClientAdapter = Depends(get_docker_adapter),
+) -> HaproxyServerRuntimeResult:
+    """Ephemeral runtime control via HAProxy admin socket (does not persist in config)."""
+    instance = _require_instance(service, instance_id)
+    if not instance.container_id:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Instance has no container")
+    if payload.action == "set_weight" and payload.weight is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="weight is required")
+
+    # Ensure rendered config includes TCP admin socket, then soft-reload once if needed.
+    try:
+        service.ensure_runtime_admin_socket(instance)
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+
+    runtime = HaproxyRuntimeClient(docker)
+    try:
+        output = runtime.server_action(
+            instance.container_id,
+            backend=backend_name,
+            server=server_name,
+            action=payload.action,
+            weight=payload.weight,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+
+    return HaproxyServerRuntimeResult(
+        ok=True,
+        backend=backend_name,
+        server=server_name,
+        action=payload.action,
+        output=output,
+        ephemeral=True,
     )

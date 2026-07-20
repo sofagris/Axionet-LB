@@ -16,10 +16,12 @@ import {
   fetchHaproxyConfig,
   fetchHaproxyFrontends,
   fetchHaproxyStatus,
+  runtimeServerAction,
   updateHaproxyAcl,
   updateHaproxyBackend,
   updateHaproxyFrontend,
   updateHaproxyServer,
+  type HaproxyRuntimeServerAction,
 } from "../../api/haproxy";
 import type { HaproxyAcl, HaproxyBackend, HaproxyFrontend, HaproxyServer } from "../../types/haproxy";
 
@@ -147,6 +149,22 @@ export function useHaproxyMutations(id: string) {
     deleteAcl: useMutation({
       mutationFn: (name: string) => deleteHaproxyAcl(id, name),
       onSuccess: invalidate,
+    }),
+    runtimeServer: useMutation({
+      mutationFn: ({
+        backend,
+        server,
+        action,
+        weight,
+      }: {
+        backend: string;
+        server: string;
+        action: HaproxyRuntimeServerAction;
+        weight?: number;
+      }) => runtimeServerAction(id, backend, server, { action, weight }),
+      onSuccess: async () => {
+        await queryClient.invalidateQueries({ queryKey: ["haproxy", id, "status"] });
+      },
     }),
   };
 }

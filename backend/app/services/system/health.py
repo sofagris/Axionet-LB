@@ -73,6 +73,7 @@ class SystemService:
                 "haproxy.runtime_status",
                 "haproxy.revisions",
                 "haproxy.soft_reload",
+                "haproxy.runtime_control",
                 "system.logs",
                 "instances.reconcile_loop",
             ],

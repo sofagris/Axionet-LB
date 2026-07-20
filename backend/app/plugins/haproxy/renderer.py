@@ -9,6 +9,7 @@ HAPROXY_TEMPLATE = Template(
 global
     log stdout format raw local0
     stats socket /var/lib/haproxy/admin.sock mode 660 level admin expose-fd listeners
+    stats socket ipv4@127.0.0.1:9999 level admin
     master-worker
 
 defaults

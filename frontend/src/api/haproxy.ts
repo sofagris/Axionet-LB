@@ -137,3 +137,28 @@ export function fetchHaproxyConfig(id: string) {
 export function fetchHaproxyStatus(id: string) {
   return apiFetch(`${base(id)}/status`, (data) => HaproxyRuntimeStatusSchema.parse(data));
 }
+
+export type HaproxyRuntimeServerAction = "enable" | "disable" | "drain" | "set_weight";
+
+export function runtimeServerAction(
+  id: string,
+  backend: string,
+  server: string,
+  payload: { action: HaproxyRuntimeServerAction; weight?: number },
+) {
+  return apiFetch(
+    `${base(id)}/runtime/servers/${encodeURIComponent(backend)}/${encodeURIComponent(server)}`,
+    (data) =>
+      z
+        .object({
+          ok: z.boolean(),
+          backend: z.string(),
+          server: z.string(),
+          action: z.string(),
+          output: z.string(),
+          ephemeral: z.boolean(),
+        })
+        .parse(data),
+    { method: "POST", body: payload },
+  );
+}

@@ -49,6 +49,8 @@ export function HaproxyDetailPage() {
   const [selectedRevisionId, setSelectedRevisionId] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState(false);
   const [logTail, setLogTail] = useState(200);
+  const [runtimeWeight, setRuntimeWeight] = useState("100");
+  const [runtimeMessage, setRuntimeMessage] = useState<string | null>(null);
 
   const frontendsQuery = useHaproxyFrontends(instanceId);
   const backendsQuery = useHaproxyBackends(instanceId);
@@ -916,34 +918,108 @@ export function HaproxyDetailPage() {
               {statusQuery.error instanceof Error ? statusQuery.error.message : "Status utilgjengelig"}
             </p>
           ) : null}
+          <p className="text-sm text-ink-muted">
+            Runtime-handlinger (enable/disable/drain/weight) er ephemeral — de lagres ikke i config før du
+            endrer Servers-fanen eksplisitt.
+          </p>
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="font-mono text-xs text-ink-muted">
+              Vekt (0–256)
+              <input
+                type="number"
+                min={0}
+                max={256}
+                className="ml-2 w-24 border border-line bg-paper px-2 py-1"
+                value={runtimeWeight}
+                onChange={(e) => setRuntimeWeight(e.target.value)}
+              />
+            </label>
+            <button
+              type="button"
+              className="border border-line px-3 py-1.5 text-sm"
+              onClick={() => void statusQuery.refetch()}
+              disabled={statusQuery.isFetching}
+            >
+              {statusQuery.isFetching ? "Henter…" : "Oppdater status"}
+            </button>
+          </div>
+          {runtimeMessage ? <p className="font-mono text-xs text-ink-muted">{runtimeMessage}</p> : null}
+          {mutations.runtimeServer.isError ? (
+            <p className="text-danger">
+              {mutations.runtimeServer.error instanceof Error
+                ? mutations.runtimeServer.error.message
+                : "Runtime-handling feilet"}
+            </p>
+          ) : null}
           <EntityTable
-            headers={["Proxy", "Server", "Status", "Sessions", "Bytes in/out", "Check"]}
+            headers={["Proxy", "Type", "Status", "Sessions", "Bytes in/out"]}
             rows={[
               ...(statusQuery.data?.frontends ?? []).map((row) => [
                 row.proxy,
-                row.server,
+                "FRONTEND",
                 row.status,
                 row.current_sessions ?? "—",
                 `${row.bytes_in ?? "—"} / ${row.bytes_out ?? "—"}`,
-                "—",
               ]),
               ...(statusQuery.data?.backends ?? []).map((row) => [
                 row.proxy,
-                row.server,
+                "BACKEND",
                 row.status,
                 row.current_sessions ?? "—",
                 `${row.bytes_in ?? "—"} / ${row.bytes_out ?? "—"}`,
-                "—",
-              ]),
-              ...(statusQuery.data?.servers ?? []).map((row) => [
-                row.proxy,
-                row.server,
-                row.status,
-                row.current_sessions ?? "—",
-                `${row.bytes_in ?? "—"} / ${row.bytes_out ?? "—"}`,
-                row.check_status ?? "—",
               ]),
             ]}
+          />
+          <h3 className="text-sm font-medium tracking-wide text-ink-muted uppercase">Servers</h3>
+          <EntityTable
+            headers={["Backend", "Server", "Status", "Sessions", "Check", ""]}
+            rows={(statusQuery.data?.servers ?? []).map((row) => [
+              row.proxy,
+              row.server,
+              row.status,
+              row.current_sessions ?? "—",
+              row.check_status ?? "—",
+              <div key={`${row.proxy}-${row.server}-rt`} className="flex flex-wrap gap-2">
+                {(
+                  [
+                    ["enable", "Enable"],
+                    ["disable", "Disable"],
+                    ["drain", "Drain"],
+                    ["set_weight", "Set weight"],
+                  ] as const
+                ).map(([action, label]) => (
+                  <button
+                    key={action}
+                    type="button"
+                    className="text-accent hover:underline disabled:opacity-50"
+                    disabled={mutations.runtimeServer.isPending}
+                    onClick={() => {
+                      setRuntimeMessage(null);
+                      mutations.runtimeServer.mutate(
+                        {
+                          backend: row.proxy,
+                          server: row.server,
+                          action,
+                          weight:
+                            action === "set_weight"
+                              ? Number(runtimeWeight) || 0
+                              : undefined,
+                        },
+                        {
+                          onSuccess: (data) => {
+                            setRuntimeMessage(
+                              `${data.action} ${data.backend}/${data.server}: ${data.output} (ephemeral)`,
+                            );
+                          },
+                        },
+                      );
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>,
+            ])}
           />
         </section>
       ) : null}
