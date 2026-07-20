@@ -380,6 +380,22 @@ class DockerClientAdapter:
             if "already exists" not in str(exc).lower():
                 raise DockerException(str(exc)) from exc
 
+    def disconnect_container_network(
+        self,
+        container_id: str,
+        network_id: str,
+        *,
+        force: bool = True,
+    ) -> None:
+        network = self._get_client().networks.get(network_id)
+        try:
+            network.disconnect(container_id, force=force)
+        except APIError as exc:
+            message = str(exc).lower()
+            if "is not connected" in message or "not found" in message:
+                return
+            raise DockerException(str(exc)) from exc
+
     def run_network_sidecar(
         self,
         *,

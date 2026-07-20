@@ -12,7 +12,15 @@ import {
   useHaproxyStatus,
 } from "../features/haproxy/hooks";
 import { DiffView } from "../features/revisions/DiffView";
-import { useInstanceLogs, useInstanceMetrics, useInstanceAction, useInstances, useValidateExistingInstance } from "../features/instances/hooks";
+import {
+  useInstanceLogs,
+  useInstanceMetrics,
+  useInstanceAction,
+  useInstanceNetworkMutations,
+  useInstances,
+  useValidateExistingInstance,
+} from "../features/instances/hooks";
+import { useNetworks } from "../features/networks/hooks";
 import type { InstanceValidateResult } from "../types/instances";
 import { useRestoreRevision, useRevision, useRevisions } from "../features/revisions/hooks";
 import type { HaproxyAcl, HaproxyBackend, HaproxyFrontend, HaproxyServer } from "../types/haproxy";
@@ -49,6 +57,12 @@ export function HaproxyDetailPage() {
     () => instancesQuery.data?.find((item) => item.id === instanceId),
     [instancesQuery.data, instanceId],
   );
+  const networksQuery = useNetworks();
+  const networkMutations = useInstanceNetworkMutations();
+  const [attachNetworkId, setAttachNetworkId] = useState("");
+  const [attachIp, setAttachIp] = useState("");
+  const [editingAttachmentId, setEditingAttachmentId] = useState<string | null>(null);
+  const [editAttachmentIp, setEditAttachmentIp] = useState("");
 
   const [tab, setTab] = useState<Tab>("overview");
   const [selectedRevisionId, setSelectedRevisionId] = useState<string | null>(null);
@@ -428,6 +442,169 @@ export function HaproxyDetailPage() {
                 metricsQuery.data?.available ? String(metricsQuery.data.bytes_out) : "—"
               }
             />
+          </div>
+
+          <div className="space-y-3 border border-line bg-paper-elevated/40 p-4">
+            <div>
+              <h3 className="font-semibold text-ink">Nettverkstilknytninger</h3>
+              <p className="mt-1 text-sm text-ink-muted">
+                Legg til, endre IP eller fjern Docker-nettverk for denne instansen uten recreate.
+              </p>
+            </div>
+            <form
+              className="grid gap-3 md:grid-cols-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!attachNetworkId) return;
+                void networkMutations.attach
+                  .mutateAsync({
+                    id: instanceId,
+                    payload: {
+                      network_id: attachNetworkId,
+                      ip_address: attachIp.trim() || null,
+                    },
+                  })
+                  .then(() => {
+                    setAttachNetworkId("");
+                    setAttachIp("");
+                  });
+              }}
+            >
+              <FormField label="Nettverk">
+                <select
+                  className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                  value={attachNetworkId}
+                  onChange={(e) => setAttachNetworkId(e.target.value)}
+                  required
+                >
+                  <option value="">Velg nettverk…</option>
+                  {(networksQuery.data ?? [])
+                    .filter(
+                      (net) =>
+                        net.enabled &&
+                        !(instance?.networks ?? []).some((item) => item.network_id === net.id),
+                    )
+                    .map((net) => (
+                      <option key={net.id} value={net.id}>
+                        {net.name}
+                        {net.subnet ? ` (${net.subnet})` : ""}
+                      </option>
+                    ))}
+                </select>
+              </FormField>
+              <FormField label="IP (valgfritt)">
+                <input
+                  className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                  value={attachIp}
+                  onChange={(e) => setAttachIp(e.target.value)}
+                  placeholder="DHCP hvis tom"
+                />
+              </FormField>
+              <FormActions>
+                <button
+                  type="submit"
+                  className="border border-accent bg-accent px-3 py-2 text-sm text-white disabled:opacity-60"
+                  disabled={networkMutations.attach.isPending || !attachNetworkId}
+                >
+                  Koble til
+                </button>
+              </FormActions>
+            </form>
+            {networkMutations.attach.isError ||
+            networkMutations.update.isError ||
+            networkMutations.detach.isError ? (
+              <p className="text-sm text-danger">
+                {(
+                  networkMutations.attach.error ||
+                  networkMutations.update.error ||
+                  networkMutations.detach.error
+                ) instanceof Error
+                  ? (
+                      networkMutations.attach.error ||
+                      networkMutations.update.error ||
+                      networkMutations.detach.error
+                    )?.message
+                  : "Nettverksfeil"}
+              </p>
+            ) : null}
+            <EntityTable
+              headers={["Network", "IP", ""]}
+              rows={(instance?.networks ?? []).map((item) => {
+                const networkName =
+                  networksQuery.data?.find((net) => net.id === item.network_id)?.name ??
+                  item.network_id;
+                const editing = editingAttachmentId === item.id;
+                return [
+                  networkName,
+                  editing ? (
+                    <input
+                      key={`ip-${item.id}`}
+                      className="w-full border border-line bg-paper px-2 py-1 font-mono text-sm"
+                      value={editAttachmentIp}
+                      onChange={(e) => setEditAttachmentIp(e.target.value)}
+                      placeholder="DHCP hvis tom"
+                    />
+                  ) : (
+                    item.ip_address || "dhcp"
+                  ),
+                  <div key={`net-actions-${item.id}`} className="flex flex-wrap gap-3">
+                    {editing ? (
+                      <>
+                        <button
+                          type="button"
+                          className="text-accent hover:underline"
+                          onClick={() => {
+                            void networkMutations.update
+                              .mutateAsync({
+                                id: instanceId,
+                                attachmentId: item.id,
+                                payload: { ip_address: editAttachmentIp.trim() || null },
+                              })
+                              .then(() => setEditingAttachmentId(null));
+                          }}
+                        >
+                          Lagre
+                        </button>
+                        <button
+                          type="button"
+                          className="text-ink-muted hover:underline"
+                          onClick={() => setEditingAttachmentId(null)}
+                        >
+                          Avbryt
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        className="text-accent hover:underline"
+                        onClick={() => {
+                          setEditingAttachmentId(item.id);
+                          setEditAttachmentIp(item.ip_address ?? "");
+                        }}
+                      >
+                        Endre IP
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="text-danger hover:underline"
+                      onClick={() => {
+                        if (!window.confirm(`Koble fra ${networkName}?`)) return;
+                        void networkMutations.detach.mutateAsync({
+                          id: instanceId,
+                          attachmentId: item.id,
+                        });
+                      }}
+                    >
+                      Koble fra
+                    </button>
+                  </div>,
+                ];
+              })}
+            />
+            {(instance?.networks ?? []).length === 0 ? (
+              <p className="text-sm text-ink-muted">Ingen nettverkstilknytninger.</p>
+            ) : null}
           </div>
           {metricsQuery.data && !metricsQuery.data.available && metricsQuery.data.detail ? (
             <p className="font-mono text-xs text-ink-muted">{metricsQuery.data.detail}</p>

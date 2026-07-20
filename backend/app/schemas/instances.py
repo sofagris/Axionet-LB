@@ -17,6 +17,14 @@ class NetworkAttachmentCreate(BaseModel):
     attachment_order: int = 0
 
 
+class NetworkAttachmentUpdate(BaseModel):
+    network_id: str | None = None
+    ip_address: str | None = None
+    gateway: str | None = None
+    interface_alias: str | None = None
+    attachment_order: int | None = None
+
+
 class NetworkAttachmentRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

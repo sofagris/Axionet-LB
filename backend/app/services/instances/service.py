@@ -23,7 +23,12 @@ from app.models.service_instance import (
 from app.plugins.haproxy.renderer import render_haproxy_config
 from app.plugins.haproxy.schemas import HaproxyConfig
 from app.plugins.haproxy.validator import HaproxyConfigValidator
-from app.schemas.instances import InstanceCreate, InstanceUpdate, NetworkAttachmentCreate
+from app.schemas.instances import (
+    InstanceCreate,
+    InstanceUpdate,
+    NetworkAttachmentCreate,
+    NetworkAttachmentUpdate,
+)
 from app.services.audit.service import AuditService
 from app.services.docker.client import DockerClientAdapter
 from app.services.instances.attachments import validate_network_attachments
@@ -75,6 +80,180 @@ class InstanceService:
             .order_by(NetworkAttachment.attachment_order, NetworkAttachment.created_at)
         )
         return list(self._db.scalars(stmt))
+
+    def get_attachment(self, instance_id: str, attachment_id: str) -> NetworkAttachment | None:
+        attachment = self._db.get(NetworkAttachment, attachment_id)
+        if attachment is None or attachment.service_instance_id != instance_id:
+            return None
+        return attachment
+
+    def add_network_attachment(
+        self,
+        instance: ServiceInstance,
+        payload: NetworkAttachmentCreate,
+    ) -> NetworkAttachment:
+        existing = self.list_attachments(instance.id)
+        if any(item.network_id == payload.network_id for item in existing):
+            raise ValueError("Instance is already attached to this network")
+
+        proposed = [
+            NetworkAttachmentCreate(
+                network_id=item.network_id,
+                ip_address=item.ip_address,
+                gateway=item.gateway,
+                interface_alias=item.interface_alias,
+                attachment_order=item.attachment_order,
+            )
+            for item in existing
+        ] + [payload]
+        self._resolve_networks(proposed, exclude_instance_id=instance.id)
+
+        order = payload.attachment_order
+        if order == 0 and existing:
+            order = max(item.attachment_order for item in existing) + 1
+
+        attachment = NetworkAttachment(
+            service_instance_id=instance.id,
+            network_id=payload.network_id,
+            ip_address=payload.ip_address,
+            gateway=payload.gateway,
+            interface_alias=payload.interface_alias,
+            attachment_order=order,
+        )
+        self._db.add(attachment)
+        self._db.flush()
+
+        try:
+            self._sync_container_networks(instance)
+        except DockerException as exc:
+            instance.last_error = str(exc)
+            instance.updated_at = datetime.now(UTC)
+            self._record_audit(
+                event_type="instance.network.attach",
+                resource_id=instance.id,
+                payload={
+                    "attachment_id": attachment.id,
+                    "network_id": attachment.network_id,
+                    "ip_address": attachment.ip_address,
+                },
+                result="error",
+            )
+            self._db.commit()
+            raise RuntimeError(str(exc)) from exc
+
+        instance.last_error = None
+        instance.updated_at = datetime.now(UTC)
+        self._record_audit(
+            event_type="instance.network.attach",
+            resource_id=instance.id,
+            payload={
+                "attachment_id": attachment.id,
+                "network_id": attachment.network_id,
+                "ip_address": attachment.ip_address,
+            },
+        )
+        self._db.commit()
+        self._db.refresh(attachment)
+        return attachment
+
+    def update_network_attachment(
+        self,
+        instance: ServiceInstance,
+        attachment: NetworkAttachment,
+        payload: NetworkAttachmentUpdate,
+    ) -> NetworkAttachment:
+        updates = payload.model_dump(exclude_unset=True)
+        if not updates:
+            return attachment
+
+        next_network_id = updates.get("network_id", attachment.network_id)
+        if next_network_id != attachment.network_id:
+            siblings = [
+                item
+                for item in self.list_attachments(instance.id)
+                if item.id != attachment.id and item.network_id == next_network_id
+            ]
+            if siblings:
+                raise ValueError("Instance is already attached to this network")
+
+        for key, value in updates.items():
+            setattr(attachment, key, value)
+
+        proposed = [
+            NetworkAttachmentCreate(
+                network_id=item.network_id,
+                ip_address=item.ip_address,
+                gateway=item.gateway,
+                interface_alias=item.interface_alias,
+                attachment_order=item.attachment_order,
+            )
+            for item in self.list_attachments(instance.id)
+        ]
+        self._resolve_networks(proposed, exclude_instance_id=instance.id)
+
+        try:
+            self._sync_container_networks(instance)
+        except DockerException as exc:
+            instance.last_error = str(exc)
+            instance.updated_at = datetime.now(UTC)
+            self._record_audit(
+                event_type="instance.network.update",
+                resource_id=instance.id,
+                payload={"attachment_id": attachment.id, **updates},
+                result="error",
+            )
+            self._db.commit()
+            raise RuntimeError(str(exc)) from exc
+
+        instance.last_error = None
+        instance.updated_at = datetime.now(UTC)
+        self._record_audit(
+            event_type="instance.network.update",
+            resource_id=instance.id,
+            payload={"attachment_id": attachment.id, **updates},
+        )
+        self._db.commit()
+        self._db.refresh(attachment)
+        return attachment
+
+    def remove_network_attachment(
+        self,
+        instance: ServiceInstance,
+        attachment: NetworkAttachment,
+    ) -> None:
+        payload = {
+            "attachment_id": attachment.id,
+            "network_id": attachment.network_id,
+            "ip_address": attachment.ip_address,
+        }
+        network = self._db.get(Network, attachment.network_id)
+        if instance.container_id and network and network.docker_network_id:
+            try:
+                self._docker.disconnect_container_network(
+                    instance.container_id,
+                    network.docker_network_id,
+                )
+            except DockerException as exc:
+                instance.last_error = str(exc)
+                instance.updated_at = datetime.now(UTC)
+                self._record_audit(
+                    event_type="instance.network.detach",
+                    resource_id=instance.id,
+                    payload=payload,
+                    result="error",
+                )
+                self._db.commit()
+                raise RuntimeError(str(exc)) from exc
+
+        self._db.delete(attachment)
+        instance.last_error = None
+        instance.updated_at = datetime.now(UTC)
+        self._record_audit(
+            event_type="instance.network.detach",
+            resource_id=instance.id,
+            payload=payload,
+        )
+        self._db.commit()
 
     def create_instance(self, payload: InstanceCreate) -> ServiceInstance:
         if payload.service_type != "haproxy":
@@ -669,13 +848,7 @@ class InstanceService:
         if instance.container_id:
             attrs = self._docker.inspect_container(instance.container_id)
             if attrs is not None:
-                for net, attachment in zip(networks, attachments, strict=False):
-                    if net.docker_network_id:
-                        self._docker.connect_container_network(
-                            instance.container_id,
-                            net.docker_network_id,
-                            ipv4_address=attachment.ip_address,
-                        )
+                self._sync_container_networks(instance)
                 return
             instance.container_id = None
 
@@ -702,3 +875,63 @@ class InstanceService:
             revision=revision_label,
         )
         instance.container_id = container_id
+
+    def _sync_container_networks(self, instance: ServiceInstance) -> None:
+        """Connect/disconnect/rebind Docker networks to match DB attachments."""
+        if not instance.container_id:
+            return
+        attrs = self._docker.inspect_container(instance.container_id)
+        if attrs is None:
+            return
+
+        attachments = self.list_attachments(instance.id)
+        desired: dict[str, str | None] = {}
+        for attachment in attachments:
+            network = self._db.get(Network, attachment.network_id)
+            if network is None or not network.docker_network_id:
+                continue
+            desired[network.docker_network_id] = attachment.ip_address
+
+        connected: dict[str, str | None] = {}
+        for info in ((attrs.get("NetworkSettings") or {}).get("Networks") or {}).values():
+            network_id = info.get("NetworkID")
+            if not network_id:
+                continue
+            ip = info.get("IPAddress") or None
+            connected[network_id] = ip if ip else None
+
+        managed_ids = {
+            item.docker_network_id
+            for item in self._db.scalars(select(Network)).all()
+            if item.docker_network_id
+        }
+
+        for docker_network_id, ipv4 in desired.items():
+            current_ip = connected.get(docker_network_id)
+            if docker_network_id not in connected:
+                self._docker.connect_container_network(
+                    instance.container_id,
+                    docker_network_id,
+                    ipv4_address=ipv4,
+                )
+                continue
+            if ipv4 and current_ip != ipv4:
+                self._docker.disconnect_container_network(
+                    instance.container_id,
+                    docker_network_id,
+                )
+                self._docker.connect_container_network(
+                    instance.container_id,
+                    docker_network_id,
+                    ipv4_address=ipv4,
+                )
+
+        for docker_network_id in connected:
+            if docker_network_id in desired:
+                continue
+            if docker_network_id not in managed_ids:
+                continue
+            self._docker.disconnect_container_network(
+                instance.container_id,
+                docker_network_id,
+            )

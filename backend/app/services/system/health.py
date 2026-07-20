@@ -67,6 +67,7 @@ class SystemService:
                 "instances.haproxy",
                 "instances.lifecycle",
                 "instances.validate_draft",
+                "instances.network_attachments",
                 "haproxy.structured_config",
                 "haproxy.defaults",
                 "haproxy.certificates",

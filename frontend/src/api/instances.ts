@@ -103,3 +103,33 @@ export function fetchInstanceLogs(
 export function fetchInstanceMetrics(id: string): Promise<InstanceMetrics> {
   return apiFetch(`/api/v1/instances/${id}/metrics`, (data) => InstanceMetricsSchema.parse(data));
 }
+
+export function attachInstanceNetwork(
+  id: string,
+  payload: { network_id: string; ip_address?: string | null },
+): Promise<Instance> {
+  return apiFetch(`/api/v1/instances/${id}/networks`, (data) => InstanceSchema.parse(data), {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export function updateInstanceNetwork(
+  id: string,
+  attachmentId: string,
+  payload: { network_id?: string; ip_address?: string | null },
+): Promise<Instance> {
+  return apiFetch(
+    `/api/v1/instances/${id}/networks/${attachmentId}`,
+    (data) => InstanceSchema.parse(data),
+    { method: "PATCH", body: payload },
+  );
+}
+
+export function detachInstanceNetwork(id: string, attachmentId: string): Promise<Instance> {
+  return apiFetch(
+    `/api/v1/instances/${id}/networks/${attachmentId}`,
+    (data) => InstanceSchema.parse(data),
+    { method: "DELETE" },
+  );
+}

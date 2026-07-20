@@ -12,7 +12,9 @@ from app.schemas.instances import (
     InstanceUpdate,
     InstanceValidateDraft,
     InstanceValidateResult,
+    NetworkAttachmentCreate,
     NetworkAttachmentRead,
+    NetworkAttachmentUpdate,
 )
 from app.services.docker.client import DockerClientAdapter, create_docker_adapter
 from app.services.instances.metrics import HaproxyMetricsCollector
@@ -117,6 +119,86 @@ def delete_instance(
         service.delete_instance(instance)
     except RuntimeError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+
+
+@router.get("/{instance_id}/networks", response_model=list[NetworkAttachmentRead])
+def list_instance_networks(
+    instance_id: str,
+    service: InstanceService = Depends(get_instance_service),
+) -> list[NetworkAttachmentRead]:
+    instance = service.get_instance(instance_id)
+    if instance is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found")
+    return [NetworkAttachmentRead.model_validate(item) for item in service.list_attachments(instance.id)]
+
+
+@router.post(
+    "/{instance_id}/networks",
+    response_model=InstanceRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def attach_instance_network(
+    instance_id: str,
+    payload: NetworkAttachmentCreate,
+    service: InstanceService = Depends(get_instance_service),
+) -> InstanceRead:
+    instance = service.get_instance(instance_id)
+    if instance is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found")
+    try:
+        service.add_network_attachment(instance, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+    refreshed = service.get_instance(instance_id)
+    assert refreshed is not None
+    return _to_read(service, refreshed)
+
+
+@router.patch("/{instance_id}/networks/{attachment_id}", response_model=InstanceRead)
+def update_instance_network(
+    instance_id: str,
+    attachment_id: str,
+    payload: NetworkAttachmentUpdate,
+    service: InstanceService = Depends(get_instance_service),
+) -> InstanceRead:
+    instance = service.get_instance(instance_id)
+    if instance is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found")
+    attachment = service.get_attachment(instance_id, attachment_id)
+    if attachment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found")
+    try:
+        service.update_network_attachment(instance, attachment, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+    refreshed = service.get_instance(instance_id)
+    assert refreshed is not None
+    return _to_read(service, refreshed)
+
+
+@router.delete("/{instance_id}/networks/{attachment_id}", response_model=InstanceRead)
+def detach_instance_network(
+    instance_id: str,
+    attachment_id: str,
+    service: InstanceService = Depends(get_instance_service),
+) -> InstanceRead:
+    instance = service.get_instance(instance_id)
+    if instance is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found")
+    attachment = service.get_attachment(instance_id, attachment_id)
+    if attachment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found")
+    try:
+        service.remove_network_attachment(instance, attachment)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+    refreshed = service.get_instance(instance_id)
+    assert refreshed is not None
+    return _to_read(service, refreshed)
 
 
 @router.post("/{instance_id}/start", response_model=InstanceRead)

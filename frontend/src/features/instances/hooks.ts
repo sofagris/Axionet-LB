@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  attachInstanceNetwork,
   createInstance,
   deleteInstance,
+  detachInstanceNetwork,
   fetchInstanceLogs,
   fetchInstanceMetrics,
   fetchInstances,
@@ -10,6 +12,7 @@ import {
   restartInstance,
   startInstance,
   stopInstance,
+  updateInstanceNetwork,
   validateInstance,
   validateInstanceConfig,
 } from "../../api/instances";
@@ -91,6 +94,42 @@ export function useInstanceLogs(id: string | null, tail = 200) {
     enabled: Boolean(id),
     refetchInterval: 5_000,
   });
+}
+
+export function useInstanceNetworkMutations() {
+  const queryClient = useQueryClient();
+  const invalidate = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["instances"] });
+  };
+  return {
+    attach: useMutation({
+      mutationFn: ({
+        id,
+        payload,
+      }: {
+        id: string;
+        payload: { network_id: string; ip_address?: string | null };
+      }) => attachInstanceNetwork(id, payload),
+      onSuccess: invalidate,
+    }),
+    update: useMutation({
+      mutationFn: ({
+        id,
+        attachmentId,
+        payload,
+      }: {
+        id: string;
+        attachmentId: string;
+        payload: { network_id?: string; ip_address?: string | null };
+      }) => updateInstanceNetwork(id, attachmentId, payload),
+      onSuccess: invalidate,
+    }),
+    detach: useMutation({
+      mutationFn: ({ id, attachmentId }: { id: string; attachmentId: string }) =>
+        detachInstanceNetwork(id, attachmentId),
+      onSuccess: invalidate,
+    }),
+  };
 }
 
 export type { InstanceValidateResult };

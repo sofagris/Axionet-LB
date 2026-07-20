@@ -39,6 +39,18 @@ def db_session() -> Generator[Session, None, None]:
             enabled=True,
         )
     )
+    session.add(
+        Network(
+            id="net-2",
+            name="lab-backend",
+            network_type=NetworkType.BRIDGE.value,
+            subnet="172.30.60.0/24",
+            gateway="172.30.60.1",
+            docker_network_id="docker-net-2",
+            docker_network_name="ax-net-net-2",
+            enabled=True,
+        )
+    )
     session.commit()
     try:
         yield session
@@ -272,3 +284,66 @@ def test_validate_config_draft(client: TestClient) -> None:
     assert body["ok"] is True
     assert body["rendered_preview"]
     assert "frontend" in body["rendered_preview"]
+
+
+def test_attach_update_detach_networks(client: TestClient, docker_adapter: MagicMock) -> None:
+    created = client.post(
+        "/api/v1/instances",
+        json={
+            "name": "edge-net",
+            "desired_state": "stopped",
+            "networks": [{"network_id": "net-1", "ip_address": "172.30.50.40"}],
+        },
+    )
+    assert created.status_code == 201, created.text
+    instance_id = created.json()["id"]
+    first_attachment = created.json()["networks"][0]["id"]
+
+    docker_adapter.inspect_container.side_effect = None
+    docker_adapter.inspect_container.return_value = {
+        "State": {"Status": "running"},
+        "NetworkSettings": {
+            "Networks": {
+                "ax-net-net-1": {
+                    "NetworkID": "docker-net-1",
+                    "IPAddress": "172.30.50.40",
+                }
+            }
+        },
+    }
+
+    attached = client.post(
+        f"/api/v1/instances/{instance_id}/networks",
+        json={"network_id": "net-2", "ip_address": "172.30.60.10"},
+    )
+    assert attached.status_code == 201, attached.text
+    networks = attached.json()["networks"]
+    assert len(networks) == 2
+    second = next(item for item in networks if item["network_id"] == "net-2")
+    docker_adapter.connect_container_network.assert_called()
+
+    updated = client.patch(
+        f"/api/v1/instances/{instance_id}/networks/{first_attachment}",
+        json={"ip_address": "172.30.50.41"},
+    )
+    assert updated.status_code == 200, updated.text
+    assert any(
+        item["id"] == first_attachment and item["ip_address"] == "172.30.50.41"
+        for item in updated.json()["networks"]
+    )
+    docker_adapter.disconnect_container_network.assert_called()
+
+    listed = client.get(f"/api/v1/instances/{instance_id}/networks")
+    assert listed.status_code == 200
+    assert len(listed.json()) == 2
+
+    detached = client.delete(f"/api/v1/instances/{instance_id}/networks/{second['id']}")
+    assert detached.status_code == 200, detached.text
+    assert len(detached.json()["networks"]) == 1
+    assert detached.json()["networks"][0]["network_id"] == "net-1"
+
+    duplicate = client.post(
+        f"/api/v1/instances/{instance_id}/networks",
+        json={"network_id": "net-1", "ip_address": "172.30.50.42"},
+    )
+    assert duplicate.status_code == 400
