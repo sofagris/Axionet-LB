@@ -34,8 +34,17 @@ def _make_iface(
 
 def test_sysfs_scanner_discovers_physical_only(tmp_path: Path) -> None:
     sysfs = tmp_path / "sys"
-    _make_iface(sysfs, "eth0", mac="aa:bb:cc:dd:ee:01", operstate="up")
-    _make_iface(sysfs, "eth1", mac="aa:bb:cc:dd:ee:02", operstate="down", speed="-1", numa="-1")
+    _make_iface(sysfs, "eth0", mac="aa:bb:cc:dd:ee:01", operstate="up", pci="0000:03:00.0")
+    _make_iface(
+        sysfs,
+        "eth1",
+        mac="aa:bb:cc:dd:ee:02",
+        operstate="down",
+        speed="-1",
+        numa="-1",
+        pci="0000:03:00.1",
+        driver="ixgbe",
+    )
 
     # virtual / non-device interfaces
     lo = sysfs / "class" / "net" / "lo"
