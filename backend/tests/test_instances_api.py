@@ -53,7 +53,12 @@ def docker_adapter(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     adapter.ping.return_value = None
     adapter.network_exists.return_value = True
     adapter.create_managed_container.return_value = "container-1"
-    adapter.inspect_container.return_value = {"State": {"Status": "created"}}
+    adapter.inspect_container.side_effect = [
+        {"State": {"Status": "created"}},  # ensure after create
+        {"State": {"Status": "created"}},  # start reconcile check
+        {"State": {"Status": "running"}},  # stop reconcile check
+        {"State": {"Status": "exited"}},
+    ]
     adapter.container_logs.return_value = "haproxy started"
 
     from app.plugins.haproxy import validator as validator_mod

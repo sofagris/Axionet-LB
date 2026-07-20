@@ -40,4 +40,4 @@ def test_capabilities(client: TestClient) -> None:
     assert response.status_code == 200
     payload = response.json()
     assert "system.health" in payload["features"]
-    assert payload["dataplane_services"] == []
+    assert "haproxy" in payload["dataplane_services"]
