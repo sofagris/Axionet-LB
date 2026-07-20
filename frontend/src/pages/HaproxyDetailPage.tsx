@@ -129,7 +129,7 @@ export function HaproxyDetailPage() {
       </nav>
 
       {tab === "overview" ? (
-        <section className="grid gap-3 sm:grid-cols-3">
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label="Frontends" value={String(frontendsQuery.data?.length ?? "…")} />
           <StatCard label="Backends" value={String(backendsQuery.data?.length ?? "…")} />
           <StatCard
@@ -137,6 +137,14 @@ export function HaproxyDetailPage() {
             value={String(
               backendsQuery.data?.reduce((sum, backend) => sum + backend.servers.length, 0) ?? "…",
             )}
+          />
+          <StatCard
+            label="IP / VIP"
+            value={
+              instance?.networks?.length
+                ? instance.networks.map((item) => item.ip_address || "dhcp").join(", ")
+                : "—"
+            }
           />
         </section>
       ) : null}

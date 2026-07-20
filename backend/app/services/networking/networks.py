@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.network import Network, NetworkType
+from app.models.network_attachment import NetworkAttachment
 from app.models.physical_interface import PhysicalInterface
 from app.schemas.networks import NetworkCreate, NetworkUpdate, NetworkValidationResult
 from app.services.docker.client import DockerClientAdapter
@@ -108,7 +109,11 @@ class NetworkService:
         return network
 
     def delete_network(self, network: Network) -> None:
-        # Milestone 3: no NetworkAttachment yet; always deletable from DB side.
+        in_use = self._db.scalars(
+            select(NetworkAttachment).where(NetworkAttachment.network_id == network.id).limit(1)
+        ).first()
+        if in_use is not None:
+            raise ValueError("Network is in use by one or more service instances")
         if network.docker_network_id:
             try:
                 self._docker.remove_managed_network(network.docker_network_id)

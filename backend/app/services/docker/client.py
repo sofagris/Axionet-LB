@@ -7,7 +7,7 @@ import uuid
 
 import docker
 from docker.errors import APIError, ContainerError, DockerException, ImageNotFound, NotFound
-from docker.types import IPAMConfig, IPAMPool
+from docker.types import EndpointConfig, IPAMConfig, IPAMPool, NetworkingConfig
 
 from app.core.config import Settings
 from app.models.network import NetworkType
@@ -183,10 +183,16 @@ class DockerClientAdapter:
         instance_id: str,
         service_type: str,
         host_config_dir: str,
-        network_ids: list[str],
+        network_endpoints: list[dict[str, str | None]] | None = None,
+        network_ids: list[str] | None = None,
         restart_policy: str = "unless-stopped",
         revision: str | None = None,
     ) -> str:
+        """Create a managed HAProxy container.
+
+        ``network_endpoints`` items: ``{"network_id": "<docker id>", "ipv4_address": "<ip>|None"}``.
+        ``network_ids`` is retained for backward compatibility when endpoints are omitted.
+        """
         client = self._get_client()
         self.ensure_image(image)
         labels = {
@@ -196,6 +202,11 @@ class DockerClientAdapter:
         }
         if revision is not None:
             labels["axionet.revision"] = revision
+
+        endpoints = list(network_endpoints or [])
+        if not endpoints and network_ids:
+            endpoints = [{"network_id": net_id, "ipv4_address": None} for net_id in network_ids]
+
         kwargs: dict[str, Any] = {
             "image": image,
             "name": name,
@@ -205,12 +216,35 @@ class DockerClientAdapter:
             "restart_policy": {"Name": restart_policy},
             "command": ["haproxy", "-W", "-db", "-f", "/usr/local/etc/haproxy/haproxy.cfg"],
         }
-        if network_ids:
-            kwargs["network"] = network_ids[0]
+        if endpoints:
+            first = endpoints[0]
+            first_net = first["network_id"]
+            if not first_net:
+                raise DockerException("network_endpoints[0].network_id is required")
+            ipv4 = first.get("ipv4_address")
+            endpoint_kwargs: dict[str, Any] = {}
+            if ipv4:
+                endpoint_kwargs["ipv4_address"] = ipv4
+            networking_config = NetworkingConfig(
+                {
+                    first_net: EndpointConfig(
+                        getattr(client.api, "_version", "1.44"),
+                        **endpoint_kwargs,
+                    )
+                }
+            )
+            kwargs["network"] = first_net
+            kwargs["networking_config"] = networking_config
         try:
             container = client.containers.create(**kwargs)
-            for net_id in network_ids[1:]:
-                client.networks.get(net_id).connect(container)
+            for endpoint in endpoints[1:]:
+                net_id = endpoint.get("network_id")
+                if not net_id:
+                    continue
+                connect_kwargs: dict[str, Any] = {}
+                if endpoint.get("ipv4_address"):
+                    connect_kwargs["ipv4_address"] = endpoint["ipv4_address"]
+                client.networks.get(net_id).connect(container, **connect_kwargs)
             return container.id
         except APIError as exc:
             raise DockerException(str(exc)) from exc

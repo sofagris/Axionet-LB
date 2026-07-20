@@ -16,6 +16,13 @@ function stateTone(state: string): string {
   return "text-ink-muted";
 }
 
+function formatAttachments(instance: Instance): string {
+  if (!instance.networks.length) return "—";
+  return instance.networks
+    .map((item) => item.ip_address || "(dhcp)")
+    .join(", ");
+}
+
 export function InstancesPage() {
   const instancesQuery = useInstances();
   const networksQuery = useNetworks();
@@ -24,11 +31,13 @@ export function InstancesPage() {
 
   const [name, setName] = useState("");
   const [networkId, setNetworkId] = useState("");
+  const [ipAddress, setIpAddress] = useState("");
   const [desiredRunning, setDesiredRunning] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const logsQuery = useInstanceLogs(selectedId);
 
   const networks = useMemo(() => networksQuery.data ?? [], [networksQuery.data]);
+  const selectedNetwork = networks.find((item) => item.id === networkId);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -36,9 +45,12 @@ export function InstancesPage() {
       name,
       service_type: "haproxy",
       desired_state: desiredRunning ? "running" : "stopped",
-      networks: networkId ? [{ network_id: networkId }] : [],
+      networks: networkId
+        ? [{ network_id: networkId, ip_address: ipAddress.trim() || null }]
+        : [],
     });
     setName("");
+    setIpAddress("");
     setSelectedId(created.id);
   }
 
@@ -47,7 +59,8 @@ export function InstancesPage() {
       <section>
         <h2 className="text-xl font-semibold tracking-tight text-ink">Service instances</h2>
         <p className="mt-1 max-w-2xl text-ink-muted">
-          Opprett HAProxy-instanser, knytt dem til nettverk, og styr start/stopp/restart.
+          Flere HAProxy-containere kan bruke samme port på separate IP-er. Angi VIP/IP per
+          nettverkstilknytning.
         </p>
       </section>
 
@@ -75,10 +88,24 @@ export function InstancesPage() {
             <option value="">Ingen (default bridge)</option>
             {networks.map((network) => (
               <option key={network.id} value={network.id}>
-                {network.name} ({network.network_type})
+                {network.name} ({network.network_type}
+                {network.subnet ? ` · ${network.subnet}` : ""})
               </option>
             ))}
           </select>
+        </label>
+        <label className="block text-sm md:col-span-2">
+          <span className="text-ink-muted">
+            Statisk IP / VIP
+            {selectedNetwork?.subnet ? ` (subnet ${selectedNetwork.subnet})` : ""}
+          </span>
+          <input
+            value={ipAddress}
+            onChange={(e) => setIpAddress(e.target.value)}
+            disabled={!networkId}
+            className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm disabled:opacity-50"
+            placeholder={selectedNetwork?.gateway ? selectedNetwork.gateway.replace(/\.\d+$/, ".10") : "172.30.60.10"}
+          />
         </label>
         <label className="flex items-center gap-2 text-sm md:col-span-2">
           <input
@@ -109,10 +136,11 @@ export function InstancesPage() {
           {instancesQuery.data.length === 0 ? (
             <p className="text-ink-muted">Ingen instanser ennå.</p>
           ) : (
-            <table className="w-full min-w-[760px] text-left text-sm">
+            <table className="w-full min-w-[860px] text-left text-sm">
               <thead>
                 <tr className="text-xs tracking-wide text-ink-muted uppercase">
                   <th className="pb-2 pr-4 font-medium">Name</th>
+                  <th className="pb-2 pr-4 font-medium">IP / VIP</th>
                   <th className="pb-2 pr-4 font-medium">Desired</th>
                   <th className="pb-2 pr-4 font-medium">Actual</th>
                   <th className="pb-2 pr-4 font-medium">Health</th>
@@ -145,6 +173,7 @@ export function InstancesPage() {
       {selectedId ? (
         <section className="rounded-lg border border-line bg-paper-elevated p-4 shadow-sm">
           <h3 className="font-semibold text-ink">Container logs</h3>
+          <p className="mt-1 font-mono text-xs text-ink-muted">{selectedId}</p>
           <pre className="mt-3 max-h-80 overflow-auto bg-ink px-3 py-3 font-mono text-xs text-paper">
             {logsQuery.isLoading
               ? "Henter logger…"
@@ -187,6 +216,7 @@ function InstanceRow({
           <p className="mt-1 max-w-xs truncate font-mono text-xs text-danger">{instance.last_error}</p>
         ) : null}
       </td>
+      <td className="py-3 pr-4 font-mono text-xs text-ink-muted">{formatAttachments(instance)}</td>
       <td className={`py-3 pr-4 font-mono text-xs uppercase ${stateTone(instance.desired_state)}`}>
         {instance.desired_state}
       </td>

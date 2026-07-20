@@ -25,6 +25,7 @@ from app.plugins.haproxy.schemas import HaproxyConfig
 from app.plugins.haproxy.validator import HaproxyConfigValidator
 from app.schemas.instances import InstanceCreate, InstanceUpdate, NetworkAttachmentCreate
 from app.services.docker.client import DockerClientAdapter
+from app.services.instances.attachments import validate_network_attachments
 from app.services.revisions.service import RevisionService
 
 logger = logging.getLogger(__name__)
@@ -354,6 +355,7 @@ class InstanceService:
             if not network.docker_network_id:
                 raise ValueError(f"Network has no Docker network: {network.name}")
             networks.append(network)
+        validate_network_attachments(self._db, attachments, networks=networks)
         return networks
 
     def _networks_for_instance(self, instance_id: str) -> list[Network]:
@@ -391,17 +393,12 @@ class InstanceService:
 
     def _ensure_container(self, instance: ServiceInstance, networks: list[Network]) -> None:
         config_dir = str(self._instance_dir(instance.id) / "config")
-        network_ids = [net.docker_network_id for net in networks if net.docker_network_id]
+        attachments = self.list_attachments(instance.id)
 
         if instance.container_id:
             attrs = self._docker.inspect_container(instance.container_id)
             if attrs is not None:
-                # Ensure additional networks
-                for net, attachment in zip(
-                    networks,
-                    self.list_attachments(instance.id),
-                    strict=False,
-                ):
+                for net, attachment in zip(networks, attachments, strict=False):
                     if net.docker_network_id:
                         self._docker.connect_container_network(
                             instance.container_id,
@@ -413,25 +410,24 @@ class InstanceService:
 
         latest = self._revisions.list_revisions(instance.id)
         revision_label = str(latest[0].revision_number) if latest else "0"
+        endpoints: list[dict[str, str | None]] = []
+        for net, attachment in zip(networks, attachments, strict=False):
+            if not net.docker_network_id:
+                continue
+            endpoints.append(
+                {
+                    "network_id": net.docker_network_id,
+                    "ipv4_address": attachment.ip_address,
+                }
+            )
         container_id = self._docker.create_managed_container(
             name=instance.container_name or f"ax-haproxy-{instance.id[:8]}",
             image=instance.image,
             instance_id=instance.id,
             service_type=instance.service_type,
             host_config_dir=config_dir,
-            network_ids=network_ids,
+            network_endpoints=endpoints,
             restart_policy=instance.restart_policy,
             revision=revision_label,
         )
         instance.container_id = container_id
-        # Connect with optional static IPs (first network already attached at create)
-        attachments = self.list_attachments(instance.id)
-        for index, (net, attachment) in enumerate(zip(networks, attachments, strict=False)):
-            if index == 0:
-                continue
-            if net.docker_network_id:
-                self._docker.connect_container_network(
-                    container_id,
-                    net.docker_network_id,
-                    ipv4_address=attachment.ip_address,
-                )

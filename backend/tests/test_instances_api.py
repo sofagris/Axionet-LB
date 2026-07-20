@@ -99,14 +99,17 @@ def test_create_start_stop_instance(client: TestClient, docker_adapter: MagicMoc
             "name": "edge-1",
             "service_type": "haproxy",
             "desired_state": "stopped",
-            "networks": [{"network_id": "net-1"}],
+            "networks": [{"network_id": "net-1", "ip_address": "172.30.50.10"}],
         },
     )
     assert created.status_code == 201, created.text
     body = created.json()
     assert body["actual_state"] == "stopped"
     assert body["container_id"] == "container-1"
+    assert body["networks"][0]["ip_address"] == "172.30.50.10"
     docker_adapter.create_managed_container.assert_called_once()
+    kwargs = docker_adapter.create_managed_container.call_args.kwargs
+    assert kwargs["network_endpoints"][0]["ipv4_address"] == "172.30.50.10"
 
     started = client.post(f"/api/v1/instances/{body['id']}/start")
     assert started.status_code == 200, started.text
@@ -120,6 +123,78 @@ def test_create_start_stop_instance(client: TestClient, docker_adapter: MagicMoc
     stopped = client.post(f"/api/v1/instances/{body['id']}/stop")
     assert stopped.status_code == 200
     docker_adapter.stop_container.assert_called()
+
+
+def test_create_two_instances_same_port_different_ips(client: TestClient, docker_adapter: MagicMock) -> None:
+    first = client.post(
+        "/api/v1/instances",
+        json={
+            "name": "edge-a",
+            "desired_state": "stopped",
+            "networks": [{"network_id": "net-1", "ip_address": "172.30.50.11"}],
+            "configuration": {
+                "mode": "http",
+                "stats_port": 8404,
+                "frontends": [
+                    {
+                        "name": "web",
+                        "bind_address": "*",
+                        "bind_port": 8080,
+                        "mode": "http",
+                        "default_backend": "app",
+                    }
+                ],
+                "backends": [
+                    {
+                        "name": "app",
+                        "balance": "roundrobin",
+                        "mode": "http",
+                        "servers": [
+                            {
+                                "name": "s1",
+                                "address": "10.0.0.10",
+                                "port": 80,
+                                "check": True,
+                                "weight": 100,
+                                "inter_ms": 2000,
+                                "rise": 2,
+                                "fall": 3,
+                            }
+                        ],
+                    }
+                ],
+            },
+        },
+    )
+    assert first.status_code == 201, first.text
+
+    second = client.post(
+        "/api/v1/instances",
+        json={
+            "name": "edge-b",
+            "desired_state": "stopped",
+            "networks": [{"network_id": "net-1", "ip_address": "172.30.50.12"}],
+            "configuration": first.json()["configuration"],
+        },
+    )
+    assert second.status_code == 201, second.text
+
+    listed = client.get("/api/v1/instances")
+    assert listed.status_code == 200
+    names = {item["name"] for item in listed.json()}
+    assert names == {"edge-a", "edge-b"}
+    assert docker_adapter.create_managed_container.call_count == 2
+
+    conflict = client.post(
+        "/api/v1/instances",
+        json={
+            "name": "edge-c",
+            "desired_state": "stopped",
+            "networks": [{"network_id": "net-1", "ip_address": "172.30.50.11"}],
+        },
+    )
+    assert conflict.status_code == 400
+    assert "already assigned" in conflict.json()["detail"]
 
 
 def test_service_definitions(client: TestClient) -> None:
