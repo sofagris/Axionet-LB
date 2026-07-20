@@ -10,6 +10,9 @@ import {
   fetchHaproxyConfig,
   fetchHaproxyFrontends,
   fetchHaproxyStatus,
+  updateHaproxyBackend,
+  updateHaproxyFrontend,
+  updateHaproxyServer,
 } from "../../api/haproxy";
 import type { HaproxyBackend, HaproxyFrontend, HaproxyServer } from "../../types/haproxy";
 
@@ -59,12 +62,22 @@ export function useHaproxyMutations(id: string) {
       mutationFn: (payload: HaproxyFrontend) => createHaproxyFrontend(id, payload),
       onSuccess: invalidate,
     }),
+    updateFrontend: useMutation({
+      mutationFn: ({ name, payload }: { name: string; payload: HaproxyFrontend }) =>
+        updateHaproxyFrontend(id, name, payload),
+      onSuccess: invalidate,
+    }),
     deleteFrontend: useMutation({
       mutationFn: (name: string) => deleteHaproxyFrontend(id, name),
       onSuccess: invalidate,
     }),
     createBackend: useMutation({
       mutationFn: (payload: HaproxyBackend) => createHaproxyBackend(id, payload),
+      onSuccess: invalidate,
+    }),
+    updateBackend: useMutation({
+      mutationFn: ({ name, payload }: { name: string; payload: HaproxyBackend }) =>
+        updateHaproxyBackend(id, name, payload),
       onSuccess: invalidate,
     }),
     deleteBackend: useMutation({
@@ -74,6 +87,18 @@ export function useHaproxyMutations(id: string) {
     createServer: useMutation({
       mutationFn: ({ backend, server }: { backend: string; server: HaproxyServer }) =>
         createHaproxyServer(id, backend, server),
+      onSuccess: invalidate,
+    }),
+    updateServer: useMutation({
+      mutationFn: ({
+        backend,
+        name,
+        server,
+      }: {
+        backend: string;
+        name: string;
+        server: HaproxyServer;
+      }) => updateHaproxyServer(id, backend, name, server),
       onSuccess: invalidate,
     }),
     deleteServer: useMutation({

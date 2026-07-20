@@ -24,6 +24,13 @@ export function createHaproxyFrontend(id: string, payload: HaproxyFrontend) {
   });
 }
 
+export function updateHaproxyFrontend(id: string, name: string, payload: HaproxyFrontend) {
+  return apiFetch(`${base(id)}/frontends/${name}`, (data) => HaproxyFrontendSchema.parse(data), {
+    method: "PATCH",
+    body: payload,
+  });
+}
+
 export function deleteHaproxyFrontend(id: string, name: string) {
   return apiFetch(`${base(id)}/frontends/${name}`, () => undefined, { method: "DELETE" });
 }
@@ -39,6 +46,13 @@ export function createHaproxyBackend(id: string, payload: HaproxyBackend) {
   });
 }
 
+export function updateHaproxyBackend(id: string, name: string, payload: HaproxyBackend) {
+  return apiFetch(`${base(id)}/backends/${name}`, (data) => HaproxyBackendSchema.parse(data), {
+    method: "PATCH",
+    body: payload,
+  });
+}
+
 export function deleteHaproxyBackend(id: string, name: string) {
   return apiFetch(`${base(id)}/backends/${name}`, () => undefined, { method: "DELETE" });
 }
@@ -48,6 +62,19 @@ export function createHaproxyServer(id: string, backend: string, payload: Haprox
     `${base(id)}/backends/${backend}/servers`,
     (data) => HaproxyServerSchema.parse(data),
     { method: "POST", body: payload },
+  );
+}
+
+export function updateHaproxyServer(
+  id: string,
+  backend: string,
+  server: string,
+  payload: HaproxyServer,
+) {
+  return apiFetch(
+    `${base(id)}/backends/${backend}/servers/${server}`,
+    (data) => HaproxyServerSchema.parse(data),
+    { method: "PATCH", body: payload },
   );
 }
 

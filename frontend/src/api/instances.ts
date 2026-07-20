@@ -40,6 +40,12 @@ export function deleteInstance(id: string): Promise<void> {
   return apiFetch(`/api/v1/instances/${id}`, () => undefined, { method: "DELETE" });
 }
 
-export function fetchInstanceLogs(id: string): Promise<{ id: string; logs: string }> {
-  return apiFetch(`/api/v1/instances/${id}/logs`, (data) => InstanceLogsSchema.parse(data));
+export function fetchInstanceLogs(
+  id: string,
+  tail = 200,
+): Promise<{ id: string; logs: string }> {
+  return apiFetch(
+    `/api/v1/instances/${id}/logs?tail=${tail}`,
+    (data) => InstanceLogsSchema.parse(data),
+  );
 }

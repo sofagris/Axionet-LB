@@ -50,10 +50,10 @@ export function useInstanceAction() {
   });
 }
 
-export function useInstanceLogs(id: string | null) {
+export function useInstanceLogs(id: string | null, tail = 200) {
   return useQuery({
-    queryKey: ["instances", id, "logs"],
-    queryFn: () => fetchInstanceLogs(id!),
+    queryKey: ["instances", id, "logs", tail],
+    queryFn: () => fetchInstanceLogs(id!, tail),
     enabled: Boolean(id),
     refetchInterval: 5_000,
   });

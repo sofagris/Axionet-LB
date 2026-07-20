@@ -141,6 +141,36 @@ def test_haproxy_structured_crud_and_status(
     assert any(row["server"] == "s1" for row in body["servers"])
     docker_adapter.run_network_sidecar.assert_called()
 
+    updated_fe = client.patch(
+        "/api/v1/instances/inst-1/haproxy/frontends/api",
+        json={
+            "name": "api",
+            "bind_address": "*",
+            "bind_port": 8081,
+            "mode": "http",
+            "default_backend": "app",
+        },
+    )
+    assert updated_fe.status_code == 200, updated_fe.text
+    assert updated_fe.json()["bind_port"] == 8081
+
+    updated_srv = client.patch(
+        "/api/v1/instances/inst-1/haproxy/backends/app/servers/api1",
+        json={
+            "name": "api1",
+            "address": "10.10.0.6",
+            "port": 80,
+            "check": True,
+            "weight": 50,
+            "inter_ms": 1000,
+            "rise": 2,
+            "fall": 3,
+        },
+    )
+    assert updated_srv.status_code == 200, updated_srv.text
+    assert updated_srv.json()["weight"] == 50
+    assert updated_srv.json()["address"] == "10.10.0.6"
+
     metrics = client.get("/api/v1/instances/inst-1/metrics")
     assert metrics.status_code == 200
     mbody = metrics.json()
