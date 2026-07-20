@@ -1,0 +1,48 @@
+{
+  "common": {
+    "brand": "AxioNet",
+    "product": "Load Balancer",
+    "loading": "Loading…",
+    "unknownError": "Unknown error"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "interfaces": "Interfaces",
+    "networks": "Networks",
+    "instances": "Instances"
+  },
+  "theme": {
+    "toLight": "Switch to light mode",
+    "toDark": "Switch to dark mode",
+    "language": "Language"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Control plane for AxioNet LB. Dataplane instances are managed under Instances.",
+    "statusHero": "System status",
+    "checkedAt": "Last checked {{time}}",
+    "fleet": "Fleet",
+    "interfaces": "Interfaces",
+    "interfacesUp": "{{up}} up / {{total}}",
+    "networks": "Networks",
+    "instances": "Instances",
+    "instancesByState": "{{running}} running · {{degraded}} degraded · {{error}} error",
+    "viewAll": "View all",
+    "manage": "Manage",
+    "telemetry": "Telemetry",
+    "cpu": "CPU",
+    "memory": "Memory",
+    "latency": "Component latency",
+    "loadAvg": "Load {{one}} / {{five}} / {{fifteen}}",
+    "memUsed": "{{used}} used of {{total}}",
+    "health": "System health",
+    "recentErrors": "Recent errors",
+    "noErrors": "No instance errors reported.",
+    "healthLoading": "Fetching health…",
+    "healthError": "Could not fetch health: {{message}}",
+    "metricsUnavailable": "Host metrics unavailable",
+    "api": "API",
+    "database": "Database",
+    "docker": "Docker"
+  }
+}

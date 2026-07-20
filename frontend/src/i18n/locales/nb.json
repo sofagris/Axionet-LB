@@ -1,0 +1,48 @@
+{
+  "common": {
+    "brand": "AxioNet",
+    "product": "Load Balancer",
+    "loading": "Laster…",
+    "unknownError": "Ukjent feil"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "interfaces": "Interfaces",
+    "networks": "Networks",
+    "instances": "Instances"
+  },
+  "theme": {
+    "toLight": "Bytt til lys modus",
+    "toDark": "Bytt til mørk modus",
+    "language": "Språk"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Kontrollplan for AxioNet LB. Dataplan-instanser administreres under Instances.",
+    "statusHero": "Systemstatus",
+    "checkedAt": "Sist sjekket {{time}}",
+    "fleet": "Flåte",
+    "interfaces": "Interfaces",
+    "interfacesUp": "{{up}} up / {{total}}",
+    "networks": "Networks",
+    "instances": "Instances",
+    "instancesByState": "{{running}} running · {{degraded}} degraded · {{error}} error",
+    "viewAll": "Vis alle",
+    "manage": "Administrer",
+    "telemetry": "Telemetri",
+    "cpu": "CPU",
+    "memory": "Minne",
+    "latency": "Komponent-latens",
+    "loadAvg": "Load {{one}} / {{five}} / {{fifteen}}",
+    "memUsed": "{{used}} brukt av {{total}}",
+    "health": "System health",
+    "recentErrors": "Siste feil",
+    "noErrors": "Ingen instance-feil rapportert.",
+    "healthLoading": "Henter health…",
+    "healthError": "Kunne ikke hente health: {{message}}",
+    "metricsUnavailable": "Host-metrics utilgjengelig",
+    "api": "API",
+    "database": "Database",
+    "docker": "Docker"
+  }
+}

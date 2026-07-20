@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchHealth, fetchSystemInfo } from "../../api/system";
+import { fetchHealth, fetchSystemInfo, fetchSystemMetrics } from "../../api/system";
 
 export function useSystemHealth() {
   return useQuery({
@@ -13,5 +13,13 @@ export function useSystemInfo() {
   return useQuery({
     queryKey: ["system", "info"],
     queryFn: fetchSystemInfo,
+  });
+}
+
+export function useSystemMetrics() {
+  return useQuery({
+    queryKey: ["system", "metrics"],
+    queryFn: fetchSystemMetrics,
+    refetchInterval: 5_000,
   });
 }

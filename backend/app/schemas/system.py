@@ -34,3 +34,14 @@ class SystemInfoResponse(BaseModel):
 class CapabilitiesResponse(BaseModel):
     features: list[str] = Field(default_factory=list)
     dataplane_services: list[str] = Field(default_factory=list)
+
+
+class SystemMetricsResponse(BaseModel):
+    cpu_percent: float
+    mem_total_bytes: int
+    mem_available_bytes: int
+    mem_used_percent: float
+    load_avg_1: float | None = None
+    load_avg_5: float | None = None
+    load_avg_15: float | None = None
+    collected_at: datetime

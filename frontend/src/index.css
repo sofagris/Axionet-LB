@@ -3,16 +3,49 @@
 @theme {
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
-  --color-ink: #12202b;
-  --color-ink-muted: #4a5d6a;
-  --color-paper: #f3f6f8;
-  --color-paper-elevated: #ffffff;
-  --color-line: #d5dee5;
-  --color-accent: #0f766e;
-  --color-accent-soft: #ccfbf1;
-  --color-warn: #b45309;
-  --color-danger: #b91c1c;
-  --color-ok: #15803d;
+  --color-ink: var(--ax-ink);
+  --color-ink-muted: var(--ax-ink-muted);
+  --color-paper: var(--ax-paper);
+  --color-paper-elevated: var(--ax-paper-elevated);
+  --color-line: var(--ax-line);
+  --color-accent: var(--ax-accent);
+  --color-accent-soft: var(--ax-accent-soft);
+  --color-warn: var(--ax-warn);
+  --color-danger: var(--ax-danger);
+  --color-ok: var(--ax-ok);
+}
+
+:root,
+html[data-theme="light"] {
+  color-scheme: light;
+  --ax-ink: #12202b;
+  --ax-ink-muted: #4a5d6a;
+  --ax-paper: #f3f6f8;
+  --ax-paper-elevated: #ffffff;
+  --ax-line: #d5dee5;
+  --ax-accent: #0f766e;
+  --ax-accent-soft: #ccfbf1;
+  --ax-warn: #b45309;
+  --ax-danger: #b91c1c;
+  --ax-ok: #15803d;
+  --ax-hero-a: #d8ece8;
+  --ax-hero-b: #dce6ef;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --ax-ink: #e7eef3;
+  --ax-ink-muted: #8fa3b0;
+  --ax-paper: #0b141a;
+  --ax-paper-elevated: #15222c;
+  --ax-line: #2a3b47;
+  --ax-accent: #2dd4bf;
+  --ax-accent-soft: #134e4a;
+  --ax-warn: #fbbf24;
+  --ax-danger: #f87171;
+  --ax-ok: #4ade80;
+  --ax-hero-a: #123038;
+  --ax-hero-b: #1a2834;
 }
 
 @layer base {
@@ -25,10 +58,13 @@
   body {
     margin: 0;
     font-family: var(--font-sans);
-    color: var(--color-ink);
+    color: var(--ax-ink);
     background:
-      radial-gradient(ellipse 80% 50% at 10% -10%, #d8ece8 0%, transparent 55%),
-      radial-gradient(ellipse 60% 40% at 100% 0%, #dce6ef 0%, transparent 50%),
-      var(--color-paper);
+      radial-gradient(ellipse 80% 50% at 10% -10%, var(--ax-hero-a) 0%, transparent 55%),
+      radial-gradient(ellipse 60% 40% at 100% 0%, var(--ax-hero-b) 0%, transparent 50%),
+      var(--ax-paper);
+    transition:
+      background-color 180ms ease,
+      color 180ms ease;
   }
 }

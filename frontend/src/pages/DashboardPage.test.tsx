@@ -3,6 +3,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { App } from "../App";
+import { ThemeProvider } from "../features/theme/ThemeProvider";
+import "../i18n";
 
 vi.mock("../api/system", () => ({
   fetchHealth: vi.fn(async () => ({
@@ -23,6 +25,16 @@ vi.mock("../api/system", () => ({
     data_dir: "/var/lib/ax-lb",
     database_configured: true,
     docker_configured: true,
+  })),
+  fetchSystemMetrics: vi.fn(async () => ({
+    cpu_percent: 12.5,
+    mem_total_bytes: 16 * 1024 ** 3,
+    mem_available_bytes: 8 * 1024 ** 3,
+    mem_used_percent: 50,
+    load_avg_1: 0.4,
+    load_avg_5: 0.3,
+    load_avg_15: 0.2,
+    collected_at: "2026-07-20T16:00:00Z",
   })),
 }));
 
@@ -71,9 +83,11 @@ function renderApp() {
   });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
-        <App />
-      </MemoryRouter>
+      <ThemeProvider>
+        <MemoryRouter>
+          <App />
+        </MemoryRouter>
+      </ThemeProvider>
     </QueryClientProvider>,
   );
 }
@@ -85,7 +99,7 @@ describe("Dashboard", () => {
 
   it("shows brand and health status", async () => {
     renderApp();
-    expect(screen.getByText("AxioNet")).toBeInTheDocument();
+    expect(screen.getAllByText("AxioNet").length).toBeGreaterThan(0);
     expect(screen.getByText("Load Balancer")).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByText("System health")).toBeInTheDocument();

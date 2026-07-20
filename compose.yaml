@@ -13,10 +13,12 @@ services:
       DOCKER_HOST: unix:///var/run/docker.sock
       AX_LOG_LEVEL: INFO
       HOST_SYSFS_ROOT: /host/sys
+      HOST_PROC_ROOT: /host/proc
       HOST_NET_NSENTER: "true"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /sys:/host/sys:ro
+      - /proc:/host/proc:ro
       - /var/lib/ax-lb:/var/lib/ax-lb
       - /run/ax-lb:/run/ax-lb
     networks:

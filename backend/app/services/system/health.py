@@ -37,6 +37,7 @@ class SystemService:
             features=[
                 "system.health",
                 "system.info",
+                "system.metrics",
                 "system.capabilities",
                 "docker.connectivity",
                 "interfaces.discovery",

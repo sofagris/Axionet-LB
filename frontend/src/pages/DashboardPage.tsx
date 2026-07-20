@@ -1,8 +1,21 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import type { ReactNode } from "react";
+import {
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { useInstances } from "../features/instances/hooks";
 import { useInterfaces } from "../features/interfaces/hooks";
 import { useNetworks } from "../features/networks/hooks";
-import { useSystemHealth, useSystemInfo } from "../features/system/hooks";
+import { useSystemHealth, useSystemInfo, useSystemMetrics } from "../features/system/hooks";
+import { useTelemetryHistory } from "../features/telemetry/useTelemetryHistory";
 import type { ComponentHealth, HealthResponse } from "../types/system";
 
 function statusTone(status: string): string {
@@ -29,7 +42,19 @@ function StatusPill({ status }: { status: string }) {
   );
 }
 
-function ComponentRow({ name, component }: { name: string; component: ComponentHealth }) {
+function formatBytes(bytes: number): string {
+  if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1)} GiB`;
+  if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(0)} MiB`;
+  return `${bytes} B`;
+}
+
+function ComponentRow({
+  name,
+  component,
+}: {
+  name: string;
+  component: ComponentHealth;
+}) {
   return (
     <div className="flex items-start justify-between gap-4 border-t border-line py-3 first:border-t-0 first:pt-0">
       <div>
@@ -49,11 +74,17 @@ function ComponentRow({ name, component }: { name: string; component: ComponentH
 }
 
 function HealthPanel({ health }: { health: HealthResponse }) {
+  const { t, i18n } = useTranslation();
+  const labels: Record<string, string> = {
+    api: t("dashboard.api"),
+    database: t("dashboard.database"),
+    docker: t("dashboard.docker"),
+  };
   return (
-    <section className="rounded-lg border border-line bg-paper-elevated p-5 shadow-sm">
+    <section className="border-l-2 border-accent bg-paper-elevated/60 p-5">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-ink">System health</h2>
+          <h2 className="text-lg font-semibold text-ink">{t("dashboard.health")}</h2>
           <p className="text-sm text-ink-muted">
             {health.service} · v{health.version}
           </p>
@@ -62,86 +93,276 @@ function HealthPanel({ health }: { health: HealthResponse }) {
       </div>
       <div>
         {Object.entries(health.components).map(([name, component]) => (
-          <ComponentRow key={name} name={name} component={component} />
+          <ComponentRow key={name} name={labels[name] ?? name} component={component} />
         ))}
       </div>
       <p className="mt-4 font-mono text-xs text-ink-muted">
-        Sist sjekket {new Date(health.checked_at).toLocaleString("nb-NO")}
+        {t("dashboard.checkedAt", {
+          time: new Date(health.checked_at).toLocaleString(i18n.language === "en" ? "en-GB" : "nb-NO"),
+        })}
       </p>
     </section>
   );
 }
 
+function ChartFrame({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="min-h-[220px] border-t border-line pt-4">
+      <p className="mb-3 text-xs tracking-wide text-ink-muted uppercase">{title}</p>
+      <div className="h-44 w-full">{children}</div>
+    </div>
+  );
+}
+
 export function DashboardPage() {
+  const { t, i18n } = useTranslation();
   const healthQuery = useSystemHealth();
   const infoQuery = useSystemInfo();
+  const metricsQuery = useSystemMetrics();
   const interfacesQuery = useInterfaces();
   const networksQuery = useNetworks();
   const instancesQuery = useInstances();
+
+  const history = useTelemetryHistory({
+    metrics: metricsQuery.data,
+    health: healthQuery.data,
+    instances: instancesQuery.data,
+  });
+
+  const chartData = history.map((point) => ({
+    ...point,
+    label: new Date(point.t).toLocaleTimeString(i18n.language === "en" ? "en-GB" : "nb-NO", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }),
+  }));
 
   const upCount =
     interfacesQuery.data?.filter((iface) => iface.link_state === "up").length ?? 0;
   const totalCount = interfacesQuery.data?.length ?? 0;
   const networkCount = networksQuery.data?.length ?? 0;
-  const runningInstances =
+  const running =
     instancesQuery.data?.filter((item) => item.actual_state === "running").length ?? 0;
-  const instanceCount = instancesQuery.data?.length ?? 0;
+  const degraded =
+    instancesQuery.data?.filter((item) => item.actual_state === "degraded").length ?? 0;
+  const errored =
+    instancesQuery.data?.filter((item) => item.actual_state === "error").length ?? 0;
+  const recentErrors =
+    instancesQuery.data?.filter((item) => item.last_error).slice(0, 5) ?? [];
+
+  const accent = "var(--ax-accent)";
+  const muted = "var(--ax-ink-muted)";
+  const warn = "var(--ax-warn)";
 
   return (
-    <div className="space-y-6">
-      <section>
-        <h2 className="text-xl font-semibold tracking-tight text-ink">Dashboard</h2>
-        <p className="mt-1 max-w-2xl text-ink-muted">
-          Kontrollplan for AxioNet LB. Dataplan-instanser administreres under Instances.
+    <div className="space-y-10">
+      <section className="relative overflow-hidden border-b border-line pb-8">
+        <p className="font-mono text-xs tracking-[0.2em] text-accent uppercase">
+          {t("dashboard.statusHero")}
         </p>
+        <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="text-3xl font-semibold tracking-tight text-ink md:text-4xl">
+              {t("common.brand")}
+            </h2>
+            <p className="mt-2 max-w-xl text-ink-muted">{t("dashboard.subtitle")}</p>
+          </div>
+          {healthQuery.data ? <StatusPill status={healthQuery.data.status} /> : null}
+        </div>
+        {metricsQuery.data ? (
+          <p className="mt-4 font-mono text-xs text-ink-muted">
+            {t("dashboard.loadAvg", {
+              one: metricsQuery.data.load_avg_1?.toFixed(2) ?? "—",
+              five: metricsQuery.data.load_avg_5?.toFixed(2) ?? "—",
+              fifteen: metricsQuery.data.load_avg_15?.toFixed(2) ?? "—",
+            })}
+            {" · "}
+            CPU {metricsQuery.data.cpu_percent.toFixed(1)}%
+            {" · "}
+            {t("dashboard.memUsed", {
+              used: formatBytes(
+                metricsQuery.data.mem_total_bytes - metricsQuery.data.mem_available_bytes,
+              ),
+              total: formatBytes(metricsQuery.data.mem_total_bytes),
+            })}
+          </p>
+        ) : metricsQuery.isError ? (
+          <p className="mt-4 text-sm text-warn">{t("dashboard.metricsUnavailable")}</p>
+        ) : null}
       </section>
 
-      {infoQuery.data ? (
-        <section className="grid gap-3 sm:grid-cols-4">
-          <div className="border-l-2 border-accent pl-3">
-            <p className="text-xs tracking-wide text-ink-muted uppercase">Interfaces</p>
-            <p className="mt-1 font-mono text-sm">
-              {interfacesQuery.isLoading ? "…" : `${upCount} up / ${totalCount}`}
+      <section>
+        <h3 className="mb-4 text-xs tracking-wide text-ink-muted uppercase">{t("dashboard.fleet")}</h3>
+        <div className="grid gap-6 sm:grid-cols-3">
+          <div className="border-l-2 border-accent pl-4">
+            <p className="text-xs tracking-wide text-ink-muted uppercase">{t("dashboard.interfaces")}</p>
+            <p className="mt-2 font-mono text-lg text-ink">
+              {interfacesQuery.isLoading
+                ? "…"
+                : t("dashboard.interfacesUp", { up: upCount, total: totalCount })}
             </p>
-            <Link className="mt-1 inline-block text-xs text-accent hover:underline" to="/interfaces">
-              Vis alle
+            <Link className="mt-2 inline-block text-xs text-accent hover:underline" to="/interfaces">
+              {t("dashboard.viewAll")}
             </Link>
           </div>
-          <div className="border-l-2 border-line pl-3">
-            <p className="text-xs tracking-wide text-ink-muted uppercase">Networks</p>
-            <p className="mt-1 font-mono text-sm">
+          <div className="border-l-2 border-line pl-4">
+            <p className="text-xs tracking-wide text-ink-muted uppercase">{t("dashboard.networks")}</p>
+            <p className="mt-2 font-mono text-lg text-ink">
               {networksQuery.isLoading ? "…" : networkCount}
             </p>
-            <Link className="mt-1 inline-block text-xs text-accent hover:underline" to="/networks">
-              Administrer
+            <Link className="mt-2 inline-block text-xs text-accent hover:underline" to="/networks">
+              {t("dashboard.manage")}
             </Link>
           </div>
-          <div className="border-l-2 border-line pl-3">
-            <p className="text-xs tracking-wide text-ink-muted uppercase">Instances</p>
-            <p className="mt-1 font-mono text-sm">
-              {instancesQuery.isLoading ? "…" : `${runningInstances} run / ${instanceCount}`}
+          <div className="border-l-2 border-line pl-4">
+            <p className="text-xs tracking-wide text-ink-muted uppercase">{t("dashboard.instances")}</p>
+            <p className="mt-2 font-mono text-sm text-ink">
+              {instancesQuery.isLoading
+                ? "…"
+                : t("dashboard.instancesByState", { running, degraded, error: errored })}
             </p>
-            <Link className="mt-1 inline-block text-xs text-accent hover:underline" to="/instances">
-              Administrer
+            <Link className="mt-2 inline-block text-xs text-accent hover:underline" to="/instances">
+              {t("dashboard.manage")}
             </Link>
           </div>
-          <div className="border-l-2 border-line pl-3">
-            <p className="text-xs tracking-wide text-ink-muted uppercase">Data</p>
-            <p className="mt-1 font-mono text-sm">{infoQuery.data.data_dir}</p>
-          </div>
+        </div>
+        {infoQuery.data ? (
+          <p className="mt-4 font-mono text-xs text-ink-muted">data · {infoQuery.data.data_dir}</p>
+        ) : null}
+      </section>
+
+      <section>
+        <h3 className="mb-2 text-xs tracking-wide text-ink-muted uppercase">
+          {t("dashboard.telemetry")}
+        </h3>
+        <div className="grid gap-8 lg:grid-cols-3">
+          <ChartFrame title={t("dashboard.cpu")}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <CartesianGrid stroke="var(--ax-line)" strokeDasharray="3 3" />
+                <XAxis dataKey="label" tick={{ fill: muted, fontSize: 10 }} hide />
+                <YAxis domain={[0, 100]} tick={{ fill: muted, fontSize: 10 }} width={32} />
+                <Tooltip
+                  contentStyle={{
+                    background: "var(--ax-paper-elevated)",
+                    border: "1px solid var(--ax-line)",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 12,
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="cpu"
+                  name="CPU %"
+                  stroke={accent}
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartFrame>
+          <ChartFrame title={t("dashboard.memory")}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <CartesianGrid stroke="var(--ax-line)" strokeDasharray="3 3" />
+                <XAxis dataKey="label" tick={{ fill: muted, fontSize: 10 }} hide />
+                <YAxis domain={[0, 100]} tick={{ fill: muted, fontSize: 10 }} width={32} />
+                <Tooltip
+                  contentStyle={{
+                    background: "var(--ax-paper-elevated)",
+                    border: "1px solid var(--ax-line)",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 12,
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="mem"
+                  name="Mem %"
+                  stroke={accent}
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartFrame>
+          <ChartFrame title={t("dashboard.latency")}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <CartesianGrid stroke="var(--ax-line)" strokeDasharray="3 3" />
+                <XAxis dataKey="label" tick={{ fill: muted, fontSize: 10 }} hide />
+                <YAxis tick={{ fill: muted, fontSize: 10 }} width={36} />
+                <Tooltip
+                  contentStyle={{
+                    background: "var(--ax-paper-elevated)",
+                    border: "1px solid var(--ax-line)",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 12,
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: 11, fontFamily: "var(--font-mono)" }} />
+                <Line
+                  type="monotone"
+                  dataKey="dbLatency"
+                  name="DB"
+                  stroke={accent}
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls
+                />
+                <Line
+                  type="monotone"
+                  dataKey="dockerLatency"
+                  name="Docker"
+                  stroke={warn}
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartFrame>
+        </div>
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        {healthQuery.isLoading ? <p className="text-ink-muted">{t("dashboard.healthLoading")}</p> : null}
+        {healthQuery.isError ? (
+          <p className="text-danger">
+            {t("dashboard.healthError", {
+              message:
+                healthQuery.error instanceof Error
+                  ? healthQuery.error.message
+                  : t("common.unknownError"),
+            })}
+          </p>
+        ) : null}
+        {healthQuery.data ? <HealthPanel health={healthQuery.data} /> : null}
+
+        <section className="border-l-2 border-line bg-paper-elevated/40 p-5">
+          <h2 className="text-lg font-semibold text-ink">{t("dashboard.recentErrors")}</h2>
+          {recentErrors.length === 0 ? (
+            <p className="mt-3 text-sm text-ink-muted">{t("dashboard.noErrors")}</p>
+          ) : (
+            <ul className="mt-3 space-y-3">
+              {recentErrors.map((item) => (
+                <li key={item.id} className="border-t border-line pt-3 first:border-t-0 first:pt-0">
+                  <Link
+                    to={`/instances/${item.id}/haproxy`}
+                    className="font-medium text-accent hover:underline"
+                  >
+                    {item.name}
+                  </Link>
+                  <p className="mt-1 font-mono text-xs text-danger">{item.last_error}</p>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
-      ) : null}
-
-      {healthQuery.isLoading ? <p className="text-ink-muted">Henter health…</p> : null}
-
-      {healthQuery.isError ? (
-        <p className="text-danger">
-          Kunne ikke hente health:{" "}
-          {healthQuery.error instanceof Error ? healthQuery.error.message : "ukjent feil"}
-        </p>
-      ) : null}
-
-      {healthQuery.data ? <HealthPanel health={healthQuery.data} /> : null}
+      </div>
     </div>
   );
 }

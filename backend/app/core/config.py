@@ -31,6 +31,11 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("HOST_SYSFS_ROOT", "AX_HOST_SYSFS_ROOT"),
         description="Sysfs root used for NIC discovery. Use /host/sys when host /sys is bind-mounted.",
     )
+    host_proc_root: str = Field(
+        default="/host/proc",
+        validation_alias=AliasChoices("HOST_PROC_ROOT", "AX_HOST_PROC_ROOT"),
+        description="Proc root for host CPU/memory metrics. Falls back to /proc when missing.",
+    )
     host_net_nsenter: bool = Field(
         default=True,
         validation_alias=AliasChoices("HOST_NET_NSENTER", "AX_HOST_NET_NSENTER"),

@@ -23,6 +23,18 @@ export const SystemInfoSchema = z.object({
   docker_configured: z.boolean(),
 });
 
+export const SystemMetricsSchema = z.object({
+  cpu_percent: z.number(),
+  mem_total_bytes: z.number().int(),
+  mem_available_bytes: z.number().int(),
+  mem_used_percent: z.number(),
+  load_avg_1: z.number().nullable().optional(),
+  load_avg_5: z.number().nullable().optional(),
+  load_avg_15: z.number().nullable().optional(),
+  collected_at: z.string(),
+});
+
 export type HealthResponse = z.infer<typeof HealthResponseSchema>;
 export type SystemInfo = z.infer<typeof SystemInfoSchema>;
+export type SystemMetrics = z.infer<typeof SystemMetricsSchema>;
 export type ComponentHealth = z.infer<typeof ComponentHealthSchema>;
