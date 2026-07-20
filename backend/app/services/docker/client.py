@@ -216,20 +216,29 @@ class DockerClientAdapter:
             "restart_policy": {"Name": restart_policy},
             "command": ["haproxy", "-W", "-db", "-f", "/usr/local/etc/haproxy/haproxy.cfg"],
         }
-        # Create detached from networks, then connect with optional static IPs.
-        # This reliably applies ipv4_address on the first attachment as well.
         if endpoints:
-            kwargs["network_mode"] = "none"
+            first_net = endpoints[0].get("network_id")
+            if not first_net:
+                raise DockerException("network_endpoints[0].network_id is required")
+            kwargs["network"] = first_net
         try:
             container = client.containers.create(**kwargs)
-            for endpoint in endpoints:
-                net_id = endpoint.get("network_id")
-                if not net_id:
-                    continue
-                connect_kwargs: dict[str, Any] = {}
-                if endpoint.get("ipv4_address"):
-                    connect_kwargs["ipv4_address"] = endpoint["ipv4_address"]
-                client.networks.get(net_id).connect(container, **connect_kwargs)
+            if endpoints:
+                first = endpoints[0]
+                first_net = first.get("network_id")
+                first_ip = first.get("ipv4_address")
+                if first_net and first_ip:
+                    network = client.networks.get(first_net)
+                    network.disconnect(container, force=True)
+                    network.connect(container, ipv4_address=first_ip)
+                for endpoint in endpoints[1:]:
+                    net_id = endpoint.get("network_id")
+                    if not net_id:
+                        continue
+                    connect_kwargs: dict[str, Any] = {}
+                    if endpoint.get("ipv4_address"):
+                        connect_kwargs["ipv4_address"] = endpoint["ipv4_address"]
+                    client.networks.get(net_id).connect(container, **connect_kwargs)
             return container.id
         except APIError as exc:
             raise DockerException(str(exc)) from exc
