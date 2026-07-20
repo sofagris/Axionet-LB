@@ -7,7 +7,7 @@ import uuid
 
 import docker
 from docker.errors import APIError, ContainerError, DockerException, ImageNotFound, NotFound
-from docker.types import EndpointConfig, IPAMConfig, IPAMPool, NetworkingConfig
+from docker.types import IPAMConfig, IPAMPool
 
 from app.core.config import Settings
 from app.models.network import NetworkType
@@ -216,28 +216,13 @@ class DockerClientAdapter:
             "restart_policy": {"Name": restart_policy},
             "command": ["haproxy", "-W", "-db", "-f", "/usr/local/etc/haproxy/haproxy.cfg"],
         }
+        # Create detached from networks, then connect with optional static IPs.
+        # This reliably applies ipv4_address on the first attachment as well.
         if endpoints:
-            first = endpoints[0]
-            first_net = first["network_id"]
-            if not first_net:
-                raise DockerException("network_endpoints[0].network_id is required")
-            ipv4 = first.get("ipv4_address")
-            endpoint_kwargs: dict[str, Any] = {}
-            if ipv4:
-                endpoint_kwargs["ipv4_address"] = ipv4
-            networking_config = NetworkingConfig(
-                {
-                    first_net: EndpointConfig(
-                        getattr(client.api, "_version", "1.44"),
-                        **endpoint_kwargs,
-                    )
-                }
-            )
-            kwargs["network"] = first_net
-            kwargs["networking_config"] = networking_config
+            kwargs["network_mode"] = "none"
         try:
             container = client.containers.create(**kwargs)
-            for endpoint in endpoints[1:]:
+            for endpoint in endpoints:
                 net_id = endpoint.get("network_id")
                 if not net_id:
                     continue

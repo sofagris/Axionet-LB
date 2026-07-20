@@ -344,7 +344,12 @@ class InstanceService:
                     logger.exception("Reconcile failed for %s", instance.id)
         return count
 
-    def _resolve_networks(self, attachments: list[NetworkAttachmentCreate]) -> list[Network]:
+    def _resolve_networks(
+        self,
+        attachments: list[NetworkAttachmentCreate],
+        *,
+        exclude_instance_id: str | None = None,
+    ) -> list[Network]:
         networks: list[Network] = []
         for item in attachments:
             network = self._db.get(Network, item.network_id)
@@ -355,7 +360,12 @@ class InstanceService:
             if not network.docker_network_id:
                 raise ValueError(f"Network has no Docker network: {network.name}")
             networks.append(network)
-        validate_network_attachments(self._db, attachments, networks=networks)
+        validate_network_attachments(
+            self._db,
+            attachments,
+            networks=networks,
+            exclude_instance_id=exclude_instance_id,
+        )
         return networks
 
     def _networks_for_instance(self, instance_id: str) -> list[Network]:
@@ -370,7 +380,8 @@ class InstanceService:
                     attachment_order=item.attachment_order,
                 )
                 for item in attachments
-            ]
+            ],
+            exclude_instance_id=instance_id,
         )
 
     def _instance_dir(self, instance_id: str) -> Path:
