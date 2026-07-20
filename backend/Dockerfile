@@ -8,7 +8,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl iproute2 util-linux \
+    && apt-get install -y --no-install-recommends curl iproute2 util-linux ethtool \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml ./

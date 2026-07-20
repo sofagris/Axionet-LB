@@ -38,7 +38,9 @@ services:
       api:
         condition: service_healthy
     ports:
-      - "80:80"
+      # Bind control plane to management IP only (2A). Default 0.0.0.0 for first boot.
+      # After promote-management, source /var/lib/ax-lb/mgmt-bind.env and recreate gui.
+      - "${MGMT_BIND_IP:-0.0.0.0}:80:80"
     networks:
       - control
 

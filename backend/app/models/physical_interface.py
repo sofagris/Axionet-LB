@@ -40,6 +40,7 @@ class PhysicalInterface(Base):
         default=AdministrativeState.ENABLED.value,
     )
     exclusive_use: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_management: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     discovered_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

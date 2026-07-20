@@ -12,6 +12,9 @@ from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.db.session import SessionLocal
 from app.services.networking.discovery import InterfaceDiscoveryService
+from app.services.networking.host import HostNetworkAdapter
+from app.services.networking.mutation import InterfaceMutationService
+from app.services.networking.pending_runtime import start_pending_store, stop_pending_store
 from app.services.networking.sysfs import SysfsInterfaceScanner
 
 logger = logging.getLogger(__name__)
@@ -29,11 +32,11 @@ def bootstrap_interface_discovery() -> None:
     settings = get_settings()
     db = SessionLocal()
     try:
-        service = InterfaceDiscoveryService(
+        discovery = InterfaceDiscoveryService(
             db=db,
             scanner=SysfsInterfaceScanner(settings.host_sysfs_root),
         )
-        interfaces, stats = service.rescan()
+        interfaces, stats = discovery.rescan()
         logger.info(
             "Interface discovery bootstrap: discovered=%s created=%s updated=%s removed=%s total=%s",
             stats["discovered"],
@@ -42,6 +45,15 @@ def bootstrap_interface_discovery() -> None:
             stats["removed"],
             len(interfaces),
         )
+        pending = start_pending_store()
+        mutation = InterfaceMutationService(
+            db=db,
+            discovery=discovery,
+            host_net=HostNetworkAdapter(use_host_nsenter=settings.host_net_nsenter),
+            pending=pending,
+            data_dir=settings.data_dir,
+        )
+        mutation.bootstrap_management_if_needed()
     except Exception:
         logger.exception("Interface discovery bootstrap failed")
     finally:
@@ -55,6 +67,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     run_migrations()
     bootstrap_interface_discovery()
     yield
+    stop_pending_store()
 
 
 def create_app(*, enable_lifespan: bool = True) -> FastAPI:

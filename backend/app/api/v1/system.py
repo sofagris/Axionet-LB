@@ -43,8 +43,11 @@ def get_metrics_collector(settings: Settings = Depends(get_settings)) -> HostMet
 
 
 @router.get("", response_model=SystemInfoResponse)
-def get_system(service: SystemService = Depends(get_system_service)) -> SystemInfoResponse:
-    return service.get_info()
+def get_system(
+    db: Session = Depends(get_db),
+    service: SystemService = Depends(get_system_service),
+) -> SystemInfoResponse:
+    return service.get_info(db)
 
 
 @router.get("/health", response_model=HealthResponse)

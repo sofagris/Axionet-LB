@@ -21,6 +21,8 @@ export const SystemInfoSchema = z.object({
   data_dir: z.string(),
   database_configured: z.boolean(),
   docker_configured: z.boolean(),
+  management_interface: z.string().nullable().optional(),
+  management_bind_ip: z.string().nullable().optional(),
 });
 
 export const SystemMetricsSchema = z.object({

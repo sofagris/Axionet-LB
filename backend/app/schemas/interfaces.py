@@ -20,6 +20,7 @@ class PhysicalInterfaceRead(BaseModel):
     link_state: LinkState
     administrative_state: AdministrativeState
     exclusive_use: bool
+    is_management: bool = False
     discovered_at: datetime
     updated_at: datetime
 
@@ -28,6 +29,32 @@ class PhysicalInterfaceUpdate(BaseModel):
     description: str | None = None
     administrative_state: AdministrativeState | None = None
     exclusive_use: bool | None = None
+    mtu: int | None = Field(default=None, ge=68, le=9216)
+    speed_mbps: int | None = Field(default=None, ge=10, le=400_000)
+    speed_autoneg: bool | None = None
+    confirm: bool = False
+
+
+class PhysicalInterfaceApplyResult(BaseModel):
+    interface: PhysicalInterfaceRead
+    pending_change_id: str | None = None
+    rollback_at: datetime | None = None
+    message: str | None = None
+
+
+class PromoteManagementResult(BaseModel):
+    interface: PhysicalInterfaceRead
+    management_bind_ip: str
+    compose_hint: str
+    requires_compose_recreate: bool = True
+
+
+class PendingChangeRead(BaseModel):
+    id: str
+    interface_id: str
+    interface_name: str
+    rollback_at: datetime
+    confirmed: bool
 
 
 class InterfaceRescanResponse(BaseModel):

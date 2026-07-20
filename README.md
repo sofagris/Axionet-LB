@@ -24,6 +24,21 @@ docker compose up --build -d
 GUI: http://\<vert\>/  
 API health: http://\<vert\>/api/v1/system/health
 
+### Management interface (kontrollplan-binding)
+
+GUI publiseres på `MGMT_BIND_IP` (default `0.0.0.0` ved første boot). Etter at et fysisk interface er merket som management:
+
+```bash
+# via API
+curl -X POST http://127.0.0.1/api/v1/interfaces/<id>/promote-management
+
+# last inn bind-IP og recreate GUI
+set -a && . /var/lib/ax-lb/mgmt-bind.env && set +a
+docker compose up -d gui
+```
+
+Deretter svarer kontrollplanet kun på management-IP (f.eks. `http://192.168.50.195/`).
+
 ## Utvikling lokalt
 
 ### Backend

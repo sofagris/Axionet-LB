@@ -16,6 +16,9 @@ from app.schemas.system import (
     SystemInfoResponse,
 )
 from app.services.docker.client import DockerClientAdapter
+from app.services.networking.bind_env import read_mgmt_bind_ip
+from app.services.networking.discovery import InterfaceDiscoveryService
+from app.services.networking.sysfs import SysfsInterfaceScanner
 
 
 class SystemService:
@@ -23,13 +26,25 @@ class SystemService:
         self._settings = settings
         self._docker = docker_adapter
 
-    def get_info(self) -> SystemInfoResponse:
+    def get_info(self, db: Session | None = None) -> SystemInfoResponse:
+        management_interface = None
+        management_bind_ip = read_mgmt_bind_ip(self._settings.data_dir)
+        if db is not None:
+            discovery = InterfaceDiscoveryService(
+                db=db,
+                scanner=SysfsInterfaceScanner(self._settings.host_sysfs_root),
+            )
+            mgmt = next((item for item in discovery.list_interfaces() if item.is_management), None)
+            if mgmt is not None:
+                management_interface = mgmt.name
         return SystemInfoResponse(
             name=self._settings.app_name,
             api_prefix=self._settings.api_prefix,
             data_dir=self._settings.data_dir,
             database_configured=bool(self._settings.database_url),
             docker_configured=True,
+            management_interface=management_interface,
+            management_bind_ip=management_bind_ip,
         )
 
     def get_capabilities(self) -> CapabilitiesResponse:
@@ -42,6 +57,8 @@ class SystemService:
                 "docker.connectivity",
                 "interfaces.discovery",
                 "interfaces.rescan",
+                "interfaces.live_edit",
+                "interfaces.management",
                 "networks.crud",
                 "networks.ipvlan-l2",
                 "networks.validate",

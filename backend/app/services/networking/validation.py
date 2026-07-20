@@ -83,6 +83,18 @@ class NetworkValidator:
                 )
             )
 
+        if (
+            payload.network_type != NetworkType.MANAGEMENT
+            and parent is not None
+            and parent.is_management
+        ):
+            issues.append(
+                NetworkValidationIssue(
+                    code="management_interface_parent",
+                    message="Management interface cannot be used as dataplane network parent",
+                )
+            )
+
         subnet = self._parse_network(payload.subnet, "subnet", issues)
         if payload.ip_range:
             ip_range = self._parse_network(payload.ip_range, "ip_range", issues)

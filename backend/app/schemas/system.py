@@ -29,6 +29,8 @@ class SystemInfoResponse(BaseModel):
     data_dir: str
     database_configured: bool
     docker_configured: bool
+    management_interface: str | None = None
+    management_bind_ip: str | None = None
 
 
 class CapabilitiesResponse(BaseModel):

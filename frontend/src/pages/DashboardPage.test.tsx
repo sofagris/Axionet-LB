@@ -25,6 +25,8 @@ vi.mock("../api/system", () => ({
     data_dir: "/var/lib/ax-lb",
     database_configured: true,
     docker_configured: true,
+    management_interface: "eth0",
+    management_bind_ip: "192.168.50.195",
   })),
   fetchSystemMetrics: vi.fn(async () => ({
     cpu_percent: 12.5,
@@ -96,11 +98,15 @@ vi.mock("../api/interfaces", () => ({
       link_state: "up",
       administrative_state: "enabled",
       exclusive_use: false,
+      is_management: true,
       discovered_at: "2026-07-20T16:00:00Z",
       updated_at: "2026-07-20T16:00:00Z",
     },
   ]),
   rescanInterfaces: vi.fn(),
+  updateInterface: vi.fn(),
+  promoteManagement: vi.fn(),
+  confirmInterfaceChange: vi.fn(),
 }));
 
 vi.mock("../api/networks", () => ({

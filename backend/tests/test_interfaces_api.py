@@ -56,5 +56,5 @@ def test_interface_rescan_and_list(fake_sysfs: Path, client: TestClient) -> None
         json={"description": "Uplink A", "exclusive_use": True},
     )
     assert patched.status_code == 200
-    assert patched.json()["description"] == "Uplink A"
-    assert patched.json()["exclusive_use"] is True
+    assert patched.json()["interface"]["description"] == "Uplink A"
+    assert patched.json()["interface"]["exclusive_use"] is True

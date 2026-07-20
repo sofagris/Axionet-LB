@@ -17,13 +17,18 @@ async function apiFetch<T>(
     let detail = response.statusText;
     try {
       const errorBody: unknown = await response.json();
-      if (
-        typeof errorBody === "object" &&
-        errorBody !== null &&
-        "detail" in errorBody &&
-        typeof (errorBody as { detail: unknown }).detail === "string"
-      ) {
-        detail = (errorBody as { detail: string }).detail;
+      if (typeof errorBody === "object" && errorBody !== null && "detail" in errorBody) {
+        const raw = (errorBody as { detail: unknown }).detail;
+        if (typeof raw === "string") {
+          detail = raw;
+        } else if (
+          typeof raw === "object" &&
+          raw !== null &&
+          "message" in raw &&
+          typeof (raw as { message: unknown }).message === "string"
+        ) {
+          detail = (raw as { message: string }).message;
+        }
       }
     } catch {
       // ignore non-JSON error bodies
