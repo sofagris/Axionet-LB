@@ -5,11 +5,13 @@ import {
   useHaproxyBackends,
   useHaproxyCertificates,
   useHaproxyConfig,
+  useHaproxyDefaults,
   useHaproxyFrontends,
   useHaproxyMaps,
   useHaproxyMutations,
   useHaproxyStatus,
 } from "../features/haproxy/hooks";
+import { DiffView } from "../features/revisions/DiffView";
 import { useInstanceLogs, useInstanceMetrics, useInstanceAction, useInstances, useValidateExistingInstance } from "../features/instances/hooks";
 import type { InstanceValidateResult } from "../types/instances";
 import { useRestoreRevision, useRevision, useRevisions } from "../features/revisions/hooks";
@@ -51,9 +53,11 @@ export function HaproxyDetailPage() {
   const [tab, setTab] = useState<Tab>("overview");
   const [selectedRevisionId, setSelectedRevisionId] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState(false);
+  const [revisionView, setRevisionView] = useState<"diff" | "full">("diff");
   const [logTail, setLogTail] = useState(200);
   const [runtimeWeight, setRuntimeWeight] = useState("100");
   const [runtimeMessage, setRuntimeMessage] = useState<string | null>(null);
+  const [configCopied, setConfigCopied] = useState(false);
 
   const frontendsQuery = useHaproxyFrontends(instanceId);
   const backendsQuery = useHaproxyBackends(instanceId);
@@ -61,6 +65,7 @@ export function HaproxyDetailPage() {
   const mapsQuery = useHaproxyMaps(instanceId);
   const aclsQuery = useHaproxyAcls(instanceId);
   const configQuery = useHaproxyConfig(instanceId);
+  const defaultsQuery = useHaproxyDefaults(instanceId);
   const statusQuery = useHaproxyStatus(instanceId);
   const revisionsQuery = useRevisions(instanceId);
   const revisionDetailQuery = useRevision(instanceId, selectedRevisionId);
@@ -108,6 +113,22 @@ export function HaproxyDetailPage() {
   const [aclFrontend, setAclFrontend] = useState("web");
   const [aclExpression, setAclExpression] = useState("path_beg /api");
   const [aclBackend, setAclBackend] = useState("");
+
+  const [defaultsMode, setDefaultsMode] = useState("http");
+  const [defaultsStatsPort, setDefaultsStatsPort] = useState("8404");
+  const [defaultsTimeoutConnect, setDefaultsTimeoutConnect] = useState("5s");
+  const [defaultsTimeoutClient, setDefaultsTimeoutClient] = useState("30s");
+  const [defaultsTimeoutServer, setDefaultsTimeoutServer] = useState("30s");
+
+  useEffect(() => {
+    const defaults = defaultsQuery.data;
+    if (!defaults) return;
+    setDefaultsMode(defaults.mode);
+    setDefaultsStatsPort(String(defaults.stats_port));
+    setDefaultsTimeoutConnect(defaults.timeout_connect);
+    setDefaultsTimeoutClient(defaults.timeout_client);
+    setDefaultsTimeoutServer(defaults.timeout_server);
+  }, [defaultsQuery.data]);
 
   useEffect(() => {
     const backends = backendsQuery.data;
@@ -395,16 +416,129 @@ export function HaproxyDetailPage() {
           {instance?.last_error ? (
             <p className="font-mono text-xs text-danger">{instance.last_error}</p>
           ) : null}
-          <div>
-            <button
-              type="button"
-              className="text-sm text-accent hover:underline"
-              onClick={() => setShowConfig((value) => !value)}
-            >
-              {showConfig ? "Skjul rendered config" : "Vis rendered config"}
-            </button>
+
+          <form
+            className="grid gap-3 border border-line bg-paper-elevated/40 p-4 md:grid-cols-3 lg:grid-cols-5"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              await mutations.updateDefaults.mutateAsync({
+                mode: defaultsMode as "http" | "tcp",
+                stats_port: Number(defaultsStatsPort) || 8404,
+                timeout_connect: defaultsTimeoutConnect,
+                timeout_client: defaultsTimeoutClient,
+                timeout_server: defaultsTimeoutServer,
+              });
+            }}
+          >
+            <p className="md:col-span-3 lg:col-span-5 text-sm text-ink-muted">
+              Global defaults (mode, stats-port, timeouts). Soft-reloades ved lagring.
+            </p>
+            <FormField label="Mode">
+              <select
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={defaultsMode}
+                onChange={(e) => setDefaultsMode(e.target.value)}
+              >
+                <option value="http">http</option>
+                <option value="tcp">tcp</option>
+              </select>
+            </FormField>
+            <FormField label="Stats port">
+              <input
+                type="number"
+                min={1}
+                max={65535}
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={defaultsStatsPort}
+                onChange={(e) => setDefaultsStatsPort(e.target.value)}
+                required
+              />
+            </FormField>
+            <FormField label="Timeout connect">
+              <input
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={defaultsTimeoutConnect}
+                onChange={(e) => setDefaultsTimeoutConnect(e.target.value)}
+                placeholder="5s"
+                required
+              />
+            </FormField>
+            <FormField label="Timeout client">
+              <input
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={defaultsTimeoutClient}
+                onChange={(e) => setDefaultsTimeoutClient(e.target.value)}
+                placeholder="30s"
+                required
+              />
+            </FormField>
+            <FormField label="Timeout server">
+              <input
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={defaultsTimeoutServer}
+                onChange={(e) => setDefaultsTimeoutServer(e.target.value)}
+                placeholder="30s"
+                required
+              />
+            </FormField>
+            <FormActions>
+              <button type="submit" className="border border-accent bg-accent px-3 py-2 text-sm text-white">
+                Lagre defaults
+              </button>
+            </FormActions>
+            {mutations.updateDefaults.isError ? (
+              <p className="md:col-span-3 lg:col-span-5 text-sm text-danger">
+                {mutations.updateDefaults.error instanceof Error
+                  ? mutations.updateDefaults.error.message
+                  : "Kunne ikke lagre defaults"}
+              </p>
+            ) : null}
+          </form>
+
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                className="text-sm text-accent hover:underline"
+                onClick={() => setShowConfig((value) => !value)}
+              >
+                {showConfig ? "Skjul rendered config" : "Vis rendered config"}
+              </button>
+              <button
+                type="button"
+                className="text-sm text-accent hover:underline disabled:opacity-50"
+                disabled={!configQuery.data?.rendered}
+                onClick={() => {
+                  const text = configQuery.data?.rendered;
+                  if (!text) return;
+                  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+                  const url = URL.createObjectURL(blob);
+                  const anchor = document.createElement("a");
+                  anchor.href = url;
+                  anchor.download = `${instance?.name || instanceId}-haproxy.cfg`;
+                  anchor.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                Last ned .cfg
+              </button>
+              <button
+                type="button"
+                className="text-sm text-accent hover:underline disabled:opacity-50"
+                disabled={!configQuery.data?.rendered}
+                onClick={async () => {
+                  const text = configQuery.data?.rendered;
+                  if (!text) return;
+                  await navigator.clipboard.writeText(text);
+                  setConfigCopied(true);
+                  window.setTimeout(() => setConfigCopied(false), 1500);
+                }}
+              >
+                {configCopied ? "Kopiert" : "Kopier config"}
+              </button>
+            </div>
             {showConfig ? (
-              <pre className="mt-3 max-h-[28rem] overflow-auto border border-line bg-ink p-4 font-mono text-xs text-paper">
+              <pre className="max-h-[28rem] overflow-auto border border-line bg-ink p-4 font-mono text-xs text-paper">
                 {configQuery.data?.rendered ?? "Henter config…"}
               </pre>
             ) : null}
@@ -1226,15 +1360,67 @@ export function HaproxyDetailPage() {
               <p className="text-ink-muted">Henter revision…</p>
             ) : (
               <>
-                <p className="font-mono text-xs text-ink-muted">
-                  Revision {revisionDetailQuery.data?.revision_number} ·{" "}
-                  {revisionDetailQuery.data?.deployment_status}
-                </p>
-                <pre className="max-h-[28rem] overflow-auto border border-line bg-ink p-4 font-mono text-xs text-paper">
-                  {revisionDetailQuery.data?.diff_from_previous ||
-                    revisionDetailQuery.data?.rendered_configuration ||
-                    "Ingen diff"}
-                </pre>
+                <div className="flex flex-wrap items-baseline justify-between gap-3">
+                  <p className="font-mono text-xs text-ink-muted">
+                    Revision {revisionDetailQuery.data?.revision_number} ·{" "}
+                    {revisionDetailQuery.data?.deployment_status}/
+                    {revisionDetailQuery.data?.validation_status}
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      className={`text-xs hover:underline ${revisionView === "diff" ? "text-accent" : "text-ink-muted"}`}
+                      onClick={() => setRevisionView("diff")}
+                    >
+                      Diff
+                    </button>
+                    <button
+                      type="button"
+                      className={`text-xs hover:underline ${revisionView === "full" ? "text-accent" : "text-ink-muted"}`}
+                      onClick={() => setRevisionView("full")}
+                    >
+                      Full config
+                    </button>
+                    <button
+                      type="button"
+                      className="text-xs text-accent hover:underline disabled:opacity-50"
+                      disabled={!revisionDetailQuery.data?.rendered_configuration}
+                      onClick={() => {
+                        const text = revisionDetailQuery.data?.rendered_configuration;
+                        if (!text) return;
+                        const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+                        const url = URL.createObjectURL(blob);
+                        const anchor = document.createElement("a");
+                        anchor.href = url;
+                        anchor.download = `${instance?.name || instanceId}-rev${revisionDetailQuery.data?.revision_number}.cfg`;
+                        anchor.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                    >
+                      Last ned
+                    </button>
+                  </div>
+                </div>
+                {revisionDetailQuery.data?.validation_output ? (
+                  <p
+                    className={`font-mono text-xs ${
+                      revisionDetailQuery.data.validation_status === "valid"
+                        ? "text-ok"
+                        : "text-danger"
+                    }`}
+                  >
+                    Validation: {revisionDetailQuery.data.validation_output}
+                  </p>
+                ) : null}
+                <DiffView
+                  text={
+                    revisionView === "full"
+                      ? revisionDetailQuery.data?.rendered_configuration
+                      : revisionDetailQuery.data?.diff_from_previous ||
+                        revisionDetailQuery.data?.rendered_configuration
+                  }
+                  emptyLabel="Ingen config"
+                />
               </>
             )}
           </div>

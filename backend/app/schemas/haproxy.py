@@ -3,6 +3,14 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class HaproxyDefaults(BaseModel):
+    mode: Literal["http", "tcp"] = "http"
+    stats_port: int = Field(default=8404, ge=1, le=65535)
+    timeout_connect: str = Field(default="5s", pattern=r"^[0-9]+[smhd]$")
+    timeout_client: str = Field(default="30s", pattern=r"^[0-9]+[smhd]$")
+    timeout_server: str = Field(default="30s", pattern=r"^[0-9]+[smhd]$")
+
+
 class HaproxyFrontendRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

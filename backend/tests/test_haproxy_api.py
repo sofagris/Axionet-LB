@@ -287,3 +287,44 @@ def test_haproxy_clear_counters(client: TestClient, docker_adapter: MagicMock) -
     body = cleared.json()
     assert body["ok"] is True
     assert body["ephemeral"] is True
+
+
+def test_haproxy_defaults(client: TestClient) -> None:
+    current = client.get("/api/v1/instances/inst-1/haproxy/defaults")
+    assert current.status_code == 200, current.text
+    assert current.json()["mode"] == "http"
+    assert current.json()["stats_port"] == 8404
+
+    updated = client.patch(
+        "/api/v1/instances/inst-1/haproxy/defaults",
+        json={
+            "mode": "tcp",
+            "stats_port": 8405,
+            "timeout_connect": "3s",
+            "timeout_client": "45s",
+            "timeout_server": "45s",
+        },
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["mode"] == "tcp"
+    assert updated.json()["stats_port"] == 8405
+    assert updated.json()["timeout_client"] == "45s"
+
+    preview = client.get("/api/v1/instances/inst-1/haproxy/config")
+    assert preview.status_code == 200
+    rendered = preview.json()["rendered"]
+    assert "mode tcp" in rendered
+    assert "timeout client 45s" in rendered
+    assert "bind *:8405" in rendered
+
+    bad = client.patch(
+        "/api/v1/instances/inst-1/haproxy/defaults",
+        json={
+            "mode": "http",
+            "stats_port": 8404,
+            "timeout_connect": "slow",
+            "timeout_client": "30s",
+            "timeout_server": "30s",
+        },
+    )
+    assert bad.status_code == 422

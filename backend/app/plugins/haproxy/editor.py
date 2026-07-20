@@ -27,6 +27,39 @@ class HaproxyConfigEditor:
     def as_dict(self) -> dict[str, Any]:
         return self._config.model_dump()
 
+    def get_defaults(self) -> dict[str, Any]:
+        return {
+            "mode": self._config.mode,
+            "stats_port": self._config.stats_port,
+            "timeout_connect": self._config.timeout_connect,
+            "timeout_client": self._config.timeout_client,
+            "timeout_server": self._config.timeout_server,
+        }
+
+    def update_defaults(
+        self,
+        *,
+        mode: str | None = None,
+        stats_port: int | None = None,
+        timeout_connect: str | None = None,
+        timeout_client: str | None = None,
+        timeout_server: str | None = None,
+    ) -> dict[str, Any]:
+        updates: dict[str, Any] = {}
+        if mode is not None:
+            updates["mode"] = mode
+        if stats_port is not None:
+            updates["stats_port"] = stats_port
+        if timeout_connect is not None:
+            updates["timeout_connect"] = timeout_connect
+        if timeout_client is not None:
+            updates["timeout_client"] = timeout_client
+        if timeout_server is not None:
+            updates["timeout_server"] = timeout_server
+        if updates:
+            self._config = self._config.model_copy(update=updates)
+        return self.get_defaults()
+
     # Frontends
     def list_frontends(self) -> list[HaproxyFrontend]:
         return list(self._config.frontends)

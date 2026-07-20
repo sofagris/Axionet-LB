@@ -17,6 +17,7 @@ import {
   fetchHaproxyBackends,
   fetchHaproxyCertificates,
   fetchHaproxyConfig,
+  fetchHaproxyDefaults,
   fetchHaproxyFrontends,
   fetchHaproxyMap,
   fetchHaproxyMaps,
@@ -24,12 +25,19 @@ import {
   runtimeServerAction,
   updateHaproxyAcl,
   updateHaproxyBackend,
+  updateHaproxyDefaults,
   updateHaproxyFrontend,
   updateHaproxyMap,
   updateHaproxyServer,
   type HaproxyRuntimeServerAction,
 } from "../../api/haproxy";
-import type { HaproxyAcl, HaproxyBackend, HaproxyFrontend, HaproxyServer } from "../../types/haproxy";
+import type {
+  HaproxyAcl,
+  HaproxyBackend,
+  HaproxyDefaults,
+  HaproxyFrontend,
+  HaproxyServer,
+} from "../../types/haproxy";
 
 export function useHaproxyFrontends(id: string) {
   return useQuery({
@@ -73,6 +81,13 @@ export function useHaproxyConfig(id: string) {
   });
 }
 
+export function useHaproxyDefaults(id: string) {
+  return useQuery({
+    queryKey: ["haproxy", id, "defaults"],
+    queryFn: () => fetchHaproxyDefaults(id),
+  });
+}
+
 export function useHaproxyStatus(id: string) {
   return useQuery({
     queryKey: ["haproxy", id, "status"],
@@ -97,6 +112,10 @@ export function useHaproxyMutations(id: string) {
   return {
     createFrontend: useMutation({
       mutationFn: (payload: HaproxyFrontend) => createHaproxyFrontend(id, payload),
+      onSuccess: invalidate,
+    }),
+    updateDefaults: useMutation({
+      mutationFn: (payload: HaproxyDefaults) => updateHaproxyDefaults(id, payload),
       onSuccess: invalidate,
     }),
     updateFrontend: useMutation({

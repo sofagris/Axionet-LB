@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+export const HaproxyDefaultsSchema = z.object({
+  mode: z.enum(["http", "tcp"]),
+  stats_port: z.number().int(),
+  timeout_connect: z.string(),
+  timeout_client: z.string(),
+  timeout_server: z.string(),
+});
+
 export const HaproxyFrontendSchema = z.object({
   name: z.string(),
   bind_address: z.string(),
@@ -78,6 +86,7 @@ export const HaproxyRuntimeStatusSchema = z.object({
   servers: z.array(HaproxyStatRowSchema),
 });
 
+export type HaproxyDefaults = z.infer<typeof HaproxyDefaultsSchema>;
 export type HaproxyFrontend = z.infer<typeof HaproxyFrontendSchema>;
 export type HaproxyBackend = z.infer<typeof HaproxyBackendSchema>;
 export type HaproxyServer = z.infer<typeof HaproxyServerSchema>;

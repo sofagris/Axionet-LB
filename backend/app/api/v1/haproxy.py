@@ -24,6 +24,7 @@ from app.schemas.haproxy import (
     HaproxyCertificateRead,
     HaproxyClearCountersResult,
     HaproxyConfigPreview,
+    HaproxyDefaults,
     HaproxyFrontendRead,
     HaproxyMapCreate,
     HaproxyMapDetail,
@@ -82,6 +83,35 @@ def get_config_preview(
         configuration=config.model_dump(),
         rendered=render_haproxy_config(config),
     )
+
+
+@router.get("/defaults", response_model=HaproxyDefaults)
+def get_defaults(
+    instance_id: str,
+    service: InstanceService = Depends(get_instance_service),
+) -> HaproxyDefaults:
+    instance = _require_instance(service, instance_id)
+    editor = HaproxyConfigEditor(instance.configuration)
+    return HaproxyDefaults.model_validate(editor.get_defaults())
+
+
+@router.patch("/defaults", response_model=HaproxyDefaults)
+def update_defaults(
+    instance_id: str,
+    payload: HaproxyDefaults,
+    service: InstanceService = Depends(get_instance_service),
+) -> HaproxyDefaults:
+    instance = _require_instance(service, instance_id)
+    editor = HaproxyConfigEditor(instance.configuration)
+    updated = editor.update_defaults(
+        mode=payload.mode,
+        stats_port=payload.stats_port,
+        timeout_connect=payload.timeout_connect,
+        timeout_client=payload.timeout_client,
+        timeout_server=payload.timeout_server,
+    )
+    _save(service, instance, editor)
+    return HaproxyDefaults.model_validate(updated)
 
 
 @router.get("/frontends", response_model=list[HaproxyFrontendRead])

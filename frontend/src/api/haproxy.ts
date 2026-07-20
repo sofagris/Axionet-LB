@@ -5,6 +5,7 @@ import {
   HaproxyBackendSchema,
   HaproxyCertificateSchema,
   HaproxyConfigPreviewSchema,
+  HaproxyDefaultsSchema,
   HaproxyFrontendSchema,
   HaproxyMapDetailSchema,
   HaproxyMapSchema,
@@ -13,6 +14,7 @@ import {
   type HaproxyAcl,
   type HaproxyBackend,
   type HaproxyCertificate,
+  type HaproxyDefaults,
   type HaproxyFrontend,
   type HaproxyMap,
   type HaproxyMapDetail,
@@ -20,6 +22,17 @@ import {
 } from "../types/haproxy";
 
 const base = (id: string) => `/api/v1/instances/${id}/haproxy`;
+
+export function fetchHaproxyDefaults(id: string): Promise<HaproxyDefaults> {
+  return apiFetch(`${base(id)}/defaults`, (data) => HaproxyDefaultsSchema.parse(data));
+}
+
+export function updateHaproxyDefaults(id: string, payload: HaproxyDefaults): Promise<HaproxyDefaults> {
+  return apiFetch(`${base(id)}/defaults`, (data) => HaproxyDefaultsSchema.parse(data), {
+    method: "PATCH",
+    body: payload,
+  });
+}
 
 export function fetchHaproxyFrontends(id: string) {
   return apiFetch(`${base(id)}/frontends`, (data) => z.array(HaproxyFrontendSchema).parse(data));
