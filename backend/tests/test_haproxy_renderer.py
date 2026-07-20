@@ -60,6 +60,49 @@ def test_render_httpchk() -> None:
     assert "option httpchk" not in tcp_section
 
 
+def test_render_compression_and_stick_table() -> None:
+    config = HaproxyConfig.model_validate(
+        {
+            "mode": "http",
+            "compression": True,
+            "compression_algo": "gzip",
+            "compression_type": "text/html application/json",
+            "backends": [
+                {
+                    "name": "app",
+                    "stick_table": True,
+                    "stick_table_type": "ip",
+                    "stick_table_size": "50k",
+                    "stick_table_expire": "15m",
+                    "stick_on": "src",
+                    "servers": [{"name": "s1", "address": "10.0.0.5", "port": 80}],
+                },
+                {
+                    "name": "by_header",
+                    "stick_table": True,
+                    "stick_table_type": "string",
+                    "stick_table_key_len": 64,
+                    "stick_table_size": "10k",
+                    "stick_table_expire": "1h",
+                    "stick_on": "hdr(X-Request-Id)",
+                    "servers": [{"name": "s1", "address": "10.0.0.7", "port": 80}],
+                },
+            ],
+        }
+    )
+    rendered = render_haproxy_config(config)
+    assert "compression algo gzip" in rendered
+    assert "compression type text/html application/json" in rendered
+    assert "stick-table type ip size 50k expire 15m" in rendered
+    assert "stick on src" in rendered
+    assert "stick-table type string len 64 size 10k expire 1h" in rendered
+    assert "stick on hdr(X-Request-Id)" in rendered
+
+    tcp = HaproxyConfig.model_validate({"mode": "tcp", "compression": True})
+    tcp_rendered = render_haproxy_config(tcp)
+    assert "compression algo" not in tcp_rendered
+
+
 def test_render_tls_and_acls() -> None:
     config = HaproxyConfig.model_validate(
         {

@@ -24,6 +24,12 @@ class HaproxyBackend(BaseModel):
     httpchk_method: Literal["OPTIONS", "HEAD", "GET"] = "GET"
     httpchk_uri: str = Field(default="/", min_length=1, max_length=512, pattern=r"^/\S*$")
     httpchk_expect_status: int | None = Field(default=None, ge=100, le=599)
+    stick_table: bool = False
+    stick_table_type: Literal["ip", "integer", "string"] = "ip"
+    stick_table_key_len: int = Field(default=32, ge=1, le=512)
+    stick_table_size: str = Field(default="100k", pattern=r"^[0-9]+[kKmMgG]?$")
+    stick_table_expire: str = Field(default="30m", pattern=r"^[0-9]+[smhd]$")
+    stick_on: str = Field(default="src", min_length=1, max_length=128, pattern=r"^[^\s].*$")
     servers: list[HaproxyServer] = Field(default_factory=lambda: [HaproxyServer()])
 
 
@@ -68,6 +74,16 @@ class HaproxyConfig(BaseModel):
     timeout_connect: str = "5s"
     timeout_client: str = "30s"
     timeout_server: str = "30s"
+    compression: bool = False
+    compression_algo: Literal["gzip", "deflate"] = "gzip"
+    compression_type: str = Field(
+        default=(
+            "text/html text/plain text/css text/javascript "
+            "application/javascript application/json"
+        ),
+        min_length=1,
+        max_length=1024,
+    )
 
     @classmethod
     def from_dict(cls, data: dict[str, Any] | None) -> HaproxyConfig:

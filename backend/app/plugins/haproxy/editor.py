@@ -34,6 +34,9 @@ class HaproxyConfigEditor:
             "timeout_connect": self._config.timeout_connect,
             "timeout_client": self._config.timeout_client,
             "timeout_server": self._config.timeout_server,
+            "compression": self._config.compression,
+            "compression_algo": self._config.compression_algo,
+            "compression_type": self._config.compression_type,
         }
 
     def update_defaults(
@@ -44,6 +47,9 @@ class HaproxyConfigEditor:
         timeout_connect: str | None = None,
         timeout_client: str | None = None,
         timeout_server: str | None = None,
+        compression: bool | None = None,
+        compression_algo: str | None = None,
+        compression_type: str | None = None,
     ) -> dict[str, Any]:
         updates: dict[str, Any] = {}
         if mode is not None:
@@ -56,6 +62,12 @@ class HaproxyConfigEditor:
             updates["timeout_client"] = timeout_client
         if timeout_server is not None:
             updates["timeout_server"] = timeout_server
+        if compression is not None:
+            updates["compression"] = compression
+        if compression_algo is not None:
+            updates["compression_algo"] = compression_algo
+        if compression_type is not None:
+            updates["compression_type"] = compression_type
         if updates:
             self._config = self._config.model_copy(update=updates)
         return self.get_defaults()

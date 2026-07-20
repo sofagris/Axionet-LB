@@ -79,6 +79,8 @@ class SystemService:
                 "haproxy.runtime_control",
                 "haproxy.clear_counters",
                 "haproxy.httpchk",
+                "haproxy.compression",
+                "haproxy.stick_tables",
                 "system.logs",
                 "system.audit",
                 "system.orphans",

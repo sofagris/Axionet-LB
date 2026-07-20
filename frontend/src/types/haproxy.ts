@@ -6,6 +6,11 @@ export const HaproxyDefaultsSchema = z.object({
   timeout_connect: z.string(),
   timeout_client: z.string(),
   timeout_server: z.string(),
+  compression: z.boolean().optional().default(false),
+  compression_algo: z.enum(["gzip", "deflate"]).optional().default("gzip"),
+  compression_type: z.string().optional().default(
+    "text/html text/plain text/css text/javascript application/javascript application/json",
+  ),
 });
 
 export const HaproxyFrontendSchema = z.object({
@@ -36,6 +41,12 @@ export const HaproxyBackendSchema = z.object({
   httpchk_method: z.enum(["OPTIONS", "HEAD", "GET"]).optional().default("GET"),
   httpchk_uri: z.string().optional().default("/"),
   httpchk_expect_status: z.number().int().nullable().optional(),
+  stick_table: z.boolean().optional().default(false),
+  stick_table_type: z.enum(["ip", "integer", "string"]).optional().default("ip"),
+  stick_table_key_len: z.number().int().optional().default(32),
+  stick_table_size: z.string().optional().default("100k"),
+  stick_table_expire: z.string().optional().default("30m"),
+  stick_on: z.string().optional().default("src"),
   servers: z.array(HaproxyServerSchema),
 });
 

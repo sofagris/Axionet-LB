@@ -107,6 +107,12 @@ export function HaproxyDetailPage() {
   const [backendHttpchkMethod, setBackendHttpchkMethod] = useState<"OPTIONS" | "HEAD" | "GET">("GET");
   const [backendHttpchkUri, setBackendHttpchkUri] = useState("/");
   const [backendHttpchkExpect, setBackendHttpchkExpect] = useState("");
+  const [backendStickTable, setBackendStickTable] = useState(false);
+  const [backendStickType, setBackendStickType] = useState<"ip" | "integer" | "string">("ip");
+  const [backendStickKeyLen, setBackendStickKeyLen] = useState("32");
+  const [backendStickSize, setBackendStickSize] = useState("100k");
+  const [backendStickExpire, setBackendStickExpire] = useState("30m");
+  const [backendStickOn, setBackendStickOn] = useState("src");
 
   const [editingServer, setEditingServer] = useState<{ backend: string; name: string } | null>(null);
   const [serverBackend, setServerBackend] = useState("app");
@@ -137,6 +143,11 @@ export function HaproxyDetailPage() {
   const [defaultsTimeoutConnect, setDefaultsTimeoutConnect] = useState("5s");
   const [defaultsTimeoutClient, setDefaultsTimeoutClient] = useState("30s");
   const [defaultsTimeoutServer, setDefaultsTimeoutServer] = useState("30s");
+  const [defaultsCompression, setDefaultsCompression] = useState(false);
+  const [defaultsCompressionAlgo, setDefaultsCompressionAlgo] = useState<"gzip" | "deflate">("gzip");
+  const [defaultsCompressionType, setDefaultsCompressionType] = useState(
+    "text/html text/plain text/css text/javascript application/javascript application/json",
+  );
 
   useEffect(() => {
     const defaults = defaultsQuery.data;
@@ -146,6 +157,9 @@ export function HaproxyDetailPage() {
     setDefaultsTimeoutConnect(defaults.timeout_connect);
     setDefaultsTimeoutClient(defaults.timeout_client);
     setDefaultsTimeoutServer(defaults.timeout_server);
+    setDefaultsCompression(defaults.compression);
+    setDefaultsCompressionAlgo(defaults.compression_algo);
+    setDefaultsCompressionType(defaults.compression_type);
   }, [defaultsQuery.data]);
 
   useEffect(() => {
@@ -218,6 +232,12 @@ export function HaproxyDetailPage() {
     setBackendHttpchkMethod("GET");
     setBackendHttpchkUri("/");
     setBackendHttpchkExpect("");
+    setBackendStickTable(false);
+    setBackendStickType("ip");
+    setBackendStickKeyLen("32");
+    setBackendStickSize("100k");
+    setBackendStickExpire("30m");
+    setBackendStickOn("src");
   }
 
   function startEditBackend(item: HaproxyBackend) {
@@ -231,6 +251,12 @@ export function HaproxyDetailPage() {
     setBackendHttpchkExpect(
       item.httpchk_expect_status != null ? String(item.httpchk_expect_status) : "",
     );
+    setBackendStickTable(item.stick_table);
+    setBackendStickType(item.stick_table_type);
+    setBackendStickKeyLen(String(item.stick_table_key_len));
+    setBackendStickSize(item.stick_table_size);
+    setBackendStickExpire(item.stick_table_expire);
+    setBackendStickOn(item.stick_on);
   }
 
   async function saveBackend(event: FormEvent) {
@@ -245,6 +271,12 @@ export function HaproxyDetailPage() {
       httpchk_method: backendHttpchkMethod,
       httpchk_uri: backendHttpchkUri.trim() || "/",
       httpchk_expect_status: expectRaw ? Number(expectRaw) : null,
+      stick_table: backendStickTable,
+      stick_table_type: backendStickType,
+      stick_table_key_len: Number(backendStickKeyLen) || 32,
+      stick_table_size: backendStickSize.trim() || "100k",
+      stick_table_expire: backendStickExpire.trim() || "30m",
+      stick_on: backendStickOn.trim() || "src",
       servers: existing?.servers ?? [],
     };
     if (editingBackend) {
@@ -623,11 +655,14 @@ export function HaproxyDetailPage() {
                 timeout_connect: defaultsTimeoutConnect,
                 timeout_client: defaultsTimeoutClient,
                 timeout_server: defaultsTimeoutServer,
+                compression: defaultsMode === "http" ? defaultsCompression : false,
+                compression_algo: defaultsCompressionAlgo,
+                compression_type: defaultsCompressionType.trim(),
               });
             }}
           >
             <p className="md:col-span-3 lg:col-span-5 text-sm text-ink-muted">
-              Global defaults (mode, stats-port, timeouts). Soft-reloades ved lagring.
+              Global defaults (mode, stats-port, timeouts, compression). Soft-reloades ved lagring.
             </p>
             <FormField label="Mode">
               <select
@@ -677,6 +712,41 @@ export function HaproxyDetailPage() {
                 required
               />
             </FormField>
+            <FormField label="Compression">
+              <label className="flex items-center gap-2 py-2 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  checked={defaultsCompression && defaultsMode === "http"}
+                  disabled={defaultsMode !== "http"}
+                  onChange={(e) => setDefaultsCompression(e.target.checked)}
+                />
+                gzip/deflate
+              </label>
+            </FormField>
+            {defaultsMode === "http" && defaultsCompression ? (
+              <>
+                <FormField label="Algo">
+                  <select
+                    className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                    value={defaultsCompressionAlgo}
+                    onChange={(e) =>
+                      setDefaultsCompressionAlgo(e.target.value as "gzip" | "deflate")
+                    }
+                  >
+                    <option value="gzip">gzip</option>
+                    <option value="deflate">deflate</option>
+                  </select>
+                </FormField>
+                <FormField label="MIME types">
+                  <input
+                    className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                    value={defaultsCompressionType}
+                    onChange={(e) => setDefaultsCompressionType(e.target.value)}
+                    required
+                  />
+                </FormField>
+              </>
+            ) : null}
             <FormActions>
               <button type="submit" className="border border-accent bg-accent px-3 py-2 text-sm text-white">
                 Lagre defaults
@@ -932,6 +1002,71 @@ export function HaproxyDetailPage() {
                 </FormField>
               </>
             ) : null}
+            <FormField label="Stick-table">
+              <label className="flex items-center gap-2 py-2 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  checked={backendStickTable}
+                  onChange={(e) => setBackendStickTable(e.target.checked)}
+                />
+                persistence
+              </label>
+            </FormField>
+            {backendStickTable ? (
+              <>
+                <FormField label="Type">
+                  <select
+                    className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                    value={backendStickType}
+                    onChange={(e) =>
+                      setBackendStickType(e.target.value as "ip" | "integer" | "string")
+                    }
+                  >
+                    <option value="ip">ip</option>
+                    <option value="integer">integer</option>
+                    <option value="string">string</option>
+                  </select>
+                </FormField>
+                {backendStickType === "string" ? (
+                  <FormField label="Key len">
+                    <input
+                      className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                      value={backendStickKeyLen}
+                      onChange={(e) => setBackendStickKeyLen(e.target.value)}
+                      inputMode="numeric"
+                      required
+                    />
+                  </FormField>
+                ) : null}
+                <FormField label="Size">
+                  <input
+                    className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                    value={backendStickSize}
+                    onChange={(e) => setBackendStickSize(e.target.value)}
+                    placeholder="100k"
+                    required
+                  />
+                </FormField>
+                <FormField label="Expire">
+                  <input
+                    className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                    value={backendStickExpire}
+                    onChange={(e) => setBackendStickExpire(e.target.value)}
+                    placeholder="30m"
+                    required
+                  />
+                </FormField>
+                <FormField label="Stick on">
+                  <input
+                    className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                    value={backendStickOn}
+                    onChange={(e) => setBackendStickOn(e.target.value)}
+                    placeholder="src"
+                    required
+                  />
+                </FormField>
+              </>
+            ) : null}
             <FormActions>
               <button type="submit" className="border border-accent bg-accent px-3 py-2 text-sm text-white">
                 {editingBackend ? "Oppdater" : "Legg til"}
@@ -944,7 +1079,7 @@ export function HaproxyDetailPage() {
             </FormActions>
           </form>
           <EntityTable
-            headers={["Name", "Balance", "Mode", "HTTP check", "Servers", ""]}
+            headers={["Name", "Balance", "Mode", "HTTP check", "Stick", "Servers", ""]}
             rows={(backendsQuery.data ?? []).map((item) => [
               item.name,
               item.balance,
@@ -953,6 +1088,9 @@ export function HaproxyDetailPage() {
                 ? `${item.httpchk_method} ${item.httpchk_uri}${
                     item.httpchk_expect_status != null ? ` → ${item.httpchk_expect_status}` : ""
                   }`
+                : "—",
+              item.stick_table
+                ? `${item.stick_table_type}/${item.stick_table_size} on ${item.stick_on}`
                 : "—",
               String(item.servers.length),
               <div key={`be-${item.name}`} className="flex gap-3">

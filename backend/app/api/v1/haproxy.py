@@ -109,6 +109,9 @@ def update_defaults(
         timeout_connect=payload.timeout_connect,
         timeout_client=payload.timeout_client,
         timeout_server=payload.timeout_server,
+        compression=payload.compression,
+        compression_algo=payload.compression_algo,
+        compression_type=payload.compression_type,
     )
     _save(service, instance, editor)
     return HaproxyDefaults.model_validate(updated)

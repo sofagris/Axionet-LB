@@ -19,6 +19,10 @@ defaults
     timeout connect {{ config.timeout_connect }}
     timeout client {{ config.timeout_client }}
     timeout server {{ config.timeout_server }}
+{% if config.compression and config.mode == "http" %}
+    compression algo {{ config.compression_algo }}
+    compression type {{ config.compression_type }}
+{% endif %}
 
 frontend stats
     bind *:{{ config.stats_port }}
@@ -55,6 +59,10 @@ backend {{ backend.name }}
 {% if backend.httpchk_expect_status %}
     http-check expect status {{ backend.httpchk_expect_status }}
 {% endif %}
+{% endif %}
+{% if backend.stick_table %}
+    stick-table type {{ backend.stick_table_type }}{% if backend.stick_table_type == "string" %} len {{ backend.stick_table_key_len }}{% endif %} size {{ backend.stick_table_size }} expire {{ backend.stick_table_expire }}
+    stick on {{ backend.stick_on }}
 {% endif %}
 {% for server in backend.servers %}
     server {{ server.name }} {{ server.address }}:{{ server.port }} weight {{ server.weight }}{% if server.check %} check inter {{ server.inter_ms }}ms rise {{ server.rise }} fall {{ server.fall }}{% endif %}

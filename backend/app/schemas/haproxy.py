@@ -9,6 +9,16 @@ class HaproxyDefaults(BaseModel):
     timeout_connect: str = Field(default="5s", pattern=r"^[0-9]+[smhd]$")
     timeout_client: str = Field(default="30s", pattern=r"^[0-9]+[smhd]$")
     timeout_server: str = Field(default="30s", pattern=r"^[0-9]+[smhd]$")
+    compression: bool = False
+    compression_algo: Literal["gzip", "deflate"] = "gzip"
+    compression_type: str = Field(
+        default=(
+            "text/html text/plain text/css text/javascript "
+            "application/javascript application/json"
+        ),
+        min_length=1,
+        max_length=1024,
+    )
 
 
 class HaproxyFrontendRead(BaseModel):
@@ -45,6 +55,12 @@ class HaproxyBackendRead(BaseModel):
     httpchk_method: str = "GET"
     httpchk_uri: str = "/"
     httpchk_expect_status: int | None = None
+    stick_table: bool = False
+    stick_table_type: str = "ip"
+    stick_table_key_len: int = 32
+    stick_table_size: str = "100k"
+    stick_table_expire: str = "30m"
+    stick_on: str = "src"
     servers: list[HaproxyServerRead] = Field(default_factory=list)
 
 
