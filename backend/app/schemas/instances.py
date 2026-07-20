@@ -83,6 +83,27 @@ class InstanceLogs(BaseModel):
     logs: str
 
 
+class InstanceMetrics(BaseModel):
+    instance_id: str
+    name: str
+    available: bool
+    current_sessions: int = 0
+    total_sessions: int = 0
+    session_rate: int = 0
+    bytes_in: int = 0
+    bytes_out: int = 0
+    request_errors: int = 0
+    connection_errors: int = 0
+    response_errors: int = 0
+    servers_up: int = 0
+    servers_down: int = 0
+    servers_total: int = 0
+    frontend_count: int = 0
+    backend_count: int = 0
+    detail: str | None = None
+    collected_at: datetime
+
+
 class InstanceValidateResult(BaseModel):
     ok: bool
     output: str

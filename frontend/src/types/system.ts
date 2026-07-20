@@ -64,7 +64,48 @@ export const SystemMetricsSchema = z.object({
   collected_at: z.string(),
 });
 
+export const LbInstanceMetricsSchema = z.object({
+  instance_id: z.string(),
+  name: z.string(),
+  available: z.boolean(),
+  current_sessions: z.number().int(),
+  total_sessions: z.number().int(),
+  session_rate: z.number().int(),
+  bytes_in: z.number().int(),
+  bytes_out: z.number().int(),
+  request_errors: z.number().int(),
+  connection_errors: z.number().int(),
+  response_errors: z.number().int(),
+  servers_up: z.number().int(),
+  servers_down: z.number().int(),
+  servers_total: z.number().int(),
+  frontend_count: z.number().int(),
+  backend_count: z.number().int(),
+  detail: z.string().nullable().optional(),
+});
+
+export const LbMetricsSchema = z.object({
+  totals: z.object({
+    current_sessions: z.number().int(),
+    total_sessions: z.number().int(),
+    session_rate: z.number().int(),
+    bytes_in: z.number().int(),
+    bytes_out: z.number().int(),
+    request_errors: z.number().int(),
+    connection_errors: z.number().int(),
+    response_errors: z.number().int(),
+    servers_up: z.number().int(),
+    servers_down: z.number().int(),
+    servers_total: z.number().int(),
+    instances_available: z.number().int(),
+    instances_total: z.number().int(),
+  }),
+  instances: z.array(LbInstanceMetricsSchema),
+  collected_at: z.string(),
+});
+
 export type HealthResponse = z.infer<typeof HealthResponseSchema>;
 export type SystemInfo = z.infer<typeof SystemInfoSchema>;
 export type SystemMetrics = z.infer<typeof SystemMetricsSchema>;
+export type LbMetrics = z.infer<typeof LbMetricsSchema>;
 export type ComponentHealth = z.infer<typeof ComponentHealthSchema>;

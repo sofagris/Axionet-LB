@@ -14,7 +14,7 @@ import {
 import { useInstances } from "../features/instances/hooks";
 import { useInterfaces } from "../features/interfaces/hooks";
 import { useNetworks } from "../features/networks/hooks";
-import { useSystemHealth, useSystemInfo, useSystemMetrics } from "../features/system/hooks";
+import { useSystemHealth, useSystemInfo, useSystemMetrics, useLbMetrics } from "../features/system/hooks";
 import { useTelemetryHistory } from "../features/telemetry/useTelemetryHistory";
 import type { ComponentHealth, HealthResponse } from "../types/system";
 
@@ -128,6 +128,7 @@ export function DashboardPage() {
   const healthQuery = useSystemHealth();
   const infoQuery = useSystemInfo();
   const metricsQuery = useSystemMetrics();
+  const lbMetricsQuery = useLbMetrics();
   const interfacesQuery = useInterfaces();
   const networksQuery = useNetworks();
   const instancesQuery = useInstances();
@@ -136,6 +137,7 @@ export function DashboardPage() {
     metrics: metricsQuery.data,
     health: healthQuery.data,
     instances: instancesQuery.data,
+    lbMetrics: lbMetricsQuery.data,
   });
 
   const chartData = history.map((point) => ({
@@ -246,7 +248,7 @@ export function DashboardPage() {
         <h3 className="mb-2 text-xs tracking-wide text-ink-muted uppercase">
           {t("dashboard.telemetry")}
         </h3>
-        <div className="grid gap-8 lg:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-8 lg:grid-cols-2 xl:grid-cols-3">
           <ChartFrame title={t("dashboard.cpu")}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
@@ -378,6 +380,85 @@ export function DashboardPage() {
               </LineChart>
             </ResponsiveContainer>
           </ChartFrame>
+          <ChartFrame title={t("dashboard.lbSessions")}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <CartesianGrid stroke="var(--ax-line)" strokeDasharray="3 3" />
+                <XAxis dataKey="label" tick={{ fill: muted, fontSize: 10 }} hide />
+                <YAxis tick={{ fill: muted, fontSize: 10 }} width={36} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{
+                    background: "var(--ax-paper-elevated)",
+                    border: "1px solid var(--ax-line)",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 12,
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: 11, fontFamily: "var(--font-mono)" }} />
+                <Line
+                  type="monotone"
+                  dataKey="sessions"
+                  name={t("dashboard.currentSessions")}
+                  stroke={accent}
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls
+                />
+                <Line
+                  type="monotone"
+                  dataKey="sessionRate"
+                  name={t("dashboard.sessionRate")}
+                  stroke={warn}
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartFrame>
+          <ChartFrame title={t("dashboard.lbThroughput")}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <CartesianGrid stroke="var(--ax-line)" strokeDasharray="3 3" />
+                <XAxis dataKey="label" tick={{ fill: muted, fontSize: 10 }} hide />
+                <YAxis
+                  tick={{ fill: muted, fontSize: 10 }}
+                  width={44}
+                  tickFormatter={(value: number) =>
+                    value >= 1e6 ? `${(value / 1e6).toFixed(1)}M` : value >= 1e3 ? `${(value / 1e3).toFixed(0)}k` : `${value}`
+                  }
+                />
+                <Tooltip
+                  formatter={(value: number | string) => formatBitRate(Number(value))}
+                  contentStyle={{
+                    background: "var(--ax-paper-elevated)",
+                    border: "1px solid var(--ax-line)",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 12,
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: 11, fontFamily: "var(--font-mono)" }} />
+                <Line
+                  type="monotone"
+                  dataKey="lbRxBps"
+                  name={t("dashboard.rx")}
+                  stroke={accent}
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls
+                />
+                <Line
+                  type="monotone"
+                  dataKey="lbTxBps"
+                  name={t("dashboard.tx")}
+                  stroke={warn}
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartFrame>
         </div>
         {metricsQuery.data?.network ? (
           <p className="mt-3 font-mono text-xs text-ink-muted">
@@ -398,6 +479,70 @@ export function DashboardPage() {
             ) : null}
           </p>
         ) : null}
+        {lbMetricsQuery.data ? (
+          <p className="mt-2 font-mono text-xs text-ink-muted">
+            LB · {t("dashboard.currentSessions")} {lbMetricsQuery.data.totals.current_sessions}
+            {" · "}
+            {t("dashboard.sessionRate")} {lbMetricsQuery.data.totals.session_rate}/s
+            {" · "}
+            {t("dashboard.servers")} {lbMetricsQuery.data.totals.servers_up}/
+            {lbMetricsQuery.data.totals.servers_total} up
+            {" · "}
+            Σ in {formatBytes(lbMetricsQuery.data.totals.bytes_in)} / out{" "}
+            {formatBytes(lbMetricsQuery.data.totals.bytes_out)}
+            {" · "}
+            {t("dashboard.instances")} {lbMetricsQuery.data.totals.instances_available}/
+            {lbMetricsQuery.data.totals.instances_total}
+          </p>
+        ) : lbMetricsQuery.isError ? (
+          <p className="mt-2 text-sm text-warn">{t("dashboard.lbMetricsUnavailable")}</p>
+        ) : null}
+      </section>
+
+      <section className="border-l-2 border-line bg-paper-elevated/40 p-5">
+        <h3 className="text-lg font-semibold text-ink">{t("dashboard.lbInstances")}</h3>
+        {(lbMetricsQuery.data?.instances.length ?? 0) === 0 ? (
+          <p className="mt-3 text-sm text-ink-muted">{t("dashboard.noLbInstances")}</p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <thead>
+                <tr className="text-xs tracking-wide text-ink-muted uppercase">
+                  <th className="pb-2 pr-4 font-medium">{t("dashboard.instance")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("dashboard.currentSessions")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("dashboard.sessionRate")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("dashboard.rx")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("dashboard.tx")}</th>
+                  <th className="pb-2 font-medium">{t("dashboard.servers")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(lbMetricsQuery.data?.instances ?? []).map((item) => (
+                  <tr key={item.instance_id} className="border-t border-line font-mono text-xs">
+                    <td className="py-2 pr-4">
+                      <Link
+                        to={`/instances/${item.instance_id}/haproxy`}
+                        className="text-accent hover:underline"
+                      >
+                        {item.name}
+                      </Link>
+                      {!item.available ? (
+                        <span className="ml-2 text-warn">{t("dashboard.unavailable")}</span>
+                      ) : null}
+                    </td>
+                    <td className="py-2 pr-4">{item.available ? item.current_sessions : "—"}</td>
+                    <td className="py-2 pr-4">{item.available ? `${item.session_rate}/s` : "—"}</td>
+                    <td className="py-2 pr-4">{item.available ? formatBytes(item.bytes_in) : "—"}</td>
+                    <td className="py-2 pr-4">{item.available ? formatBytes(item.bytes_out) : "—"}</td>
+                    <td className="py-2">
+                      {item.available ? `${item.servers_up}/${item.servers_total}` : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       <section className="border-l-2 border-line bg-paper-elevated/40 p-5">

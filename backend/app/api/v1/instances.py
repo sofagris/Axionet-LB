@@ -6,6 +6,7 @@ from app.db.session import get_db
 from app.schemas.instances import (
     InstanceCreate,
     InstanceLogs,
+    InstanceMetrics,
     InstanceRead,
     InstanceStatus,
     InstanceUpdate,
@@ -13,6 +14,7 @@ from app.schemas.instances import (
     NetworkAttachmentRead,
 )
 from app.services.docker.client import DockerClientAdapter, create_docker_adapter
+from app.services.instances.metrics import HaproxyMetricsCollector
 from app.services.instances.service import InstanceService
 
 router = APIRouter(prefix="/instances", tags=["instances"])
@@ -185,6 +187,18 @@ def instance_logs(
     except RuntimeError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
     return InstanceLogs(id=instance.id, logs=logs)
+
+
+@router.get("/{instance_id}/metrics", response_model=InstanceMetrics)
+def instance_metrics(
+    instance_id: str,
+    service: InstanceService = Depends(get_instance_service),
+    docker: DockerClientAdapter = Depends(get_docker_adapter),
+) -> InstanceMetrics:
+    instance = service.get_instance(instance_id)
+    if instance is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found")
+    return HaproxyMetricsCollector(docker=docker, instances=service).collect_instance(instance)
 
 
 def _action(service: InstanceService, instance_id: str, fn) -> InstanceRead:

@@ -60,6 +60,25 @@ vi.mock("../api/system", () => ({
     ],
     collected_at: "2026-07-20T16:00:00Z",
   })),
+  fetchLbMetrics: vi.fn(async () => ({
+    totals: {
+      current_sessions: 0,
+      total_sessions: 0,
+      session_rate: 0,
+      bytes_in: 0,
+      bytes_out: 0,
+      request_errors: 0,
+      connection_errors: 0,
+      response_errors: 0,
+      servers_up: 0,
+      servers_down: 0,
+      servers_total: 0,
+      instances_available: 0,
+      instances_total: 0,
+    },
+    instances: [],
+    collected_at: "2026-07-20T16:00:00Z",
+  })),
 }));
 
 vi.mock("../api/interfaces", () => ({

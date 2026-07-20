@@ -20,10 +20,11 @@ from app.services.docker.client import DockerClientAdapter
 
 CSV_SAMPLE = """\
 # pxname,svname,qcur,qmax,scur,smax,slim,stot,bin,bout,dreq,dresp,ereq,econ,eresp,wretr,wredis,status,weight,act,bck,chkfail,chkdown,lastchg,downtime,qlimit,pid,iid,sid,throttle,lbtot,tracked,type,rate,rate_lim,rate_max,check_status,check_code,check_duration,hrsp_1xx,hrsp_2xx,hrsp_3xx,hrsp_4xx,hrsp_5xx,hrsp_other,hanafail,req_rate,req_rate_max,req_tot,cli_abrt,srv_abrt,comp_in,comp_out,comp_byp,comp_rsp,lastsess,last_chk,last_agt,qtime,ctime,rtime,ttime,
-stats,FRONTEND,,,0,0,2000,0,0,0,0,0,0,,,,,OPEN,,,,,,,,,1,1,0,,,,0,0,0,0,,,,,,,,,,,0,0,0,,,0,0,0,0,,,,,,,,
-main,FRONTEND,,,0,0,2000,0,0,0,0,0,0,,,,,OPEN,,,,,,,,,1,2,0,,,,0,0,0,0,,,,,,,,,,,0,0,0,,,0,0,0,0,,,,,,,,
-app,BACKEND,0,0,0,0,200,0,0,0,0,0,,0,0,0,0,UP,0,0,0,,0,1,0,,1,3,0,,0,,1,0,,0,,,,0,0,0,0,0,0,,,,0,0,0,0,0,0,,,,,0,,,0,0,0,0,
-app,s1,0,0,0,0,,0,0,0,,0,,0,0,0,0,UP,100,1,0,0,0,1,0,,1,3,1,,0,,2,0,,0,L4OK,,0,0,0,0,0,0,0,0,,,,0,0,,,,,0,,,0,0,0,0,
+stats,FRONTEND,,,1,5,2000,100,1000,2000,0,0,2,,,,,OPEN,,,,,,,,,1,1,0,,,,0,3,0,0,,,,,,,,,,,0,0,0,,,0,0,0,0,,,,,,,,
+main,FRONTEND,,,4,10,2000,500,9000,8000,0,0,1,,,,,OPEN,,,,,,,,,1,2,0,,,,0,7,0,0,,,,,,,,,,,0,0,0,,,0,0,0,0,,,,,,,,
+app,BACKEND,0,0,4,10,200,500,9000,8000,0,0,,3,1,0,0,UP,0,0,0,,0,1,0,,1,3,0,,0,,1,0,,0,,,,0,0,0,0,0,0,,,,0,0,0,0,0,0,,,,,0,,,0,0,0,0,
+app,s1,0,0,3,8,,400,7000,6000,,0,,0,0,0,0,UP,100,1,0,0,0,1,0,,1,3,1,,0,,2,0,,0,L4OK,,0,0,0,0,0,0,0,0,,,,0,0,,,,,0,,,0,0,0,0,
+app,s2,0,0,0,0,,0,0,0,,0,,1,2,0,0,DOWN,100,1,0,0,1,1,30,,1,3,2,,0,,2,0,,0,L4TOUT,,0,0,0,0,0,0,0,0,,,,0,0,,,,,0,,,0,0,0,0,
 """
 
 
@@ -91,7 +92,11 @@ def client(db_session: Session, docker_adapter: MagicMock) -> Generator[TestClie
     app.dependency_overrides.clear()
 
 
-def test_haproxy_structured_crud_and_status(client: TestClient, docker_adapter: MagicMock) -> None:
+def test_haproxy_structured_crud_and_status(
+    client: TestClient,
+    docker_adapter: MagicMock,
+    db_session: Session,
+) -> None:
     created = client.post(
         "/api/v1/instances/inst-1/haproxy/frontends",
         json={
@@ -135,3 +140,27 @@ def test_haproxy_structured_crud_and_status(client: TestClient, docker_adapter: 
     assert any(row["server"] == "FRONTEND" for row in body["frontends"])
     assert any(row["server"] == "s1" for row in body["servers"])
     docker_adapter.run_network_sidecar.assert_called()
+
+    metrics = client.get("/api/v1/instances/inst-1/metrics")
+    assert metrics.status_code == 200
+    mbody = metrics.json()
+    assert mbody["available"] is True
+    assert mbody["current_sessions"] == 5
+    assert mbody["bytes_in"] == 10_000
+    assert mbody["servers_up"] == 1
+    assert mbody["servers_down"] == 1
+
+    # Fleet metrics only include running-ish instances; mark running in DB first.
+    from app.models.service_instance import ActualState, ServiceInstance
+
+    inst = db_session.get(ServiceInstance, "inst-1")
+    assert inst is not None
+    inst.actual_state = ActualState.RUNNING.value
+    db_session.commit()
+
+    fleet = client.get("/api/v1/system/lb-metrics")
+    assert fleet.status_code == 200
+    fbody = fleet.json()
+    assert fbody["totals"]["instances_available"] == 1
+    assert fbody["totals"]["current_sessions"] == 5
+    assert fbody["totals"]["bytes_out"] == 10_000

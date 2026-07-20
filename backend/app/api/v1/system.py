@@ -6,10 +6,13 @@ from app.db.session import get_db
 from app.schemas.system import (
     CapabilitiesResponse,
     HealthResponse,
+    LbMetricsResponse,
     SystemInfoResponse,
     SystemMetricsResponse,
 )
 from app.services.docker.client import DockerClientAdapter, create_docker_adapter
+from app.services.instances.metrics import HaproxyMetricsCollector
+from app.services.instances.service import InstanceService
 from app.services.system.health import SystemService
 from app.services.system.metrics import HostMetricsCollector
 
@@ -57,6 +60,16 @@ def get_metrics(
     collector: HostMetricsCollector = Depends(get_metrics_collector),
 ) -> SystemMetricsResponse:
     return collector.collect()
+
+
+@router.get("/lb-metrics", response_model=LbMetricsResponse)
+def get_lb_metrics(
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+    docker: DockerClientAdapter = Depends(get_docker_adapter),
+) -> LbMetricsResponse:
+    instances = InstanceService(db=db, docker=docker, settings=settings)
+    return HaproxyMetricsCollector(docker=docker, instances=instances).collect_fleet()
 
 
 @router.get("/capabilities", response_model=CapabilitiesResponse)

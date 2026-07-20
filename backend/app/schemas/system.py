@@ -71,3 +71,45 @@ class SystemMetricsResponse(BaseModel):
     network: NetworkTotalsRead | None = None
     interfaces: list[InterfaceCountersRead] = Field(default_factory=list)
     collected_at: datetime
+
+
+class LbInstanceMetricsRead(BaseModel):
+    instance_id: str
+    name: str
+    available: bool
+    current_sessions: int = 0
+    total_sessions: int = 0
+    session_rate: int = 0
+    bytes_in: int = 0
+    bytes_out: int = 0
+    request_errors: int = 0
+    connection_errors: int = 0
+    response_errors: int = 0
+    servers_up: int = 0
+    servers_down: int = 0
+    servers_total: int = 0
+    frontend_count: int = 0
+    backend_count: int = 0
+    detail: str | None = None
+
+
+class LbMetricsTotals(BaseModel):
+    current_sessions: int = 0
+    total_sessions: int = 0
+    session_rate: int = 0
+    bytes_in: int = 0
+    bytes_out: int = 0
+    request_errors: int = 0
+    connection_errors: int = 0
+    response_errors: int = 0
+    servers_up: int = 0
+    servers_down: int = 0
+    servers_total: int = 0
+    instances_available: int = 0
+    instances_total: int = 0
+
+
+class LbMetricsResponse(BaseModel):
+    totals: LbMetricsTotals
+    instances: list[LbInstanceMetricsRead] = Field(default_factory=list)
+    collected_at: datetime

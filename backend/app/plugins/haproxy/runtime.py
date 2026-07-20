@@ -30,6 +30,7 @@ class RuntimeRow:
     lastchg: str
     downtime: str
     type_code: str
+    rate: str = ""
 
 
 class HaproxyRuntimeClient:
@@ -77,6 +78,7 @@ class HaproxyRuntimeClient:
                     lastchg=item.get("lastchg", ""),
                     downtime=item.get("downtime", ""),
                     type_code=item.get("type", ""),
+                    rate=item.get("rate", ""),
                 )
             )
         return rows
