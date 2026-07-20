@@ -24,11 +24,12 @@ def _make_iface(
     (iface / "carrier").write_text("1\n" if operstate == "up" else "0\n", encoding="utf-8")
 
     pci_dir = root / "devices" / "pci0000:00" / pci
-    pci_dir.mkdir(parents=True)
+    pci_dir.mkdir(parents=True, exist_ok=True)
     (pci_dir / "numa_node").write_text(f"{numa}\n", encoding="utf-8")
     driver_dir = root / "bus" / "pci" / "drivers" / driver
-    driver_dir.mkdir(parents=True)
-    (pci_dir / "driver").symlink_to(driver_dir)
+    driver_dir.mkdir(parents=True, exist_ok=True)
+    if not (pci_dir / "driver").exists():
+        (pci_dir / "driver").symlink_to(driver_dir)
     (iface / "device").symlink_to(pci_dir)
 
 
