@@ -70,7 +70,7 @@ def docker_adapter(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     monkeypatch.setattr(
         validator_mod.HaproxyConfigValidator,
         "validate_config_dict",
-        lambda self, configuration: ValidationResult(ok=True, output="ok"),
+        lambda self, configuration, cert_files=None: ValidationResult(ok=True, output="ok"),
     )
     return adapter
 
