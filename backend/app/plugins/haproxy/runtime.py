@@ -122,6 +122,9 @@ class HaproxyRuntimeClient:
             raise ValueError(f"Unsupported action: {action}")
         return self.send_admin_command(container_id, command)
 
+    def clear_counters(self, container_id: str) -> str:
+        return self.send_admin_command(container_id, "clear counters")
+
     def send_admin_command(self, container_id: str, command: str) -> str:
         """Send one line to the HAProxy admin socket (TCP localhost:9999 via socat sidecar)."""
         if "\n" in command or "\r" in command:

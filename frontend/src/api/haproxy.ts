@@ -6,12 +6,16 @@ import {
   HaproxyCertificateSchema,
   HaproxyConfigPreviewSchema,
   HaproxyFrontendSchema,
+  HaproxyMapDetailSchema,
+  HaproxyMapSchema,
   HaproxyRuntimeStatusSchema,
   HaproxyServerSchema,
   type HaproxyAcl,
   type HaproxyBackend,
   type HaproxyCertificate,
   type HaproxyFrontend,
+  type HaproxyMap,
+  type HaproxyMapDetail,
   type HaproxyServer,
 } from "../types/haproxy";
 
@@ -108,6 +112,43 @@ export function deleteHaproxyCertificate(id: string, name: string) {
   return apiFetch(`${base(id)}/certificates/${name}`, () => undefined, { method: "DELETE" });
 }
 
+export function fetchHaproxyMaps(id: string) {
+  return apiFetch(`${base(id)}/maps`, (data) => z.array(HaproxyMapSchema).parse(data));
+}
+
+export function fetchHaproxyMap(id: string, name: string): Promise<HaproxyMapDetail> {
+  return apiFetch(`${base(id)}/maps/${encodeURIComponent(name)}`, (data) =>
+    HaproxyMapDetailSchema.parse(data),
+  );
+}
+
+export function createHaproxyMap(
+  id: string,
+  payload: { name: string; content: string },
+): Promise<HaproxyMap> {
+  return apiFetch(`${base(id)}/maps`, (data) => HaproxyMapSchema.parse(data), {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export function updateHaproxyMap(
+  id: string,
+  name: string,
+  payload: { name: string; content: string },
+): Promise<HaproxyMap> {
+  return apiFetch(`${base(id)}/maps/${encodeURIComponent(name)}`, (data) => HaproxyMapSchema.parse(data), {
+    method: "PUT",
+    body: payload,
+  });
+}
+
+export function deleteHaproxyMap(id: string, name: string) {
+  return apiFetch(`${base(id)}/maps/${encodeURIComponent(name)}`, () => undefined, {
+    method: "DELETE",
+  });
+}
+
 export function fetchHaproxyAcls(id: string) {
   return apiFetch(`${base(id)}/acls`, (data) => z.array(HaproxyAclSchema).parse(data));
 }
@@ -140,25 +181,21 @@ export function fetchHaproxyStatus(id: string) {
 
 export type HaproxyRuntimeServerAction = "enable" | "disable" | "drain" | "set_weight";
 
-export function runtimeServerAction(
-  id: string,
-  backend: string,
-  server: string,
-  payload: { action: HaproxyRuntimeServerAction; weight?: number },
-) {
+    { method: "POST", body: payload },
+  );
+}
+
+export function clearHaproxyCounters(id: string) {
   return apiFetch(
-    `${base(id)}/runtime/servers/${encodeURIComponent(backend)}/${encodeURIComponent(server)}`,
+    `${base(id)}/runtime/clear-counters`,
     (data) =>
       z
         .object({
           ok: z.boolean(),
-          backend: z.string(),
-          server: z.string(),
-          action: z.string(),
           output: z.string(),
           ephemeral: z.boolean(),
         })
         .parse(data),
-    { method: "POST", body: payload },
+    { method: "POST" },
   );
 }

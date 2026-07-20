@@ -1,25 +1,31 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  clearHaproxyCounters,
   createHaproxyAcl,
   createHaproxyBackend,
   createHaproxyCertificate,
   createHaproxyFrontend,
+  createHaproxyMap,
   createHaproxyServer,
   deleteHaproxyAcl,
   deleteHaproxyBackend,
   deleteHaproxyCertificate,
   deleteHaproxyFrontend,
+  deleteHaproxyMap,
   deleteHaproxyServer,
   fetchHaproxyAcls,
   fetchHaproxyBackends,
   fetchHaproxyCertificates,
   fetchHaproxyConfig,
   fetchHaproxyFrontends,
+  fetchHaproxyMap,
+  fetchHaproxyMaps,
   fetchHaproxyStatus,
   runtimeServerAction,
   updateHaproxyAcl,
   updateHaproxyBackend,
   updateHaproxyFrontend,
+  updateHaproxyMap,
   updateHaproxyServer,
   type HaproxyRuntimeServerAction,
 } from "../../api/haproxy";
@@ -43,6 +49,13 @@ export function useHaproxyCertificates(id: string) {
   return useQuery({
     queryKey: ["haproxy", id, "certificates"],
     queryFn: () => fetchHaproxyCertificates(id),
+  });
+}
+
+export function useHaproxyMaps(id: string) {
+  return useQuery({
+    queryKey: ["haproxy", id, "maps"],
+    queryFn: () => fetchHaproxyMaps(id),
   });
 }
 
@@ -138,6 +151,22 @@ export function useHaproxyMutations(id: string) {
       mutationFn: (name: string) => deleteHaproxyCertificate(id, name),
       onSuccess: invalidate,
     }),
+    createMap: useMutation({
+      mutationFn: (payload: { name: string; content: string }) => createHaproxyMap(id, payload),
+      onSuccess: invalidate,
+    }),
+    updateMap: useMutation({
+      mutationFn: ({ name, content }: { name: string; content: string }) =>
+        updateHaproxyMap(id, name, { name, content }),
+      onSuccess: invalidate,
+    }),
+    deleteMap: useMutation({
+      mutationFn: (name: string) => deleteHaproxyMap(id, name),
+      onSuccess: invalidate,
+    }),
+    loadMap: useMutation({
+      mutationFn: (name: string) => fetchHaproxyMap(id, name),
+    }),
     createAcl: useMutation({
       mutationFn: (payload: HaproxyAcl) => createHaproxyAcl(id, payload),
       onSuccess: invalidate,
@@ -163,6 +192,12 @@ export function useHaproxyMutations(id: string) {
         action: HaproxyRuntimeServerAction;
         weight?: number;
       }) => runtimeServerAction(id, backend, server, { action, weight }),
+      onSuccess: async () => {
+        await queryClient.invalidateQueries({ queryKey: ["haproxy", id, "status"] });
+      },
+    }),
+    clearCounters: useMutation({
+      mutationFn: () => clearHaproxyCounters(id),
       onSuccess: async () => {
         await queryClient.invalidateQueries({ queryKey: ["haproxy", id, "status"] });
       },

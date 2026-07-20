@@ -33,6 +33,16 @@ export const HaproxyCertificateSchema = z.object({
   size_bytes: z.number().int(),
 });
 
+export const HaproxyMapSchema = z.object({
+  name: z.string(),
+  filename: z.string(),
+  size_bytes: z.number().int(),
+});
+
+export const HaproxyMapDetailSchema = HaproxyMapSchema.extend({
+  content: z.string(),
+});
+
 export const HaproxyAclSchema = z.object({
   name: z.string(),
   frontend: z.string(),
@@ -72,5 +82,7 @@ export type HaproxyFrontend = z.infer<typeof HaproxyFrontendSchema>;
 export type HaproxyBackend = z.infer<typeof HaproxyBackendSchema>;
 export type HaproxyServer = z.infer<typeof HaproxyServerSchema>;
 export type HaproxyCertificate = z.infer<typeof HaproxyCertificateSchema>;
+export type HaproxyMap = z.infer<typeof HaproxyMapSchema>;
+export type HaproxyMapDetail = z.infer<typeof HaproxyMapDetailSchema>;
 export type HaproxyAcl = z.infer<typeof HaproxyAclSchema>;
 export type HaproxyRuntimeStatus = z.infer<typeof HaproxyRuntimeStatusSchema>;

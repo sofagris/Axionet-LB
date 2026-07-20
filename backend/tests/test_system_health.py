@@ -44,6 +44,8 @@ def test_capabilities(client: TestClient) -> None:
     assert "system.logs" in payload["features"]
     assert "instances.reconcile_loop" in payload["features"]
     assert "haproxy.runtime_control" in payload["features"]
+    assert "haproxy.maps" in payload["features"]
+    assert "haproxy.clear_counters" in payload["features"]
 
 
 def test_system_logs_overview(client: TestClient) -> None:

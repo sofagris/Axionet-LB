@@ -52,6 +52,7 @@ function buildHaproxyConfig(input: {
       },
     ],
     certificates: [],
+    maps: [],
     acls: [],
     timeout_connect: "5s",
     timeout_client: "30s",

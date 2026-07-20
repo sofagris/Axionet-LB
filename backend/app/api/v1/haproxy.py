@@ -14,6 +14,7 @@ from app.plugins.haproxy.schemas import (
     HaproxyCertificate,
     HaproxyConfig,
     HaproxyFrontend,
+    HaproxyMap,
     HaproxyServer,
 )
 from app.schemas.haproxy import (
@@ -21,8 +22,12 @@ from app.schemas.haproxy import (
     HaproxyBackendRead,
     HaproxyCertificateCreate,
     HaproxyCertificateRead,
+    HaproxyClearCountersResult,
     HaproxyConfigPreview,
     HaproxyFrontendRead,
+    HaproxyMapCreate,
+    HaproxyMapDetail,
+    HaproxyMapRead,
     HaproxyRuntimeStatus,
     HaproxyServerRead,
     HaproxyServerRuntimeRequest,
@@ -369,6 +374,118 @@ def delete_certificate(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+@router.get("/maps", response_model=list[HaproxyMapRead])
+def list_maps(
+    instance_id: str,
+    service: InstanceService = Depends(get_instance_service),
+) -> list[HaproxyMapRead]:
+    instance = _require_instance(service, instance_id)
+    editor = HaproxyConfigEditor(instance.configuration)
+    return [
+        HaproxyMapRead(
+            name=item.name,
+            filename=item.filename or f"maps/{item.name}.map",
+            size_bytes=service.map_size(instance, item.name),
+        )
+        for item in editor.list_maps()
+    ]
+
+
+@router.get("/maps/{map_name}", response_model=HaproxyMapDetail)
+def get_map(
+    instance_id: str,
+    map_name: str,
+    service: InstanceService = Depends(get_instance_service),
+) -> HaproxyMapDetail:
+    instance = _require_instance(service, instance_id)
+    editor = HaproxyConfigEditor(instance.configuration)
+    item = editor.get_map(map_name)
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Map not found")
+    try:
+        content = service.read_map_file(instance, map_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return HaproxyMapDetail(
+        name=item.name,
+        filename=item.filename or f"maps/{item.name}.map",
+        size_bytes=service.map_size(instance, item.name),
+        content=content,
+    )
+
+
+@router.post("/maps", response_model=HaproxyMapRead, status_code=status.HTTP_201_CREATED)
+def create_map(
+    instance_id: str,
+    payload: HaproxyMapCreate,
+    service: InstanceService = Depends(get_instance_service),
+) -> HaproxyMapRead:
+    instance = _require_instance(service, instance_id)
+    editor = HaproxyConfigEditor(instance.configuration)
+    try:
+        service.write_map_file(instance, payload.name, payload.content)
+        item = editor.upsert_map(
+            HaproxyMap(name=payload.name, filename=f"maps/{payload.name}.map"),
+            create=True,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    _save(service, instance, editor)
+    return HaproxyMapRead(
+        name=item.name,
+        filename=item.filename,
+        size_bytes=service.map_size(instance, item.name),
+    )
+
+
+@router.put("/maps/{map_name}", response_model=HaproxyMapRead)
+def update_map(
+    instance_id: str,
+    map_name: str,
+    payload: HaproxyMapCreate,
+    service: InstanceService = Depends(get_instance_service),
+) -> HaproxyMapRead:
+    instance = _require_instance(service, instance_id)
+    if payload.name != map_name:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Name mismatch")
+    editor = HaproxyConfigEditor(instance.configuration)
+    try:
+        service.write_map_file(instance, payload.name, payload.content)
+        item = editor.upsert_map(
+            HaproxyMap(name=payload.name, filename=f"maps/{payload.name}.map"),
+            create=False,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    _save(service, instance, editor)
+    return HaproxyMapRead(
+        name=item.name,
+        filename=item.filename,
+        size_bytes=service.map_size(instance, item.name),
+    )
+
+
+@router.delete(
+    "/maps/{map_name}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
+def delete_map(
+    instance_id: str,
+    map_name: str,
+    service: InstanceService = Depends(get_instance_service),
+) -> Response:
+    instance = _require_instance(service, instance_id)
+    editor = HaproxyConfigEditor(instance.configuration)
+    try:
+        editor.delete_map(map_name)
+        service.delete_map_file(instance, map_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    _save(service, instance, editor)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.get("/acls", response_model=list[HaproxyAclRead])
 def list_acls(
     instance_id: str,
@@ -523,3 +640,25 @@ def runtime_server_action(
         output=output,
         ephemeral=True,
     )
+
+
+@router.post("/runtime/clear-counters", response_model=HaproxyClearCountersResult)
+def clear_counters(
+    instance_id: str,
+    service: InstanceService = Depends(get_instance_service),
+    docker: DockerClientAdapter = Depends(get_docker_adapter),
+) -> HaproxyClearCountersResult:
+    """Reset HAProxy stats counters via admin socket (ephemeral until next clear/reload)."""
+    instance = _require_instance(service, instance_id)
+    if not instance.container_id:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Instance has no container")
+    try:
+        service.ensure_runtime_admin_socket(instance)
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+    runtime = HaproxyRuntimeClient(docker)
+    try:
+        output = runtime.clear_counters(instance.container_id)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+    return HaproxyClearCountersResult(ok=True, output=output, ephemeral=True)

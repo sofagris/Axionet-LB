@@ -47,6 +47,21 @@ class HaproxyCertificateRead(BaseModel):
     size_bytes: int = 0
 
 
+class HaproxyMapCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    content: str = Field(min_length=1, max_length=1_000_000)
+
+
+class HaproxyMapRead(BaseModel):
+    name: str
+    filename: str
+    size_bytes: int = 0
+
+
+class HaproxyMapDetail(HaproxyMapRead):
+    content: str
+
+
 class HaproxyAclRead(BaseModel):
     name: str
     frontend: str
@@ -92,5 +107,11 @@ class HaproxyServerRuntimeResult(BaseModel):
     backend: str
     server: str
     action: str
+    output: str
+    ephemeral: bool = True
+
+
+class HaproxyClearCountersResult(BaseModel):
+    ok: bool
     output: str
     ephemeral: bool = True

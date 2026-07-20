@@ -6,6 +6,7 @@ import {
   useHaproxyCertificates,
   useHaproxyConfig,
   useHaproxyFrontends,
+  useHaproxyMaps,
   useHaproxyMutations,
   useHaproxyStatus,
 } from "../features/haproxy/hooks";
@@ -20,6 +21,7 @@ type Tab =
   | "backends"
   | "servers"
   | "certificates"
+  | "maps"
   | "acls"
   | "status"
   | "logs"
@@ -31,6 +33,7 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: "backends", label: "Backends" },
   { id: "servers", label: "Servers" },
   { id: "certificates", label: "Certificates" },
+  { id: "maps", label: "Maps" },
   { id: "acls", label: "ACLs" },
   { id: "status", label: "Runtime Status" },
   { id: "logs", label: "Logs" },
@@ -55,6 +58,7 @@ export function HaproxyDetailPage() {
   const frontendsQuery = useHaproxyFrontends(instanceId);
   const backendsQuery = useHaproxyBackends(instanceId);
   const certificatesQuery = useHaproxyCertificates(instanceId);
+  const mapsQuery = useHaproxyMaps(instanceId);
   const aclsQuery = useHaproxyAcls(instanceId);
   const configQuery = useHaproxyConfig(instanceId);
   const statusQuery = useHaproxyStatus(instanceId);
@@ -94,6 +98,10 @@ export function HaproxyDetailPage() {
 
   const [certName, setCertName] = useState("site");
   const [certPem, setCertPem] = useState("");
+
+  const [editingMap, setEditingMap] = useState<string | null>(null);
+  const [mapName, setMapName] = useState("hosts");
+  const [mapContent, setMapContent] = useState("# key value\nexample.com be1\n");
 
   const [editingAcl, setEditingAcl] = useState<string | null>(null);
   const [aclName, setAclName] = useState("is_api");
@@ -793,6 +801,104 @@ export function HaproxyDetailPage() {
         </section>
       ) : null}
 
+      {tab === "maps" ? (
+        <section className="space-y-4">
+          <form
+            onSubmit={async (event) => {
+              event.preventDefault();
+              if (editingMap) {
+                await mutations.updateMap.mutateAsync({ name: editingMap, content: mapContent });
+              } else {
+                await mutations.createMap.mutateAsync({ name: mapName, content: mapContent });
+              }
+              setEditingMap(null);
+              setMapName("hosts");
+              setMapContent("# key value\nexample.com be1\n");
+            }}
+            className="space-y-3 border border-line bg-paper-elevated/40 p-4"
+          >
+            <p className="text-sm text-ink-muted">
+              Map-filer lagres under <span className="font-mono">config/maps/</span> og er tilgjengelige i
+              container som <span className="font-mono">/usr/local/etc/haproxy/maps/&lt;navn&gt;.map</span>.
+              Referer dem i ACL-uttrykk, f.eks.{" "}
+              <span className="font-mono">path,map_beg(/usr/local/etc/haproxy/maps/hosts.map)</span>.
+            </p>
+            <FormField label="Map-navn">
+              <input
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={mapName}
+                onChange={(e) => setMapName(e.target.value)}
+                placeholder="hosts"
+                required
+                disabled={Boolean(editingMap)}
+              />
+            </FormField>
+            <FormField label="Innhold (key value per linje)">
+              <textarea
+                className="min-h-40 w-full border border-line bg-paper px-3 py-2 font-mono text-xs"
+                value={mapContent}
+                onChange={(e) => setMapContent(e.target.value)}
+                required
+              />
+            </FormField>
+            <FormActions>
+              <button type="submit" className="border border-accent bg-accent px-3 py-2 text-sm text-white">
+                {editingMap ? "Oppdater map" : "Opprett map"}
+              </button>
+              {editingMap ? (
+                <button
+                  type="button"
+                  className="border border-line px-3 py-2 text-sm"
+                  onClick={() => {
+                    setEditingMap(null);
+                    setMapName("hosts");
+                    setMapContent("# key value\nexample.com be1\n");
+                  }}
+                >
+                  Avbryt
+                </button>
+              ) : null}
+            </FormActions>
+            {mutations.createMap.isError || mutations.updateMap.isError ? (
+              <p className="text-sm text-danger">
+                {(mutations.createMap.error || mutations.updateMap.error) instanceof Error
+                  ? ((mutations.createMap.error || mutations.updateMap.error) as Error).message
+                  : "Map-lagring feilet"}
+              </p>
+            ) : null}
+          </form>
+          <EntityTable
+            headers={["Name", "Filename", "Size", ""]}
+            rows={(mapsQuery.data ?? []).map((item) => [
+              item.name,
+              item.filename,
+              `${item.size_bytes} B`,
+              <div key={`map-${item.name}`} className="flex gap-3">
+                <button
+                  type="button"
+                  className="text-accent hover:underline"
+                  onClick={async () => {
+                    const detail = await mutations.loadMap.mutateAsync(item.name);
+                    setEditingMap(detail.name);
+                    setMapName(detail.name);
+                    setMapContent(detail.content);
+                  }}
+                >
+                  Rediger
+                </button>
+                <button
+                  type="button"
+                  className="text-danger hover:underline"
+                  onClick={() => mutations.deleteMap.mutate(item.name)}
+                >
+                  Slett
+                </button>
+              </div>,
+            ])}
+          />
+        </section>
+      ) : null}
+
       {tab === "acls" ? (
         <section className="space-y-4">
           <form
@@ -942,12 +1048,27 @@ export function HaproxyDetailPage() {
             >
               {statusQuery.isFetching ? "Henter…" : "Oppdater status"}
             </button>
+            <button
+              type="button"
+              className="border border-line px-3 py-1.5 text-sm"
+              disabled={mutations.clearCounters.isPending}
+              onClick={() => {
+                setRuntimeMessage(null);
+                mutations.clearCounters.mutate(undefined, {
+                  onSuccess: (data) => {
+                    setRuntimeMessage(`clear counters: ${data.output} (ephemeral)`);
+                  },
+                });
+              }}
+            >
+              {mutations.clearCounters.isPending ? "Nullstiller…" : "Clear counters"}
+            </button>
           </div>
           {runtimeMessage ? <p className="font-mono text-xs text-ink-muted">{runtimeMessage}</p> : null}
-          {mutations.runtimeServer.isError ? (
+          {mutations.runtimeServer.isError || mutations.clearCounters.isError ? (
             <p className="text-danger">
-              {mutations.runtimeServer.error instanceof Error
-                ? mutations.runtimeServer.error.message
+              {(mutations.runtimeServer.error || mutations.clearCounters.error) instanceof Error
+                ? ((mutations.runtimeServer.error || mutations.clearCounters.error) as Error).message
                 : "Runtime-handling feilet"}
             </p>
           ) : null}

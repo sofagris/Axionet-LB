@@ -39,6 +39,13 @@ class HaproxyCertificate(BaseModel):
     filename: str = ""
 
 
+class HaproxyMap(BaseModel):
+    """Metadata for a map file stored under config/maps/<name>.map."""
+
+    name: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    filename: str = ""
+
+
 class HaproxyAcl(BaseModel):
     name: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
     frontend: str
@@ -52,6 +59,7 @@ class HaproxyConfig(BaseModel):
     frontends: list[HaproxyFrontend] = Field(default_factory=lambda: [HaproxyFrontend()])
     backends: list[HaproxyBackend] = Field(default_factory=lambda: [HaproxyBackend()])
     certificates: list[HaproxyCertificate] = Field(default_factory=list)
+    maps: list[HaproxyMap] = Field(default_factory=list)
     acls: list[HaproxyAcl] = Field(default_factory=list)
     timeout_connect: str = "5s"
     timeout_client: str = "30s"

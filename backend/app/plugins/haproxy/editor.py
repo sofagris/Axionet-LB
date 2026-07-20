@@ -9,6 +9,7 @@ from app.plugins.haproxy.schemas import (
     HaproxyCertificate,
     HaproxyConfig,
     HaproxyFrontend,
+    HaproxyMap,
     HaproxyServer,
 )
 
@@ -163,6 +164,34 @@ class HaproxyConfigEditor:
             item.model_copy(update={"certificate": None}) if item.certificate == name else item
             for item in self._config.frontends
         ]
+
+    # Maps
+    def list_maps(self) -> list[HaproxyMap]:
+        return list(self._config.maps)
+
+    def get_map(self, name: str) -> HaproxyMap | None:
+        return next((item for item in self._config.maps if item.name == name), None)
+
+    def upsert_map(self, haproxy_map: HaproxyMap, *, create: bool) -> HaproxyMap:
+        existing = self.get_map(haproxy_map.name)
+        if create and existing is not None:
+            raise ValueError(f"Map already exists: {haproxy_map.name}")
+        if not create and existing is None:
+            raise ValueError(f"Map not found: {haproxy_map.name}")
+        filename = haproxy_map.filename or f"maps/{haproxy_map.name}.map"
+        item = haproxy_map.model_copy(update={"filename": filename})
+        if create:
+            self._config.maps.append(item)
+        else:
+            self._config.maps = [
+                item if entry.name == item.name else entry for entry in self._config.maps
+            ]
+        return item
+
+    def delete_map(self, name: str) -> None:
+        if self.get_map(name) is None:
+            raise ValueError(f"Map not found: {name}")
+        self._config.maps = [item for item in self._config.maps if item.name != name]
 
     # ACLs
     def list_acls(self) -> list[HaproxyAcl]:

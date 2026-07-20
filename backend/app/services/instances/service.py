@@ -102,6 +102,7 @@ class InstanceService:
             validation = self._validator.validate_config_dict(
                 instance.configuration,
                 cert_files=self._load_cert_files(instance),
+                map_files=self._load_map_files(instance),
             )
             if not validation.ok:
                 raise ValueError(f"HAProxy config invalid: {validation.output}")
@@ -160,6 +161,7 @@ class InstanceService:
         validation = self._validator.validate_config_dict(
             instance.configuration,
             cert_files=self._load_cert_files(instance),
+            map_files=self._load_map_files(instance),
         )
         if not validation.ok:
             raise ValueError(f"HAProxy config invalid: {validation.output}")
@@ -279,6 +281,7 @@ class InstanceService:
         validation = self._validator.validate_config_dict(
             instance.configuration,
             cert_files=self._load_cert_files(instance),
+            map_files=self._load_map_files(instance),
         )
         if not validation.ok:
             raise ValueError(f"HAProxy config invalid: {validation.output}")
@@ -344,6 +347,7 @@ class InstanceService:
         result = self._validator.validate_config_dict(
             instance.configuration,
             cert_files=self._load_cert_files(instance),
+            map_files=self._load_map_files(instance),
         )
         return result.ok, result.output, rendered
 
@@ -388,6 +392,7 @@ class InstanceService:
                 validation = self._validator.validate_config_dict(
                     instance.configuration,
                     cert_files=self._load_cert_files(instance),
+                    map_files=self._load_map_files(instance),
                 )
                 if not validation.ok:
                     raise RuntimeError(f"HAProxy config invalid: {validation.output}")
@@ -491,12 +496,18 @@ class InstanceService:
         rendered = render_haproxy_config(HaproxyConfig.from_dict(instance.configuration))
         config_dir = self._instance_dir(instance.id) / "config"
         (config_dir / "certs").mkdir(parents=True, exist_ok=True)
+        (config_dir / "maps").mkdir(parents=True, exist_ok=True)
         cfg = config_dir / "haproxy.cfg"
         cfg.write_text(rendered, encoding="utf-8")
         return config_dir
 
     def certs_dir(self, instance_id: str) -> Path:
         path = self._instance_dir(instance_id) / "config" / "certs"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def maps_dir(self, instance_id: str) -> Path:
+        path = self._instance_dir(instance_id) / "config" / "maps"
         path.mkdir(parents=True, exist_ok=True)
         return path
 
@@ -518,6 +529,30 @@ class InstanceService:
         path = self.certs_dir(instance.id) / f"{name}.pem"
         return path.stat().st_size if path.exists() else 0
 
+    def write_map_file(self, instance: ServiceInstance, name: str, content: str) -> Path:
+        cleaned = content.replace("\r\n", "\n").strip()
+        if not cleaned:
+            raise ValueError("Map content cannot be empty")
+        if len(cleaned) > 1_000_000:
+            raise ValueError("Map content too large (max 1MB)")
+        path = self.maps_dir(instance.id) / f"{name}.map"
+        path.write_text(cleaned + "\n", encoding="utf-8")
+        return path
+
+    def read_map_file(self, instance: ServiceInstance, name: str) -> str:
+        path = self.maps_dir(instance.id) / f"{name}.map"
+        if not path.exists():
+            raise ValueError(f"Map file not found: {name}")
+        return path.read_text(encoding="utf-8")
+
+    def delete_map_file(self, instance: ServiceInstance, name: str) -> None:
+        path = self.maps_dir(instance.id) / f"{name}.map"
+        path.unlink(missing_ok=True)
+
+    def map_size(self, instance: ServiceInstance, name: str) -> int:
+        path = self.maps_dir(instance.id) / f"{name}.map"
+        return path.stat().st_size if path.exists() else 0
+
     def _load_cert_files(self, instance: ServiceInstance) -> dict[str, str]:
         config = HaproxyConfig.from_dict(instance.configuration)
         files: dict[str, str] = {}
@@ -525,6 +560,15 @@ class InstanceService:
             path = self.certs_dir(instance.id) / f"{cert.name}.pem"
             if path.exists():
                 files[cert.name] = path.read_text(encoding="utf-8")
+        return files
+
+    def _load_map_files(self, instance: ServiceInstance) -> dict[str, str]:
+        config = HaproxyConfig.from_dict(instance.configuration)
+        files: dict[str, str] = {}
+        for item in config.maps:
+            path = self.maps_dir(instance.id) / f"{item.name}.map"
+            if path.exists():
+                files[item.name] = path.read_text(encoding="utf-8")
         return files
 
     def _ensure_container(self, instance: ServiceInstance, networks: list[Network]) -> None:

@@ -70,7 +70,7 @@ def docker_adapter(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     monkeypatch.setattr(
         validator_mod.HaproxyConfigValidator,
         "validate_config_dict",
-        lambda self, configuration, cert_files=None: ValidationResult(ok=True, output="ok"),
+        lambda self, configuration, cert_files=None, map_files=None: ValidationResult(ok=True, output="ok"),
     )
     return adapter
 
@@ -243,3 +243,47 @@ def test_haproxy_runtime_server_action(
     assert missing_weight.status_code == 400
 
     assert docker_adapter.run_network_sidecar.call_count >= 2
+
+
+def test_haproxy_maps_crud(client: TestClient) -> None:
+    created = client.post(
+        "/api/v1/instances/inst-1/haproxy/maps",
+        json={"name": "hosts", "content": "example.com be1\napi.example.com be2\n"},
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["name"] == "hosts"
+    assert created.json()["filename"] == "maps/hosts.map"
+    assert created.json()["size_bytes"] > 0
+
+    listed = client.get("/api/v1/instances/inst-1/haproxy/maps")
+    assert listed.status_code == 200
+    assert any(item["name"] == "hosts" for item in listed.json())
+
+    detail = client.get("/api/v1/instances/inst-1/haproxy/maps/hosts")
+    assert detail.status_code == 200
+    assert "example.com be1" in detail.json()["content"]
+
+    updated = client.put(
+        "/api/v1/instances/inst-1/haproxy/maps/hosts",
+        json={"name": "hosts", "content": "only.example.com be1\n"},
+    )
+    assert updated.status_code == 200, updated.text
+
+    detail2 = client.get("/api/v1/instances/inst-1/haproxy/maps/hosts")
+    assert "only.example.com" in detail2.json()["content"]
+    assert "api.example.com" not in detail2.json()["content"]
+
+    deleted = client.delete("/api/v1/instances/inst-1/haproxy/maps/hosts")
+    assert deleted.status_code == 204
+    assert client.get("/api/v1/instances/inst-1/haproxy/maps").json() == []
+
+
+def test_haproxy_clear_counters(client: TestClient, docker_adapter: MagicMock) -> None:
+    docker_adapter.run_network_sidecar.return_value = "ok"
+    docker_adapter.inspect_container.return_value = {"State": {"Status": "running"}}
+
+    cleared = client.post("/api/v1/instances/inst-1/haproxy/runtime/clear-counters")
+    assert cleared.status_code == 200, cleared.text
+    body = cleared.json()
+    assert body["ok"] is True
+    assert body["ephemeral"] is True
