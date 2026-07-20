@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
-import type { HealthResponse } from "../../types/system";
+import { useEffect, useRef, useState } from "react";
+import type { HealthResponse, SystemMetrics } from "../../types/system";
 import type { Instance } from "../../types/instances";
-import type { SystemMetrics } from "../../types/system";
 
 const MAX_POINTS = 60;
 
@@ -15,6 +14,16 @@ export type TelemetryPoint = {
   running: number;
   degraded: number;
   error: number;
+  rxBps: number | null;
+  txBps: number | null;
+  rxErrors: number | null;
+  txErrors: number | null;
+};
+
+type CounterSnapshot = {
+  t: number;
+  rx: number;
+  tx: number;
 };
 
 function countStates(instances: Instance[] | undefined) {
@@ -26,20 +35,65 @@ function countStates(instances: Instance[] | undefined) {
   };
 }
 
+function rateBps(prev: CounterSnapshot | null, next: CounterSnapshot): number | null {
+  if (!prev || next.t <= prev.t) {
+    return null;
+  }
+  const seconds = (next.t - prev.t) / 1000;
+  if (seconds <= 0) {
+    return null;
+  }
+  const delta = next.rx - prev.rx;
+  if (delta < 0) {
+    return null;
+  }
+  return (delta * 8) / seconds;
+}
+
+function txRateBps(prev: CounterSnapshot | null, next: CounterSnapshot): number | null {
+  if (!prev || next.t <= prev.t) {
+    return null;
+  }
+  const seconds = (next.t - prev.t) / 1000;
+  if (seconds <= 0) {
+    return null;
+  }
+  const delta = next.tx - prev.tx;
+  if (delta < 0) {
+    return null;
+  }
+  return (delta * 8) / seconds;
+}
+
 export function useTelemetryHistory(input: {
   metrics?: SystemMetrics;
   health?: HealthResponse;
   instances?: Instance[];
 }) {
   const [points, setPoints] = useState<TelemetryPoint[]>([]);
+  const prevCounters = useRef<CounterSnapshot | null>(null);
 
   useEffect(() => {
     if (!input.metrics && !input.health && !input.instances) {
       return;
     }
     const states = countStates(input.instances);
+    const now = Date.now();
+    let rxBps: number | null = null;
+    let txBps: number | null = null;
+    if (input.metrics?.network) {
+      const snap: CounterSnapshot = {
+        t: now,
+        rx: input.metrics.network.rx_bytes,
+        tx: input.metrics.network.tx_bytes,
+      };
+      rxBps = rateBps(prevCounters.current, snap);
+      txBps = txRateBps(prevCounters.current, snap);
+      prevCounters.current = snap;
+    }
+
     const next: TelemetryPoint = {
-      t: Date.now(),
+      t: now,
       cpu: input.metrics?.cpu_percent ?? null,
       mem: input.metrics?.mem_used_percent ?? null,
       apiLatency: input.health?.components.api?.latency_ms ?? null,
@@ -48,6 +102,10 @@ export function useTelemetryHistory(input: {
       running: states.running,
       degraded: states.degraded,
       error: states.error,
+      rxBps,
+      txBps,
+      rxErrors: input.metrics?.network?.rx_errors ?? null,
+      txErrors: input.metrics?.network?.tx_errors ?? null,
     };
     setPoints((prev) => {
       const last = prev[prev.length - 1];
@@ -60,6 +118,8 @@ export function useTelemetryHistory(input: {
     input.metrics?.collected_at,
     input.metrics?.cpu_percent,
     input.metrics?.mem_used_percent,
+    input.metrics?.network?.rx_bytes,
+    input.metrics?.network?.tx_bytes,
     input.health?.checked_at,
     input.instances,
   ]);

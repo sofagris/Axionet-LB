@@ -45,7 +45,16 @@ function StatusPill({ status }: { status: string }) {
 function formatBytes(bytes: number): string {
   if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1)} GiB`;
   if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(0)} MiB`;
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KiB`;
   return `${bytes} B`;
+}
+
+function formatBitRate(bps: number | null | undefined): string {
+  if (bps == null || Number.isNaN(bps)) return "—";
+  if (bps >= 1e9) return `${(bps / 1e9).toFixed(2)} Gbit/s`;
+  if (bps >= 1e6) return `${(bps / 1e6).toFixed(2)} Mbit/s`;
+  if (bps >= 1e3) return `${(bps / 1e3).toFixed(1)} kbit/s`;
+  return `${bps.toFixed(0)} bit/s`;
 }
 
 function ComponentRow({
@@ -137,6 +146,7 @@ export function DashboardPage() {
       second: "2-digit",
     }),
   }));
+  const latestRate = history.length ? history[history.length - 1] : null;
 
   const upCount =
     interfacesQuery.data?.filter((iface) => iface.link_state === "up").length ?? 0;
@@ -236,7 +246,7 @@ export function DashboardPage() {
         <h3 className="mb-2 text-xs tracking-wide text-ink-muted uppercase">
           {t("dashboard.telemetry")}
         </h3>
-        <div className="grid gap-8 lg:grid-cols-3">
+        <div className="grid gap-8 lg:grid-cols-2 xl:grid-cols-4">
           <ChartFrame title={t("dashboard.cpu")}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
@@ -325,7 +335,109 @@ export function DashboardPage() {
               </LineChart>
             </ResponsiveContainer>
           </ChartFrame>
+          <ChartFrame title={t("dashboard.networkThroughput")}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <CartesianGrid stroke="var(--ax-line)" strokeDasharray="3 3" />
+                <XAxis dataKey="label" tick={{ fill: muted, fontSize: 10 }} hide />
+                <YAxis
+                  tick={{ fill: muted, fontSize: 10 }}
+                  width={44}
+                  tickFormatter={(value: number) =>
+                    value >= 1e6 ? `${(value / 1e6).toFixed(1)}M` : value >= 1e3 ? `${(value / 1e3).toFixed(0)}k` : `${value}`
+                  }
+                />
+                <Tooltip
+                  formatter={(value: number | string) => formatBitRate(Number(value))}
+                  contentStyle={{
+                    background: "var(--ax-paper-elevated)",
+                    border: "1px solid var(--ax-line)",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 12,
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: 11, fontFamily: "var(--font-mono)" }} />
+                <Line
+                  type="monotone"
+                  dataKey="rxBps"
+                  name={t("dashboard.rx")}
+                  stroke={accent}
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls
+                />
+                <Line
+                  type="monotone"
+                  dataKey="txBps"
+                  name={t("dashboard.tx")}
+                  stroke={warn}
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartFrame>
         </div>
+        {metricsQuery.data?.network ? (
+          <p className="mt-3 font-mono text-xs text-ink-muted">
+            Σ {t("dashboard.rx")} {formatBytes(metricsQuery.data.network.rx_bytes)}
+            {" · "}
+            Σ {t("dashboard.tx")} {formatBytes(metricsQuery.data.network.tx_bytes)}
+            {" · "}
+            {t("dashboard.errors")}{" "}
+            {metricsQuery.data.network.rx_errors + metricsQuery.data.network.tx_errors}
+            {" · "}
+            {t("dashboard.dropped")}{" "}
+            {metricsQuery.data.network.rx_dropped + metricsQuery.data.network.tx_dropped}
+            {latestRate ? (
+              <>
+                {" · "}
+                now RX {formatBitRate(latestRate.rxBps)} / TX {formatBitRate(latestRate.txBps)}
+              </>
+            ) : null}
+          </p>
+        ) : null}
+      </section>
+
+      <section className="border-l-2 border-line bg-paper-elevated/40 p-5">
+        <h3 className="text-lg font-semibold text-ink">{t("dashboard.networkInterfaces")}</h3>
+        {(metricsQuery.data?.interfaces?.length ?? 0) === 0 ? (
+          <p className="mt-3 text-sm text-ink-muted">{t("dashboard.noInterfaces")}</p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <thead>
+                <tr className="text-xs tracking-wide text-ink-muted uppercase">
+                  <th className="pb-2 pr-4 font-medium">Name</th>
+                  <th className="pb-2 pr-4 font-medium">Link</th>
+                  <th className="pb-2 pr-4 font-medium">{t("dashboard.rx")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("dashboard.tx")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("dashboard.errors")}</th>
+                  <th className="pb-2 font-medium">{t("dashboard.dropped")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(metricsQuery.data?.interfaces ?? []).map((iface) => (
+                  <tr key={iface.name} className="border-t border-line font-mono text-xs">
+                    <td className="py-2 pr-4 text-ink">{iface.name}</td>
+                    <td className={`py-2 pr-4 uppercase ${statusTone(iface.link_state === "up" ? "ok" : "degraded")}`}>
+                      {iface.link_state}
+                    </td>
+                    <td className="py-2 pr-4">{formatBytes(iface.rx_bytes)}</td>
+                    <td className="py-2 pr-4">{formatBytes(iface.tx_bytes)}</td>
+                    <td className="py-2 pr-4">
+                      {iface.rx_errors}/{iface.tx_errors}
+                    </td>
+                    <td className="py-2">
+                      {iface.rx_dropped}/{iface.tx_dropped}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       <div className="grid gap-6 lg:grid-cols-2">

@@ -32,7 +32,10 @@ def get_system_service(
 def get_metrics_collector(settings: Settings = Depends(get_settings)) -> HostMetricsCollector:
     global _metrics_collector
     if _metrics_collector is None:
-        _metrics_collector = HostMetricsCollector(proc_root=settings.host_proc_root)
+        _metrics_collector = HostMetricsCollector(
+            proc_root=settings.host_proc_root,
+            sysfs_root=settings.host_sysfs_root,
+        )
     return _metrics_collector
 
 

@@ -5,7 +5,12 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from app.schemas.system import SystemMetricsResponse
+from app.schemas.system import (
+    InterfaceCountersRead,
+    NetworkTotalsRead,
+    SystemMetricsResponse,
+)
+from app.services.system.network_metrics import NetworkMetricsCollector
 
 
 @dataclass
@@ -15,10 +20,11 @@ class _CpuSample:
 
 
 class HostMetricsCollector:
-    """Read host CPU/memory from a (bind-mounted) proc filesystem."""
+    """Read host CPU/memory/network metrics from bind-mounted host filesystems."""
 
-    def __init__(self, proc_root: str = "/host/proc") -> None:
+    def __init__(self, proc_root: str = "/host/proc", sysfs_root: str = "/host/sys") -> None:
         self._proc_root = Path(proc_root)
+        self._network = NetworkMetricsCollector(sysfs_root=sysfs_root)
         self._last_cpu: _CpuSample | None = None
 
     def collect(self) -> SystemMetricsResponse:
@@ -28,6 +34,7 @@ class HostMetricsCollector:
         mem_used = max(mem_total - mem_available, 0)
         mem_used_percent = (mem_used / mem_total * 100.0) if mem_total else 0.0
         load1, load5, load15 = self._loadavg(root)
+        totals, interfaces = self._network.collect()
         return SystemMetricsResponse(
             cpu_percent=round(cpu_percent, 2),
             mem_total_bytes=mem_total,
@@ -36,6 +43,31 @@ class HostMetricsCollector:
             load_avg_1=load1,
             load_avg_5=load5,
             load_avg_15=load15,
+            network=NetworkTotalsRead(
+                rx_bytes=totals.rx_bytes,
+                tx_bytes=totals.tx_bytes,
+                rx_packets=totals.rx_packets,
+                tx_packets=totals.tx_packets,
+                rx_errors=totals.rx_errors,
+                tx_errors=totals.tx_errors,
+                rx_dropped=totals.rx_dropped,
+                tx_dropped=totals.tx_dropped,
+            ),
+            interfaces=[
+                InterfaceCountersRead(
+                    name=item.name,
+                    link_state=item.link_state,
+                    rx_bytes=item.rx_bytes,
+                    tx_bytes=item.tx_bytes,
+                    rx_packets=item.rx_packets,
+                    tx_packets=item.tx_packets,
+                    rx_errors=item.rx_errors,
+                    tx_errors=item.tx_errors,
+                    rx_dropped=item.rx_dropped,
+                    tx_dropped=item.tx_dropped,
+                )
+                for item in interfaces
+            ],
             collected_at=datetime.now(UTC),
         )
 

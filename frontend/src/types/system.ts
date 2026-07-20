@@ -31,6 +31,36 @@ export const SystemMetricsSchema = z.object({
   load_avg_1: z.number().nullable().optional(),
   load_avg_5: z.number().nullable().optional(),
   load_avg_15: z.number().nullable().optional(),
+  network: z
+    .object({
+      rx_bytes: z.number().int(),
+      tx_bytes: z.number().int(),
+      rx_packets: z.number().int(),
+      tx_packets: z.number().int(),
+      rx_errors: z.number().int(),
+      tx_errors: z.number().int(),
+      rx_dropped: z.number().int(),
+      tx_dropped: z.number().int(),
+    })
+    .nullable()
+    .optional(),
+  interfaces: z
+    .array(
+      z.object({
+        name: z.string(),
+        link_state: z.string(),
+        rx_bytes: z.number().int(),
+        tx_bytes: z.number().int(),
+        rx_packets: z.number().int(),
+        tx_packets: z.number().int(),
+        rx_errors: z.number().int(),
+        tx_errors: z.number().int(),
+        rx_dropped: z.number().int(),
+        tx_dropped: z.number().int(),
+      }),
+    )
+    .optional()
+    .default([]),
   collected_at: z.string(),
 });
 

@@ -36,6 +36,30 @@ class CapabilitiesResponse(BaseModel):
     dataplane_services: list[str] = Field(default_factory=list)
 
 
+class NetworkTotalsRead(BaseModel):
+    rx_bytes: int
+    tx_bytes: int
+    rx_packets: int
+    tx_packets: int
+    rx_errors: int
+    tx_errors: int
+    rx_dropped: int
+    tx_dropped: int
+
+
+class InterfaceCountersRead(BaseModel):
+    name: str
+    link_state: str
+    rx_bytes: int
+    tx_bytes: int
+    rx_packets: int
+    tx_packets: int
+    rx_errors: int
+    tx_errors: int
+    rx_dropped: int
+    tx_dropped: int
+
+
 class SystemMetricsResponse(BaseModel):
     cpu_percent: float
     mem_total_bytes: int
@@ -44,4 +68,6 @@ class SystemMetricsResponse(BaseModel):
     load_avg_1: float | None = None
     load_avg_5: float | None = None
     load_avg_15: float | None = None
+    network: NetworkTotalsRead | None = None
+    interfaces: list[InterfaceCountersRead] = Field(default_factory=list)
     collected_at: datetime
