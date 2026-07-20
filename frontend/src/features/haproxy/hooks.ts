@@ -80,6 +80,7 @@ function useInvalidate(id: string) {
 
 export function useHaproxyMutations(id: string) {
   const invalidate = useInvalidate(id);
+  const queryClient = useQueryClient();
   return {
     createFrontend: useMutation({
       mutationFn: (payload: HaproxyFrontend) => createHaproxyFrontend(id, payload),
