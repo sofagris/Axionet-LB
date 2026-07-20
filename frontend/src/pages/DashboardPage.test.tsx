@@ -55,6 +55,16 @@ vi.mock("../api/networks", () => ({
   validateNetwork: vi.fn(),
 }));
 
+vi.mock("../api/instances", () => ({
+  fetchInstances: vi.fn(async () => []),
+  createInstance: vi.fn(),
+  startInstance: vi.fn(),
+  stopInstance: vi.fn(),
+  restartInstance: vi.fn(),
+  deleteInstance: vi.fn(),
+  fetchInstanceLogs: vi.fn(),
+}));
+
 function renderApp() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },

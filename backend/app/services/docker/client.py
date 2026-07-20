@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import logging
 from typing import Any
+from pathlib import Path
+import uuid
 
 import docker
-from docker.errors import APIError, DockerException, NotFound
+from docker.errors import APIError, ContainerError, DockerException, ImageNotFound, NotFound
 from docker.types import IPAMConfig, IPAMPool
 
 from app.core.config import Settings
@@ -125,6 +127,159 @@ class DockerClientAdapter:
                 f"Refusing to delete Docker network {network_id}: missing {MANAGED_LABEL}=true"
             )
         network.remove()
+
+    def run_ephemeral(
+        self,
+        *,
+        image: str,
+        command: list[str],
+        files: dict[str, str],
+    ) -> str:
+        """Run one-shot container with config files from a host-visible data dir."""
+        client = self._get_client()
+        self.ensure_image(image)
+
+        validate_root = Path(self._settings.data_dir) / "runtime" / "validate"
+        validate_root.mkdir(parents=True, exist_ok=True)
+        work = validate_root / str(uuid.uuid4())
+        work.mkdir(parents=True, exist_ok=True)
+        try:
+            content = next(iter(files.values()))
+            (work / "haproxy.cfg").write_text(content, encoding="utf-8")
+            container = client.containers.create(
+                image=image,
+                command=command,
+                volumes={str(work): {"bind": "/usr/local/etc/haproxy", "mode": "ro"}},
+                network_mode="none",
+                labels={MANAGED_LABEL: "true", "axionet.purpose": "config-validate"},
+            )
+            try:
+                result = container.wait(timeout=60)
+                logs = container.logs(stdout=True, stderr=True).decode("utf-8", errors="replace")
+                status_code = int(result.get("StatusCode", 1))
+                if status_code != 0:
+                    raise ContainerError(container, status_code, command, image, logs.encode())
+                return logs.strip()
+            finally:
+                container.remove(force=True)
+        finally:
+            for path in sorted(work.rglob("*"), reverse=True):
+                if path.is_file():
+                    path.unlink(missing_ok=True)
+            work.rmdir()
+
+    def ensure_image(self, image: str) -> None:
+        client = self._get_client()
+        try:
+            client.images.get(image)
+        except ImageNotFound:
+            client.images.pull(image)
+
+    def create_managed_container(
+        self,
+        *,
+        name: str,
+        image: str,
+        instance_id: str,
+        service_type: str,
+        host_config_dir: str,
+        network_ids: list[str],
+        restart_policy: str = "unless-stopped",
+    ) -> str:
+        client = self._get_client()
+        self.ensure_image(image)
+        labels = {
+            MANAGED_LABEL: "true",
+            "axionet.instance_id": instance_id,
+            "axionet.service_type": service_type,
+        }
+        kwargs: dict[str, Any] = {
+            "image": image,
+            "name": name,
+            "detach": True,
+            "labels": labels,
+            "volumes": {host_config_dir: {"bind": "/usr/local/etc/haproxy", "mode": "ro"}},
+            "restart_policy": {"Name": restart_policy},
+            "command": ["haproxy", "-W", "-db", "-f", "/usr/local/etc/haproxy/haproxy.cfg"],
+        }
+        if network_ids:
+            kwargs["network"] = network_ids[0]
+        try:
+            container = client.containers.create(**kwargs)
+            for net_id in network_ids[1:]:
+                client.networks.get(net_id).connect(container)
+            return container.id
+        except APIError as exc:
+            raise DockerException(str(exc)) from exc
+
+    def start_container(self, container_id: str) -> None:
+        try:
+            self._get_client().containers.get(container_id).start()
+        except NotFound as exc:
+            raise DockerException(f"Container not found: {container_id}") from exc
+        except APIError as exc:
+            raise DockerException(str(exc)) from exc
+
+    def stop_container(self, container_id: str, timeout: int = 10) -> None:
+        try:
+            self._get_client().containers.get(container_id).stop(timeout=timeout)
+        except NotFound:
+            return
+        except APIError as exc:
+            raise DockerException(str(exc)) from exc
+
+    def restart_container(self, container_id: str, timeout: int = 10) -> None:
+        try:
+            self._get_client().containers.get(container_id).restart(timeout=timeout)
+        except NotFound as exc:
+            raise DockerException(f"Container not found: {container_id}") from exc
+        except APIError as exc:
+            raise DockerException(str(exc)) from exc
+
+    def remove_container(self, container_id: str) -> None:
+        try:
+            container = self._get_client().containers.get(container_id)
+            labels = container.labels or {}
+            if labels.get(MANAGED_LABEL) != "true":
+                raise DockerException(
+                    f"Refusing to remove container {container_id}: missing {MANAGED_LABEL}=true"
+                )
+            container.remove(force=True)
+        except NotFound:
+            return
+        except APIError as exc:
+            raise DockerException(str(exc)) from exc
+
+    def inspect_container(self, container_id: str) -> dict[str, Any] | None:
+        try:
+            container = self._get_client().containers.get(container_id)
+            return container.attrs
+        except NotFound:
+            return None
+
+    def container_logs(self, container_id: str, *, tail: int = 200) -> str:
+        try:
+            container = self._get_client().containers.get(container_id)
+            raw = container.logs(tail=tail, stdout=True, stderr=True)
+            return raw.decode("utf-8", errors="replace")
+        except NotFound as exc:
+            raise DockerException(f"Container not found: {container_id}") from exc
+
+    def connect_container_network(
+        self,
+        container_id: str,
+        network_id: str,
+        ipv4_address: str | None = None,
+    ) -> None:
+        network = self._get_client().networks.get(network_id)
+        kwargs: dict[str, Any] = {}
+        if ipv4_address:
+            kwargs["ipv4_address"] = ipv4_address
+        try:
+            network.connect(container_id, **kwargs)
+        except APIError as exc:
+            if "already exists" not in str(exc).lower():
+                raise DockerException(str(exc)) from exc
 
     def close(self) -> None:
         if self._client is not None:

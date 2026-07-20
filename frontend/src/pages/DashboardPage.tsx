@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useInstances } from "../features/instances/hooks";
 import { useInterfaces } from "../features/interfaces/hooks";
 import { useNetworks } from "../features/networks/hooks";
 import { useSystemHealth, useSystemInfo } from "../features/system/hooks";
@@ -76,28 +77,28 @@ export function DashboardPage() {
   const infoQuery = useSystemInfo();
   const interfacesQuery = useInterfaces();
   const networksQuery = useNetworks();
+  const instancesQuery = useInstances();
 
   const upCount =
     interfacesQuery.data?.filter((iface) => iface.link_state === "up").length ?? 0;
   const totalCount = interfacesQuery.data?.length ?? 0;
   const networkCount = networksQuery.data?.length ?? 0;
+  const runningInstances =
+    instancesQuery.data?.filter((item) => item.actual_state === "running").length ?? 0;
+  const instanceCount = instancesQuery.data?.length ?? 0;
 
   return (
     <div className="space-y-6">
       <section>
         <h2 className="text-xl font-semibold tracking-tight text-ink">Dashboard</h2>
         <p className="mt-1 max-w-2xl text-ink-muted">
-          Blank installasjon med kun kontrollplan. Dataplan-tjenester opprettes senere via API/GUI.
+          Kontrollplan for AxioNet LB. Dataplan-instanser administreres under Instances.
         </p>
       </section>
 
       {infoQuery.data ? (
         <section className="grid gap-3 sm:grid-cols-4">
           <div className="border-l-2 border-accent pl-3">
-            <p className="text-xs tracking-wide text-ink-muted uppercase">Plattform</p>
-            <p className="mt-1 font-medium">{infoQuery.data.name}</p>
-          </div>
-          <div className="border-l-2 border-line pl-3">
             <p className="text-xs tracking-wide text-ink-muted uppercase">Interfaces</p>
             <p className="mt-1 font-mono text-sm">
               {interfacesQuery.isLoading ? "…" : `${upCount} up / ${totalCount}`}
@@ -112,6 +113,15 @@ export function DashboardPage() {
               {networksQuery.isLoading ? "…" : networkCount}
             </p>
             <Link className="mt-1 inline-block text-xs text-accent hover:underline" to="/networks">
+              Administrer
+            </Link>
+          </div>
+          <div className="border-l-2 border-line pl-3">
+            <p className="text-xs tracking-wide text-ink-muted uppercase">Instances</p>
+            <p className="mt-1 font-mono text-sm">
+              {instancesQuery.isLoading ? "…" : `${runningInstances} run / ${instanceCount}`}
+            </p>
+            <Link className="mt-1 inline-block text-xs text-accent hover:underline" to="/instances">
               Administrer
             </Link>
           </div>

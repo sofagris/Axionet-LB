@@ -44,8 +44,10 @@ class SystemService:
                 "networks.crud",
                 "networks.ipvlan-l2",
                 "networks.validate",
+                "instances.haproxy",
+                "instances.lifecycle",
             ],
-            dataplane_services=[],
+            dataplane_services=["haproxy"],
         )
 
     def check_health(self, db: Session) -> HealthResponse:

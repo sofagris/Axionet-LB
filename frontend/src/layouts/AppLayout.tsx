@@ -9,7 +9,7 @@ export function AppLayout() {
             <p className="font-mono text-xs tracking-[0.18em] text-accent uppercase">AxioNet</p>
             <h1 className="text-2xl font-semibold tracking-tight text-ink">Load Balancer</h1>
           </div>
-          <nav className="flex gap-4 text-sm">
+          <nav className="flex flex-wrap gap-4 text-sm">
             <Link className="text-ink-muted hover:text-ink" to="/">
               Dashboard
             </Link>
@@ -18,6 +18,9 @@ export function AppLayout() {
             </Link>
             <Link className="text-ink-muted hover:text-ink" to="/networks">
               Networks
+            </Link>
+            <Link className="text-ink-muted hover:text-ink" to="/instances">
+              Instances
             </Link>
           </nav>
         </div>
