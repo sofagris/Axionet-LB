@@ -406,63 +406,75 @@ export function HaproxyDetailPage() {
         <section className="space-y-4">
           <form
             onSubmit={saveFrontend}
-            className="grid gap-3 border border-line bg-paper-elevated/40 p-4 md:grid-cols-3 lg:grid-cols-7"
+            className="grid gap-3 border border-line bg-paper-elevated/40 p-4 md:grid-cols-3 lg:grid-cols-4"
           >
-            <input
-              className="border border-line bg-paper px-3 py-2 font-mono text-sm"
-              value={frontendName}
-              onChange={(e) => setFrontendName(e.target.value)}
-              placeholder="name"
-              required
-              disabled={editingFrontend != null}
-            />
-            <input
-              className="border border-line bg-paper px-3 py-2 font-mono text-sm"
-              value={frontendBind}
-              onChange={(e) => setFrontendBind(e.target.value)}
-              placeholder="bind"
-              required
-            />
-            <input
-              className="border border-line bg-paper px-3 py-2 font-mono text-sm"
-              value={frontendPort}
-              onChange={(e) => setFrontendPort(e.target.value)}
-              placeholder="port"
-              required
-            />
-            <select
-              className="border border-line bg-paper px-3 py-2 font-mono text-sm"
-              value={frontendMode}
-              onChange={(e) => setFrontendMode(e.target.value)}
-            >
-              <option value="http">http</option>
-              <option value="tcp">tcp</option>
-            </select>
-            <select
-              className="border border-line bg-paper px-3 py-2 font-mono text-sm"
-              value={frontendBackend}
-              onChange={(e) => setFrontendBackend(e.target.value)}
-            >
-              {(backendsQuery.data ?? []).map((backend) => (
-                <option key={backend.name} value={backend.name}>
-                  {backend.name}
-                </option>
-              ))}
-            </select>
-            <select
-              className="border border-line bg-paper px-3 py-2 font-mono text-sm"
-              value={frontendCertificate}
-              onChange={(e) => setFrontendCertificate(e.target.value)}
-            >
-              <option value="">no TLS</option>
-              {(certificatesQuery.data ?? []).map((cert) => (
-                <option key={cert.name} value={cert.name}>
-                  {cert.name}
-                </option>
-              ))}
-            </select>
-            <div className="flex gap-2">
-              <button type="submit" className="flex-1 border border-accent bg-accent px-3 py-2 text-sm text-white">
+            <FormField label="Navn">
+              <input
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={frontendName}
+                onChange={(e) => setFrontendName(e.target.value)}
+                placeholder="web"
+                required
+                disabled={editingFrontend != null}
+              />
+            </FormField>
+            <FormField label="Bind-adresse">
+              <input
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={frontendBind}
+                onChange={(e) => setFrontendBind(e.target.value)}
+                placeholder="*"
+                required
+              />
+            </FormField>
+            <FormField label="Port">
+              <input
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={frontendPort}
+                onChange={(e) => setFrontendPort(e.target.value)}
+                placeholder="8080"
+                required
+              />
+            </FormField>
+            <FormField label="Mode">
+              <select
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={frontendMode}
+                onChange={(e) => setFrontendMode(e.target.value)}
+              >
+                <option value="http">http</option>
+                <option value="tcp">tcp</option>
+              </select>
+            </FormField>
+            <FormField label="Default backend">
+              <select
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={frontendBackend}
+                onChange={(e) => setFrontendBackend(e.target.value)}
+              >
+                {(backendsQuery.data ?? []).map((backend) => (
+                  <option key={backend.name} value={backend.name}>
+                    {backend.name}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+            <FormField label="TLS-sertifikat">
+              <select
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={frontendCertificate}
+                onChange={(e) => setFrontendCertificate(e.target.value)}
+              >
+                <option value="">Ingen TLS</option>
+                {(certificatesQuery.data ?? []).map((cert) => (
+                  <option key={cert.name} value={cert.name}>
+                    {cert.name}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+            <FormActions>
+              <button type="submit" className="border border-accent bg-accent px-3 py-2 text-sm text-white">
                 {editingFrontend ? "Oppdater" : "Legg til"}
               </button>
               {editingFrontend ? (
@@ -470,7 +482,7 @@ export function HaproxyDetailPage() {
                   Avbryt
                 </button>
               ) : null}
-            </div>
+            </FormActions>
           </form>
           <EntityTable
             headers={["Name", "Bind", "Mode", "Backend", "TLS", ""]}
@@ -503,33 +515,39 @@ export function HaproxyDetailPage() {
             onSubmit={saveBackend}
             className="grid gap-3 border border-line bg-paper-elevated/40 p-4 md:grid-cols-4"
           >
-            <input
-              className="border border-line bg-paper px-3 py-2 font-mono text-sm"
-              value={backendName}
-              onChange={(e) => setBackendName(e.target.value)}
-              placeholder="backend name"
-              required
-              disabled={editingBackend != null}
-            />
-            <select
-              className="border border-line bg-paper px-3 py-2 font-mono text-sm"
-              value={backendBalance}
-              onChange={(e) => setBackendBalance(e.target.value)}
-            >
-              <option value="roundrobin">roundrobin</option>
-              <option value="leastconn">leastconn</option>
-              <option value="source">source</option>
-            </select>
-            <select
-              className="border border-line bg-paper px-3 py-2 font-mono text-sm"
-              value={backendMode}
-              onChange={(e) => setBackendMode(e.target.value)}
-            >
-              <option value="http">http</option>
-              <option value="tcp">tcp</option>
-            </select>
-            <div className="flex gap-2">
-              <button type="submit" className="flex-1 border border-accent bg-accent px-3 py-2 text-sm text-white">
+            <FormField label="Navn">
+              <input
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={backendName}
+                onChange={(e) => setBackendName(e.target.value)}
+                placeholder="app"
+                required
+                disabled={editingBackend != null}
+              />
+            </FormField>
+            <FormField label="Balance">
+              <select
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={backendBalance}
+                onChange={(e) => setBackendBalance(e.target.value)}
+              >
+                <option value="roundrobin">roundrobin</option>
+                <option value="leastconn">leastconn</option>
+                <option value="source">source</option>
+              </select>
+            </FormField>
+            <FormField label="Mode">
+              <select
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={backendMode}
+                onChange={(e) => setBackendMode(e.target.value)}
+              >
+                <option value="http">http</option>
+                <option value="tcp">tcp</option>
+              </select>
+            </FormField>
+            <FormActions>
+              <button type="submit" className="border border-accent bg-accent px-3 py-2 text-sm text-white">
                 {editingBackend ? "Oppdater" : "Legg til"}
               </button>
               {editingBackend ? (
@@ -537,7 +555,7 @@ export function HaproxyDetailPage() {
                   Avbryt
                 </button>
               ) : null}
-            </div>
+            </FormActions>
           </form>
           <EntityTable
             headers={["Name", "Balance", "Mode", "Servers", ""]}
@@ -569,90 +587,105 @@ export function HaproxyDetailPage() {
             onSubmit={saveServer}
             className="grid gap-3 border border-line bg-paper-elevated/40 p-4 md:grid-cols-3 lg:grid-cols-5"
           >
-            <select
-              className="border border-line bg-paper px-3 py-2 font-mono text-sm"
-              value={serverBackend}
-              onChange={(e) => setServerBackend(e.target.value)}
-              disabled={editingServer != null}
-            >
-              {(backendsQuery.data ?? []).map((backend) => (
-                <option key={backend.name} value={backend.name}>
-                  {backend.name}
-                </option>
-              ))}
-            </select>
-            <input
-              className="border border-line bg-paper px-3 py-2 font-mono text-sm"
-              value={serverName}
-              onChange={(e) => setServerName(e.target.value)}
-              placeholder="server"
-              required
-              disabled={editingServer != null}
-            />
-            <input
-              className="border border-line bg-paper px-3 py-2 font-mono text-sm"
-              value={serverAddress}
-              onChange={(e) => setServerAddress(e.target.value)}
-              placeholder="ip"
-              required
-            />
-            <input
-              className="border border-line bg-paper px-3 py-2 font-mono text-sm"
-              value={serverPort}
-              onChange={(e) => setServerPort(e.target.value)}
-              placeholder="port"
-              required
-            />
-            <input
-              className="border border-line bg-paper px-3 py-2 font-mono text-sm"
-              value={serverWeight}
-              onChange={(e) => setServerWeight(e.target.value)}
-              placeholder="weight"
-              required
-            />
-            <label className="flex items-center gap-2 font-mono text-xs text-ink">
+            <FormField label="Backend">
+              <select
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={serverBackend}
+                onChange={(e) => setServerBackend(e.target.value)}
+                disabled={editingServer != null}
+              >
+                {(backendsQuery.data ?? []).map((backend) => (
+                  <option key={backend.name} value={backend.name}>
+                    {backend.name}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+            <FormField label="Servernavn">
               <input
-                type="checkbox"
-                checked={serverCheck}
-                onChange={(e) => setServerCheck(e.target.checked)}
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={serverName}
+                onChange={(e) => setServerName(e.target.value)}
+                placeholder="s2"
+                required
+                disabled={editingServer != null}
               />
-              check
-            </label>
-            <input
-              className="border border-line bg-paper px-3 py-2 font-mono text-sm disabled:opacity-50"
-              type="number"
-              min={100}
-              max={60000}
-              value={serverInterMs}
-              onChange={(e) => setServerInterMs(e.target.value)}
-              placeholder="inter ms"
-              disabled={!serverCheck}
-              title="check interval (ms)"
-            />
-            <input
-              className="border border-line bg-paper px-3 py-2 font-mono text-sm disabled:opacity-50"
-              type="number"
-              min={1}
-              max={100}
-              value={serverRise}
-              onChange={(e) => setServerRise(e.target.value)}
-              placeholder="rise"
-              disabled={!serverCheck}
-              title="rise"
-            />
-            <input
-              className="border border-line bg-paper px-3 py-2 font-mono text-sm disabled:opacity-50"
-              type="number"
-              min={1}
-              max={100}
-              value={serverFall}
-              onChange={(e) => setServerFall(e.target.value)}
-              placeholder="fall"
-              disabled={!serverCheck}
-              title="fall"
-            />
-            <div className="flex gap-2">
-              <button type="submit" className="flex-1 border border-accent bg-accent px-3 py-2 text-sm text-white">
+            </FormField>
+            <FormField label="Adresse">
+              <input
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={serverAddress}
+                onChange={(e) => setServerAddress(e.target.value)}
+                placeholder="10.0.0.20"
+                required
+              />
+            </FormField>
+            <FormField label="Port">
+              <input
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={serverPort}
+                onChange={(e) => setServerPort(e.target.value)}
+                placeholder="80"
+                required
+              />
+            </FormField>
+            <FormField label="Vekt">
+              <input
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={serverWeight}
+                onChange={(e) => setServerWeight(e.target.value)}
+                placeholder="100"
+                required
+              />
+            </FormField>
+            <FormField label="Health check">
+              <span className="flex h-[38px] items-center gap-2 font-mono text-xs text-ink">
+                <input
+                  type="checkbox"
+                  checked={serverCheck}
+                  onChange={(e) => setServerCheck(e.target.checked)}
+                />
+                Aktiv
+              </span>
+            </FormField>
+            <FormField label="Intervall (ms)">
+              <input
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm disabled:opacity-50"
+                type="number"
+                min={100}
+                max={60000}
+                value={serverInterMs}
+                onChange={(e) => setServerInterMs(e.target.value)}
+                placeholder="2000"
+                disabled={!serverCheck}
+              />
+            </FormField>
+            <FormField label="Rise">
+              <input
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm disabled:opacity-50"
+                type="number"
+                min={1}
+                max={100}
+                value={serverRise}
+                onChange={(e) => setServerRise(e.target.value)}
+                placeholder="2"
+                disabled={!serverCheck}
+              />
+            </FormField>
+            <FormField label="Fall">
+              <input
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm disabled:opacity-50"
+                type="number"
+                min={1}
+                max={100}
+                value={serverFall}
+                onChange={(e) => setServerFall(e.target.value)}
+                placeholder="3"
+                disabled={!serverCheck}
+              />
+            </FormField>
+            <FormActions>
+              <button type="submit" className="border border-accent bg-accent px-3 py-2 text-sm text-white">
                 {editingServer ? "Oppdater" : "Legg til"}
               </button>
               {editingServer ? (
@@ -660,7 +693,7 @@ export function HaproxyDetailPage() {
                   Avbryt
                 </button>
               ) : null}
-            </div>
+            </FormActions>
           </form>
           <EntityTable
             headers={["Backend", "Server", "Address", "Check", "Weight", ""]}
@@ -711,21 +744,24 @@ export function HaproxyDetailPage() {
               Last opp kombinert PEM (sertifikat + privat nøkkel). Filen lagres under{" "}
               <span className="font-mono">config/certs/</span> med restriktive rettigheter.
             </p>
-            <input
-              className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
-              value={certName}
-              onChange={(e) => setCertName(e.target.value)}
-              placeholder="certificate name"
-              required
-            />
-            <textarea
-              className="min-h-40 w-full border border-line bg-paper px-3 py-2 font-mono text-xs"
-              value={certPem}
-              onChange={(e) => setCertPem(e.target.value)}
-              placeholder={"-----BEGIN CERTIFICATE-----\n...\n-----BEGIN PRIVATE KEY-----\n..."}
-              required
-            />
-            <button type="submit" className="border border-accent bg-accent px-3 py-2 text-sm text-white">
+            <FormField label="Sertifikatnavn">
+              <input
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={certName}
+                onChange={(e) => setCertName(e.target.value)}
+                placeholder="site"
+                required
+              />
+            </FormField>
+            <FormField label="PEM-innhold">
+              <textarea
+                className="min-h-40 w-full border border-line bg-paper px-3 py-2 font-mono text-xs"
+                value={certPem}
+                onChange={(e) => setCertPem(e.target.value)}
+                placeholder={"-----BEGIN CERTIFICATE-----\n...\n-----BEGIN PRIVATE KEY-----\n..."}
+                required
+              />
+            </FormField>            <button type="submit" className="border border-accent bg-accent px-3 py-2 text-sm text-white">
               Last opp sertifikat
             </button>
             {mutations.createCertificate.isError ? (
@@ -778,46 +814,54 @@ export function HaproxyDetailPage() {
             }}
             className="grid gap-3 border border-line bg-paper-elevated/40 p-4 md:grid-cols-2 lg:grid-cols-5"
           >
-            <input
-              className="border border-line bg-paper px-3 py-2 font-mono text-sm"
-              value={aclName}
-              onChange={(e) => setAclName(e.target.value)}
-              placeholder="acl name"
-              required
-              disabled={editingAcl != null}
-            />
-            <select
-              className="border border-line bg-paper px-3 py-2 font-mono text-sm"
-              value={aclFrontend}
-              onChange={(e) => setAclFrontend(e.target.value)}
-            >
-              {(frontendsQuery.data ?? []).map((item) => (
-                <option key={item.name} value={item.name}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-            <input
-              className="border border-line bg-paper px-3 py-2 font-mono text-sm lg:col-span-1"
-              value={aclExpression}
-              onChange={(e) => setAclExpression(e.target.value)}
-              placeholder="path_beg /api"
-              required
-            />
-            <select
-              className="border border-line bg-paper px-3 py-2 font-mono text-sm"
-              value={aclBackend}
-              onChange={(e) => setAclBackend(e.target.value)}
-            >
-              <option value="">no use_backend</option>
-              {(backendsQuery.data ?? []).map((item) => (
-                <option key={item.name} value={item.name}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-            <div className="flex gap-2">
-              <button type="submit" className="flex-1 border border-accent bg-accent px-3 py-2 text-sm text-white">
+            <FormField label="Navn">
+              <input
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={aclName}
+                onChange={(e) => setAclName(e.target.value)}
+                placeholder="is_api"
+                required
+                disabled={editingAcl != null}
+              />
+            </FormField>
+            <FormField label="Frontend">
+              <select
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={aclFrontend}
+                onChange={(e) => setAclFrontend(e.target.value)}
+              >
+                {(frontendsQuery.data ?? []).map((item) => (
+                  <option key={item.name} value={item.name}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+            <FormField label="Uttrykk">
+              <input
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={aclExpression}
+                onChange={(e) => setAclExpression(e.target.value)}
+                placeholder="path_beg /api"
+                required
+              />
+            </FormField>
+            <FormField label="use_backend">
+              <select
+                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                value={aclBackend}
+                onChange={(e) => setAclBackend(e.target.value)}
+              >
+                <option value="">Ingen</option>
+                {(backendsQuery.data ?? []).map((item) => (
+                  <option key={item.name} value={item.name}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+            <FormActions>
+              <button type="submit" className="border border-accent bg-accent px-3 py-2 text-sm text-white">
                 {editingAcl ? "Oppdater" : "Legg til"}
               </button>
               {editingAcl ? (
@@ -829,7 +873,7 @@ export function HaproxyDetailPage() {
                   Avbryt
                 </button>
               ) : null}
-            </div>
+            </FormActions>
           </form>
           <EntityTable
             headers={["Name", "Frontend", "Expression", "use_backend", ""]}
@@ -1010,6 +1054,27 @@ function StatCard({ label, value }: { label: string; value: string }) {
       <p className="mt-1 font-mono text-lg">{value}</p>
     </div>
   );
+}
+
+function FormField({
+  label,
+  children,
+  className = "",
+}: {
+  label: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <label className={`block text-sm ${className}`}>
+      <span className="mb-1 block text-xs text-ink-muted">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function FormActions({ children }: { children: ReactNode }) {
+  return <div className="flex items-end gap-2 pt-5">{children}</div>;
 }
 
 function EntityTable({
