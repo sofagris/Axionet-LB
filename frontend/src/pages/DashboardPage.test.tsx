@@ -26,6 +26,28 @@ vi.mock("../api/system", () => ({
   })),
 }));
 
+vi.mock("../api/interfaces", () => ({
+  fetchInterfaces: vi.fn(async () => [
+    {
+      id: "1",
+      name: "eth0",
+      mac_address: "aa:bb:cc:dd:ee:ff",
+      pci_address: "0000:01:00.0",
+      numa_node: 0,
+      speed_mbps: 10000,
+      driver: "ixgbe",
+      description: null,
+      mtu: 1500,
+      link_state: "up",
+      administrative_state: "enabled",
+      exclusive_use: false,
+      discovered_at: "2026-07-20T16:00:00Z",
+      updated_at: "2026-07-20T16:00:00Z",
+    },
+  ]),
+  rescanInterfaces: vi.fn(),
+}));
+
 function renderApp() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },

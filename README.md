@@ -49,6 +49,18 @@ npm run dev
 
 Vite proxier `/api` til `http://127.0.0.1:8000`.
 
+## Milestone 2 – interface discovery
+
+Kontrollplanet leser vertens NIC-er via bind-mount av `/sys` til `/host/sys` i API-containeren.
+
+```bash
+docker compose up --build -d
+curl -s http://127.0.0.1/api/v1/interfaces | jq
+curl -s -X POST http://127.0.0.1/api/v1/interfaces/rescan | jq
+```
+
+GUI: http://\<vert\>/interfaces
+
 ## Tester
 
 ```bash

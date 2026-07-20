@@ -8,8 +8,10 @@ services:
       AX_LB_DATA_DIR: /var/lib/ax-lb
       DOCKER_HOST: unix:///var/run/docker.sock
       AX_LOG_LEVEL: INFO
+      HOST_SYSFS_ROOT: /host/sys
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /sys:/host/sys:ro
       - ax-lb-data:/var/lib/ax-lb
       - ax-lb-run:/run/ax-lb
     networks:

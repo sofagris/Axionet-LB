@@ -26,6 +26,11 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("DOCKER_HOST"),
     )
     docker_timeout_seconds: float = 5.0
+    host_sysfs_root: str = Field(
+        default="/sys",
+        validation_alias=AliasChoices("HOST_SYSFS_ROOT", "AX_HOST_SYSFS_ROOT"),
+        description="Sysfs root used for NIC discovery. Use /host/sys when host /sys is bind-mounted.",
+    )
 
 
 @lru_cache

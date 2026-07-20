@@ -39,6 +39,8 @@ class SystemService:
                 "system.info",
                 "system.capabilities",
                 "docker.connectivity",
+                "interfaces.discovery",
+                "interfaces.rescan",
             ],
             dataplane_services=[],
         )
