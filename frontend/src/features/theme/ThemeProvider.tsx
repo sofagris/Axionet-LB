@@ -27,6 +27,9 @@ function resolveInitialTheme(): ThemeMode {
   if (stored === "light" || stored === "dark") {
     return stored;
   }
+  if (typeof window.matchMedia !== "function") {
+    return "light";
+  }
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
