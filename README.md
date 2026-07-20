@@ -49,17 +49,16 @@ npm run dev
 
 Vite proxier `/api` til `http://127.0.0.1:8000`.
 
-## Milestone 2 – interface discovery
+## Milestone 3 – networks
 
-Kontrollplanet leser vertens NIC-er via bind-mount av `/sys` til `/host/sys` i API-containeren.
+GUI: http://\<vert\>/networks
 
 ```bash
-docker compose up --build -d
-curl -s http://127.0.0.1/api/v1/interfaces | jq
-curl -s -X POST http://127.0.0.1/api/v1/interfaces/rescan | jq
+curl -s http://127.0.0.1/api/v1/networks | jq
+curl -s -X POST http://127.0.0.1/api/v1/networks/validate -H 'content-type: application/json' -d '{...}' | jq
 ```
 
-GUI: http://\<vert\>/interfaces
+API-containeren bruker `pid: host` + `NET_ADMIN`/`SYS_ADMIN` for VLAN via `nsenter` inn i vertens netns.
 
 ## Tester
 

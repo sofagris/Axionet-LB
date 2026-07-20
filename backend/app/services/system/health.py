@@ -41,6 +41,9 @@ class SystemService:
                 "docker.connectivity",
                 "interfaces.discovery",
                 "interfaces.rescan",
+                "networks.crud",
+                "networks.ipvlan-l2",
+                "networks.validate",
             ],
             dataplane_services=[],
         )

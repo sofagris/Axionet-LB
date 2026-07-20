@@ -3,12 +3,17 @@ services:
     build: ./backend
     container_name: ax-api
     restart: unless-stopped
+    pid: host
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
     environment:
       DATABASE_URL: sqlite:////var/lib/ax-lb/ax-lb.db
       AX_LB_DATA_DIR: /var/lib/ax-lb
       DOCKER_HOST: unix:///var/run/docker.sock
       AX_LOG_LEVEL: INFO
       HOST_SYSFS_ROOT: /host/sys
+      HOST_NET_NSENTER: "true"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /sys:/host/sys:ro

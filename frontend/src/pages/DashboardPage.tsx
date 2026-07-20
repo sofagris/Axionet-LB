@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useInterfaces } from "../features/interfaces/hooks";
+import { useNetworks } from "../features/networks/hooks";
 import { useSystemHealth, useSystemInfo } from "../features/system/hooks";
 import type { ComponentHealth, HealthResponse } from "../types/system";
 
@@ -74,10 +75,12 @@ export function DashboardPage() {
   const healthQuery = useSystemHealth();
   const infoQuery = useSystemInfo();
   const interfacesQuery = useInterfaces();
+  const networksQuery = useNetworks();
 
   const upCount =
     interfacesQuery.data?.filter((iface) => iface.link_state === "up").length ?? 0;
   const totalCount = interfacesQuery.data?.length ?? 0;
+  const networkCount = networksQuery.data?.length ?? 0;
 
   return (
     <div className="space-y-6">
@@ -95,16 +98,21 @@ export function DashboardPage() {
             <p className="mt-1 font-medium">{infoQuery.data.name}</p>
           </div>
           <div className="border-l-2 border-line pl-3">
-            <p className="text-xs tracking-wide text-ink-muted uppercase">API</p>
-            <p className="mt-1 font-mono text-sm">{infoQuery.data.api_prefix}</p>
-          </div>
-          <div className="border-l-2 border-line pl-3">
             <p className="text-xs tracking-wide text-ink-muted uppercase">Interfaces</p>
             <p className="mt-1 font-mono text-sm">
               {interfacesQuery.isLoading ? "…" : `${upCount} up / ${totalCount}`}
             </p>
             <Link className="mt-1 inline-block text-xs text-accent hover:underline" to="/interfaces">
               Vis alle
+            </Link>
+          </div>
+          <div className="border-l-2 border-line pl-3">
+            <p className="text-xs tracking-wide text-ink-muted uppercase">Networks</p>
+            <p className="mt-1 font-mono text-sm">
+              {networksQuery.isLoading ? "…" : networkCount}
+            </p>
+            <Link className="mt-1 inline-block text-xs text-accent hover:underline" to="/networks">
+              Administrer
             </Link>
           </div>
           <div className="border-l-2 border-line pl-3">

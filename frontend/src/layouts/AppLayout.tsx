@@ -16,6 +16,9 @@ export function AppLayout() {
             <Link className="text-ink-muted hover:text-ink" to="/interfaces">
               Interfaces
             </Link>
+            <Link className="text-ink-muted hover:text-ink" to="/networks">
+              Networks
+            </Link>
           </nav>
         </div>
       </header>

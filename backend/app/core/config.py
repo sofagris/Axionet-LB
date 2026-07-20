@@ -31,6 +31,11 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("HOST_SYSFS_ROOT", "AX_HOST_SYSFS_ROOT"),
         description="Sysfs root used for NIC discovery. Use /host/sys when host /sys is bind-mounted.",
     )
+    host_net_nsenter: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("HOST_NET_NSENTER", "AX_HOST_NET_NSENTER"),
+        description="Use nsenter into PID 1 netns for VLAN device management.",
+    )
 
 
 @lru_cache
