@@ -47,6 +47,11 @@ class HostNetworkAdapter:
         result = self._run(["ip", "link", "show", "dev", name], check=False)
         return result.returncode == 0
 
+    def set_promiscuous(self, name: str, *, enabled: bool = True) -> None:
+        """Enable/disable promiscuous mode (required for macvlan RX of foreign MACs)."""
+        self._require_name(name)
+        self._run(["ip", "link", "set", "dev", name, "promisc", "on" if enabled else "off"])
+
     def set_mtu(self, name: str, mtu: int) -> None:
         self._require_name(name)
         if not (68 <= mtu <= 9216):

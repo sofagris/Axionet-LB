@@ -156,10 +156,23 @@ class NetworkService:
             in {NetworkType.IPVLAN_L2, NetworkType.IPVLAN_L3, NetworkType.MACVLAN}
             and payload.vlan_id is None
         ):
+            if payload.network_type in {
+                NetworkType.IPVLAN_L2,
+                NetworkType.IPVLAN_L3,
+                NetworkType.MACVLAN,
+                NetworkType.UNTAGGED_ACCESS,
+            }:
+                self._host_net.set_promiscuous(parent.name, enabled=True)
             return parent.name
 
         if payload.vlan_id is not None:
             ensured = self._host_net.ensure_vlan_subinterface(parent.name, payload.vlan_id)
+            if payload.network_type in {
+                NetworkType.IPVLAN_L2,
+                NetworkType.IPVLAN_L3,
+                NetworkType.MACVLAN,
+            }:
+                self._host_net.set_promiscuous(parent.name, enabled=True)
             return ensured.device_name
 
         return parent.name
