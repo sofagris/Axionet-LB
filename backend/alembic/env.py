@@ -15,6 +15,7 @@ from app.models import (  # noqa: F401
     PhysicalInterface,
     ServiceInstance,
     ServiceVip,
+    ServiceVipLink,
     User,
 )
 

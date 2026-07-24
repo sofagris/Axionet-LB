@@ -12,6 +12,7 @@ from app.models.service_instance import (
     ServiceInstance,
 )
 from app.models.service_vip import ServiceVip
+from app.models.service_vip_link import ServiceVipLink
 from app.models.user import User
 
 __all__ = [
@@ -31,6 +32,7 @@ __all__ = [
     "PhysicalInterface",
     "ServiceInstance",
     "ServiceVip",
+    "ServiceVipLink",
     "User",
     "ValidationStatus",
 ]

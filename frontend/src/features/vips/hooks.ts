@@ -1,6 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createVip, deleteVip, disableVip, enableVip, fetchVips } from "../../api/vips";
-import type { VipCreatePayload } from "../../types/vips";
+import {
+  addVipLink,
+  createVip,
+  deleteVip,
+  disableVip,
+  enableVip,
+  fetchVips,
+  removeVipLink,
+} from "../../api/vips";
+import type { VipCreatePayload, VipLinkCreatePayload } from "../../types/vips";
 
 export function useVips() {
   return useQuery({
@@ -47,6 +55,30 @@ export function useDeleteVip() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteVip(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["vips"] });
+      await queryClient.invalidateQueries({ queryKey: ["instances"] });
+    },
+  });
+}
+
+export function useAddVipLink() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { vipId: string; payload: VipLinkCreatePayload }) =>
+      addVipLink(input.vipId, input.payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["vips"] });
+      await queryClient.invalidateQueries({ queryKey: ["instances"] });
+    },
+  });
+}
+
+export function useRemoveVipLink() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { vipId: string; linkId: string }) =>
+      removeVipLink(input.vipId, input.linkId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["vips"] });
       await queryClient.invalidateQueries({ queryKey: ["instances"] });

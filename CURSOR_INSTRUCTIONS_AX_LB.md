@@ -1144,9 +1144,9 @@ Knytt en VIP til en HAProxy-instans og annonser den via en FRR-instans. **Modell
 
 #### Utenfor Milestone 9
 
-- Health-gated withdraw (M9.1)
-- Eget VIP-prefiks + DNAT via FRR (M9.2)
-- Multi-homing / ECMP (M9.3)
+- Health-gated withdraw (M9.1) — gjort
+- Eget VIP-prefiks + DNAT via FRR (M9.2) — gjort
+- Multi-homing / ECMP (M9.3) — gjort
 - Anycast-eierskap, VRRP, multi-node (M10+)
 
 ### Milestone 9.1 – Health-gated VIP withdraw
@@ -1184,6 +1184,17 @@ Eget VIP-prefiks (ikke nødvendigvis på peer-L2). **Modell 2:** VIP ligger på 
 2. FRR har VIP på lo og DNAT-regler
 3. Peer ser `/32`
 4. Stopp HAProxy → prefiks/DNAT trekkes
+
+### Milestone 9.3 – Multi-homing / ECMP
+
+Én VIP kan ha flere dataplan-lenker `(frr_instance_id, network_id)`. Hver FRR-kant annonserer samme `/32` (og i routed-mode programmerer lo+DNAT). Health-gate (M9.1) gjelder fortsatt på VIP-ens HAProxy. Primary `frr_instance_id`/`network_id` speiler første link.
+
+#### Akseptansekriterium (lab)
+
+1. Opprett routed VIP med to FRR-lenker
+2. Begge FRR har `/32` i BGP networks (+ DNAT hvis routed)
+3. Stopp HAProxy → begge withdraw
+4. Slett én link → kun den FRR tegnes ned
 
 ---
 
@@ -1320,9 +1331,9 @@ Grunnleggende BGP-peering er Milestone 8. VIP-orkestrering starter i Milestone 9
 |------|---------|
 | **M9** | Same-L2 VIP = HAProxy-IP + FRR `/32`-annonsering |
 | **M9.1** | Health-gated withdraw (stopp/unhealthy HAProxy → fjern `/32`) |
-| **M9.2** (nå) | Modell 2: eget VIP-prefiks med FRR-mottak + DNAT/forward til HAProxy |
-| **M9.3** | Multi-homing / ECMP (flere dataplan-linker) |
-| **M10+** | Anycast-eierskap, VRRP, multi-node |
+| **M9.2** | Modell 2: eget VIP-prefiks med FRR-mottak + DNAT/forward til HAProxy |
+| **M9.3** (nå) | Multi-homing / ECMP: flere `(FRR, network)`-lenker per VIP; hver kant annonserer `/32` |
+| **M10+** | Anycast-eierskap, VRRP, multi-node / cross-box control plane |
 
 Modell 1 er bevisst midlertidig lab-/MVP-strategi.
 

@@ -8,6 +8,25 @@ from pydantic import BaseModel, ConfigDict, Field
 VipMode = Literal["same_l2", "routed"]
 
 
+class VipLinkCreate(BaseModel):
+    frr_instance_id: str
+    network_id: str
+
+
+class VipLinkRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    vip_id: str
+    frr_instance_id: str
+    network_id: str
+    attached: bool
+    dataplane_ready: bool
+    advertised: bool
+    created_at: datetime
+    updated_at: datetime
+
+
 class VipCreate(BaseModel):
     name: str = Field(min_length=1, max_length=128)
     address: str = Field(min_length=1, max_length=64)
@@ -19,6 +38,8 @@ class VipCreate(BaseModel):
     enabled: bool = True
     advertise: bool = True
     bind_frontends: bool = False
+    # Additional dataplane links beyond the primary frr/network pair.
+    links: list[VipLinkCreate] = Field(default_factory=list)
 
 
 class VipUpdate(BaseModel):
@@ -54,3 +75,4 @@ class VipRead(BaseModel):
     created_at: datetime
     updated_at: datetime
     announce_prefix: str | None = None
+    links: list[VipLinkRead] = Field(default_factory=list)

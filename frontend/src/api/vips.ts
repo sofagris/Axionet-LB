@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { apiFetch } from "./client";
-import { VipSchema, type Vip, type VipCreatePayload } from "../types/vips";
+import {
+  VipSchema,
+  type Vip,
+  type VipCreatePayload,
+  type VipLinkCreatePayload,
+} from "../types/vips";
 
 export function fetchVips(): Promise<Vip[]> {
   return apiFetch("/api/v1/vips", (data) => z.array(VipSchema).parse(data));
@@ -27,4 +32,17 @@ export function disableVip(id: string): Promise<Vip> {
 
 export function deleteVip(id: string): Promise<void> {
   return apiFetch(`/api/v1/vips/${id}`, () => undefined, { method: "DELETE" });
+}
+
+export function addVipLink(vipId: string, payload: VipLinkCreatePayload): Promise<Vip> {
+  return apiFetch(`/api/v1/vips/${vipId}/links`, (data) => VipSchema.parse(data), {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export function removeVipLink(vipId: string, linkId: string): Promise<Vip> {
+  return apiFetch(`/api/v1/vips/${vipId}/links/${linkId}`, (data) => VipSchema.parse(data), {
+    method: "DELETE",
+  });
 }

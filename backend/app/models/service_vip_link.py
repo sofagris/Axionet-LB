@@ -4,26 +4,32 @@ import uuid
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
 if TYPE_CHECKING:
-    from app.models.service_vip_link import ServiceVipLink
+    from app.models.service_vip import ServiceVip
 
 
-class ServiceVip(Base):
-    __tablename__ = "service_vips"
+class ServiceVipLink(Base):
+    """One dataplane edge for a VIP: FRR instance + network (M9.3 ECMP)."""
+
+    __tablename__ = "service_vip_links"
+    __table_args__ = (
+        UniqueConstraint(
+            "vip_id",
+            "frr_instance_id",
+            "network_id",
+            name="uq_service_vip_links_vip_frr_net",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    name: Mapped[str] = mapped_column(String(128), unique=True, nullable=False, index=True)
-    address: Mapped[str] = mapped_column(String(64), nullable=False)
-    mode: Mapped[str] = mapped_column(String(32), nullable=False, default="same_l2")
-    backend_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    haproxy_instance_id: Mapped[str] = mapped_column(
+    vip_id: Mapped[str] = mapped_column(
         String(36),
-        ForeignKey("service_instances.id"),
+        ForeignKey("service_vips.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
@@ -39,12 +45,9 @@ class ServiceVip(Base):
         nullable=False,
         index=True,
     )
-    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    advertise: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     attached: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     dataplane_ready: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     advertised: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -57,9 +60,4 @@ class ServiceVip(Base):
         onupdate=lambda: datetime.now(UTC),
     )
 
-    links: Mapped[list[ServiceVipLink]] = relationship(
-        "ServiceVipLink",
-        back_populates="vip",
-        cascade="all, delete-orphan",
-        order_by="ServiceVipLink.created_at",
-    )
+    vip: Mapped[ServiceVip] = relationship("ServiceVip", back_populates="links")

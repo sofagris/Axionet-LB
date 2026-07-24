@@ -103,6 +103,30 @@ def db_session() -> Generator[Session, None, None]:
             health_status=HealthStatus.HEALTHY.value,
         )
     )
+    session.add(
+        ServiceInstance(
+            id="frr-2",
+            name="edge-sonic-b",
+            service_type="frr",
+            desired_state=DesiredState.RUNNING.value,
+            actual_state=ActualState.RUNNING.value,
+            image="quay.io/frrouting/frr:10.2.6",
+            image_version="10.2.6",
+            restart_policy="unless-stopped",
+            configuration={
+                "hostname": "edge-sonic-b",
+                "router_id": "192.168.22.3",
+                "local_as": 65001,
+                "neighbors": [
+                    {"name": "sonic", "address": "192.168.22.1", "remote_as": 65100},
+                ],
+                "networks": ["203.0.113.0/24"],
+                "log_stdout": True,
+            },
+            container_id="frr-container-2",
+            health_status=HealthStatus.HEALTHY.value,
+        )
+    )
     session.commit()
     try:
         yield session
@@ -339,3 +363,54 @@ def test_routed_vip_dnat_and_announce(client: TestClient, docker_adapter: MagicM
     assert disabled.status_code == 200
     assert disabled.json()["advertised"] is False
     assert disabled.json()["dataplane_ready"] is False
+
+
+def test_vip_multi_link_ecmp_announce_and_remove(
+    client: TestClient,
+    docker_adapter: MagicMock,
+) -> None:
+    attached = client.post(
+        "/api/v1/instances/hap-1/networks",
+        json={"network_id": "net-sonic", "ip_address": "192.168.22.20"},
+    )
+    assert attached.status_code == 201, attached.text
+
+    created = client.post(
+        "/api/v1/vips",
+        json={
+            "name": "vip-ecmp",
+            "address": "203.0.113.50",
+            "mode": "routed",
+            "haproxy_instance_id": "hap-1",
+            "frr_instance_id": "frr-1",
+            "network_id": "net-sonic",
+            "links": [{"frr_instance_id": "frr-2", "network_id": "net-sonic"}],
+            "enabled": True,
+            "advertise": True,
+        },
+    )
+    assert created.status_code == 201, created.text
+    body = created.json()
+    assert len(body["links"]) == 2
+    assert body["advertised"] is True
+    assert all(link["advertised"] for link in body["links"])
+    assert all(link["dataplane_ready"] for link in body["links"])
+
+    frr1 = client.get("/api/v1/instances/frr-1").json()
+    frr2 = client.get("/api/v1/instances/frr-2").json()
+    assert "203.0.113.50/32" in frr1["configuration"]["networks"]
+    assert "203.0.113.50/32" in frr2["configuration"]["networks"]
+
+    second = next(link for link in body["links"] if link["frr_instance_id"] == "frr-2")
+    removed = client.delete(f"/api/v1/vips/{body['id']}/links/{second['id']}")
+    assert removed.status_code == 200, removed.text
+    assert len(removed.json()["links"]) == 1
+    frr2_after = client.get("/api/v1/instances/frr-2").json()
+    assert "203.0.113.50/32" not in frr2_after["configuration"]["networks"]
+    frr1_after = client.get("/api/v1/instances/frr-1").json()
+    assert "203.0.113.50/32" in frr1_after["configuration"]["networks"]
+
+    disabled = client.post(f"/api/v1/vips/{body['id']}/disable")
+    assert disabled.status_code == 200
+    assert disabled.json()["advertised"] is False
+    assert all(not link["advertised"] for link in disabled.json()["links"])

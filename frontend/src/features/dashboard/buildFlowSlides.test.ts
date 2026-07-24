@@ -70,6 +70,7 @@ const vip: Vip = {
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
   announce_prefix: "203.0.113.10/32",
+  links: [],
 };
 
 describe("buildFlowSlides", () => {
