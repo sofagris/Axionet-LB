@@ -6,9 +6,11 @@ import { useFrrBgp, useFrrConfig, useUpdateFrrConfig } from "../features/frr/hoo
 import {
   useInstanceAction,
   useInstanceLogs,
+  useInstanceNetworkMutations,
   useInstances,
   useValidateExistingInstance,
 } from "../features/instances/hooks";
+import { useNetworks } from "../features/networks/hooks";
 import { useRestoreRevision, useRevision, useRevisions } from "../features/revisions/hooks";
 import type { InstanceValidateResult } from "../types/instances";
 
@@ -46,6 +48,12 @@ export function FrrDetailPage() {
   const logsQuery = useInstanceLogs(tab === "logs" ? instanceId : null, logTail);
   const actionMutation = useInstanceAction();
   const validateMutation = useValidateExistingInstance();
+  const networksQuery = useNetworks();
+  const networkMutations = useInstanceNetworkMutations();
+  const [attachNetworkId, setAttachNetworkId] = useState("");
+  const [attachIp, setAttachIp] = useState("");
+  const [editingAttachmentId, setEditingAttachmentId] = useState<string | null>(null);
+  const [editAttachmentIp, setEditAttachmentIp] = useState("");
 
   const [hostname, setHostname] = useState("");
   const [routerId, setRouterId] = useState("");
@@ -189,21 +197,176 @@ export function FrrDetailPage() {
       {tab === "overview" ? (
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-4">
-            <div className="border border-line bg-paper-elevated p-4">
-              <h3 className="font-medium text-ink">{t("frr.containerIpTitle")}</h3>
-              <p className="mt-1 text-sm text-ink-muted">{t("frr.containerIpHint")}</p>
+            <div className="space-y-3 border border-line bg-paper-elevated p-4">
+              <div>
+                <h3 className="font-medium text-ink">{t("frr.attachmentsTitle")}</h3>
+                <p className="mt-1 text-sm text-ink-muted">{t("frr.attachmentsHint")}</p>
+              </div>
+              <form
+                className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (!attachNetworkId) return;
+                  void networkMutations.attach
+                    .mutateAsync({
+                      id: instanceId,
+                      payload: {
+                        network_id: attachNetworkId,
+                        ip_address: attachIp.trim() || null,
+                      },
+                    })
+                    .then(() => {
+                      setAttachNetworkId("");
+                      setAttachIp("");
+                    });
+                }}
+              >
+                <label className="block text-sm">
+                  <span className="text-ink-muted">{t("frr.attachNetwork")}</span>
+                  <select
+                    className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                    value={attachNetworkId}
+                    onChange={(e) => setAttachNetworkId(e.target.value)}
+                    required
+                  >
+                    <option value="">{t("frr.attachNetworkPlaceholder")}</option>
+                    {(networksQuery.data ?? [])
+                      .filter(
+                        (net) =>
+                          net.enabled &&
+                          !(instance?.networks ?? []).some((item) => item.network_id === net.id),
+                      )
+                      .map((net) => (
+                        <option key={net.id} value={net.id}>
+                          {net.name}
+                          {net.subnet ? ` (${net.subnet})` : ""}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <label className="block text-sm">
+                  <span className="text-ink-muted">{t("frr.attachIp")}</span>
+                  <input
+                    className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                    value={attachIp}
+                    onChange={(e) => setAttachIp(e.target.value)}
+                    placeholder={t("frr.attachIpPlaceholder")}
+                  />
+                </label>
+                <div className="flex items-end">
+                  <button
+                    type="submit"
+                    className="w-full border border-accent bg-accent px-3 py-2 text-sm text-white disabled:opacity-60 sm:w-auto"
+                    disabled={networkMutations.attach.isPending || !attachNetworkId}
+                  >
+                    {t("frr.attach")}
+                  </button>
+                </div>
+              </form>
+              {networkMutations.attach.isError ||
+              networkMutations.update.isError ||
+              networkMutations.detach.isError ? (
+                <p className="text-sm text-danger" role="alert">
+                  {(
+                    networkMutations.attach.error ||
+                    networkMutations.update.error ||
+                    networkMutations.detach.error
+                  ) instanceof Error
+                    ? (
+                        networkMutations.attach.error ||
+                        networkMutations.update.error ||
+                        networkMutations.detach.error
+                      )?.message
+                    : t("frr.attachError")}
+                </p>
+              ) : null}
               {(instance?.networks ?? []).length === 0 ? (
-                <p className="mt-3 font-mono text-sm text-ink-muted">—</p>
+                <p className="font-mono text-sm text-ink-muted">{t("frr.noAttachments")}</p>
               ) : (
-                <ul className="mt-3 space-y-2 font-mono text-sm">
-                  {(instance?.networks ?? []).map((attachment) => (
-                    <li key={attachment.id} className="border-t border-line pt-2 first:border-t-0 first:pt-0">
-                      <span className="text-ink">{attachment.ip_address || t("frr.noStaticIp")}</span>
-                      <span className="mt-0.5 block text-xs text-ink-muted">
-                        network {attachment.network_id.slice(0, 8)}…
-                      </span>
-                    </li>
-                  ))}
+                <ul className="space-y-2">
+                  {(instance?.networks ?? []).map((attachment) => {
+                    const networkName =
+                      networksQuery.data?.find((net) => net.id === attachment.network_id)?.name ??
+                      attachment.network_id;
+                    const editing = editingAttachmentId === attachment.id;
+                    return (
+                      <li
+                        key={attachment.id}
+                        className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-2 first:border-t-0 first:pt-0"
+                      >
+                        <div className="min-w-0 font-mono text-sm">
+                          <span className="font-medium text-ink">{networkName}</span>
+                          {editing ? (
+                            <input
+                              className="mt-1 block w-full max-w-xs border border-line bg-paper px-2 py-1 font-mono text-sm"
+                              value={editAttachmentIp}
+                              onChange={(e) => setEditAttachmentIp(e.target.value)}
+                              placeholder={t("frr.attachIpPlaceholder")}
+                            />
+                          ) : (
+                            <span className="mt-0.5 block text-xs text-ink-muted">
+                              {attachment.ip_address || t("frr.noStaticIp")}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-3 text-sm">
+                          {editing ? (
+                            <>
+                              <button
+                                type="button"
+                                className="text-accent hover:underline"
+                                onClick={() => {
+                                  void networkMutations.update
+                                    .mutateAsync({
+                                      id: instanceId,
+                                      attachmentId: attachment.id,
+                                      payload: { ip_address: editAttachmentIp.trim() || null },
+                                    })
+                                    .then(() => setEditingAttachmentId(null));
+                                }}
+                              >
+                                {t("frr.saveIp")}
+                              </button>
+                              <button
+                                type="button"
+                                className="text-ink-muted hover:underline"
+                                onClick={() => setEditingAttachmentId(null)}
+                              >
+                                {t("frr.cancelEdit")}
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              className="text-accent hover:underline"
+                              onClick={() => {
+                                setEditingAttachmentId(attachment.id);
+                                setEditAttachmentIp(attachment.ip_address ?? "");
+                              }}
+                            >
+                              {t("frr.editIp")}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="text-danger hover:underline"
+                            disabled={networkMutations.detach.isPending}
+                            onClick={() => {
+                              if (!window.confirm(t("frr.detachConfirm", { name: networkName }))) {
+                                return;
+                              }
+                              void networkMutations.detach.mutateAsync({
+                                id: instanceId,
+                                attachmentId: attachment.id,
+                              });
+                            }}
+                          >
+                            {t("frr.detach")}
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
