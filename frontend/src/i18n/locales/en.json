@@ -467,6 +467,69 @@
     "legendMaint": "MAINT"
   },
 
+  "haproxyDetail": {
+    "breadcrumbInstances": "Instances",
+    "breadcrumbService": "HAProxy",
+    "noContainer": "no container",
+    "tabsLabel": "HAProxy sections",
+    "tabs": {
+      "overview": "Overview",
+      "frontends": "Frontends",
+      "backends": "Backends",
+      "servers": "Servers",
+      "certificates": "Certificates",
+      "maps": "Maps",
+      "acls": "ACLs",
+      "status": "Runtime Status",
+      "logs": "Logs",
+      "revisions": "Revisions"
+    },
+    "overviewTitle": "Instance overview",
+    "overviewSubtitle": "Health, live metrics, and shortcuts into config and the runtime graph.",
+    "actions": {
+      "softReload": "Soft reload",
+      "reconcile": "Reconcile",
+      "validate": "Validate",
+      "restart": "Restart"
+    },
+    "configValid": "Config valid",
+    "configInvalid": "Config invalid",
+    "shortcuts": {
+      "runtime": "Runtime Status",
+      "runtimeHint": "Open the live frontend → backend → server graph",
+      "frontends": "Frontends",
+      "frontendsHint": "{{count}} configured — edit binds and routing",
+      "backends": "Backends",
+      "backendsHint": "{{count}} configured — balance and health checks"
+    },
+    "unhealthyBanner": "{{count}} servers not UP",
+    "openRuntimeGraph": "Open in Runtime Status",
+    "metricsHeading": "Metrics & inventory",
+    "stats": {
+      "frontends": "Frontends",
+      "backends": "Backends",
+      "servers": "Servers",
+      "unhealthy": "Unhealthy",
+      "ipVip": "IP / VIP",
+      "image": "Image",
+      "desired": "Desired",
+      "health": "Health",
+      "sessions": "Sessions",
+      "sessionRate": "Session rate",
+      "serversUp": "Servers up",
+      "bytesOut": "Bytes out"
+    },
+    "networksTitle": "Network attachments",
+    "networksHint": "Attach, change IP, or detach Docker networks without recreating the instance.",
+    "network": "Network",
+    "selectNetwork": "Select network…",
+    "ipOptional": "IP (optional)",
+    "dhcpPlaceholder": "DHCP if empty",
+    "statusUnavailable": "Status unavailable",
+    "runtimeActionFailed": "Runtime action failed",
+    "clearCountersResult": "clear counters: {{output}} (ephemeral)"
+  },
+
   "revisions": {
     "restore": "Restore",
     "pick": "Pick a revision"

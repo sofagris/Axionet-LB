@@ -44,6 +44,8 @@ type Props = {
   clearPending: boolean;
   message: string | null;
   actionError: string | null;
+  /** Pre-select a graph node (e.g. from Overview deep-link). */
+  focusNodeId?: string | null;
   onRefresh: () => void;
   onClearCounters: () => void;
   onServerAction: (payload: RuntimeActionPayload) => void;
@@ -71,13 +73,14 @@ function RuntimeGraphInner({
   clearPending,
   message,
   actionError,
+  focusNodeId,
   onRefresh,
   onClearCounters,
   onServerAction,
 }: Props) {
   const { t } = useTranslation();
   const [weight, setWeight] = useState("100");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(focusNodeId ?? null);
 
   const built = useMemo(
     () => buildRuntimeGraph({ frontends, backends, status }),
@@ -91,6 +94,13 @@ function RuntimeGraphInner({
     setNodes(built.nodes);
     setEdges(built.edges);
   }, [built.nodes, built.edges, setNodes, setEdges]);
+
+  useEffect(() => {
+    if (!focusNodeId) return;
+    if (built.nodes.some((node) => node.id === focusNodeId)) {
+      setSelectedId(focusNodeId);
+    }
+  }, [focusNodeId, built.nodes]);
 
   const selected = useMemo(
     () => nodes.find((node) => node.id === selectedId)?.data ?? null,

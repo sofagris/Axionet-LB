@@ -901,6 +901,8 @@ Mobil: kollapsbar drawer. Runtime Status bruker `@xyflow/react` for zoom/pan/min
 
 **Konfigurerbare dashboards (MVP):** `/` er fortsatt fast systemoversikt. `/dashboards` + `/dashboards/:id` for egendefinerte boards med JSON-widget-layout. Første widget: `traffic_flow`. Publish fra system-dashboard; «Add widget» i board-editor.
 
+**HAProxy detail:** faner i18n (`haproxyDetail.tabs`), Overview med snareveier til Runtime Status / Frontends / Backends, unhealthy-banner som deep-linker til runtime-graf (`?tab=status&node=srv:…`), traffic-domain styling.
+
 ### 12.6 API-klient
 
 Generer TypeScript-typer fra FastAPI OpenAPI dersom mulig.

@@ -468,6 +468,69 @@
     "legendMaint": "MAINT"
   },
 
+  "haproxyDetail": {
+    "breadcrumbInstances": "Instances",
+    "breadcrumbService": "HAProxy",
+    "noContainer": "ingen container",
+    "tabsLabel": "HAProxy-seksjoner",
+    "tabs": {
+      "overview": "Overview",
+      "frontends": "Frontends",
+      "backends": "Backends",
+      "servers": "Servers",
+      "certificates": "Certificates",
+      "maps": "Maps",
+      "acls": "ACLs",
+      "status": "Runtime Status",
+      "logs": "Logs",
+      "revisions": "Revisions"
+    },
+    "overviewTitle": "Instans-oversikt",
+    "overviewSubtitle": "Helse, live-metrikker og snarveier til config og runtime-grafen.",
+    "actions": {
+      "softReload": "Soft reload",
+      "reconcile": "Reconcile",
+      "validate": "Validate",
+      "restart": "Restart"
+    },
+    "configValid": "Config gyldig",
+    "configInvalid": "Config ugyldig",
+    "shortcuts": {
+      "runtime": "Runtime Status",
+      "runtimeHint": "Åpne live frontend → backend → server-graf",
+      "frontends": "Frontends",
+      "frontendsHint": "{{count}} konfigurert — rediger binds og routing",
+      "backends": "Backends",
+      "backendsHint": "{{count}} konfigurert — balance og health checks"
+    },
+    "unhealthyBanner": "{{count}} servere er ikke UP",
+    "openRuntimeGraph": "Åpne i Runtime Status",
+    "metricsHeading": "Metrikker og inventar",
+    "stats": {
+      "frontends": "Frontends",
+      "backends": "Backends",
+      "servers": "Servers",
+      "unhealthy": "Unhealthy",
+      "ipVip": "IP / VIP",
+      "image": "Image",
+      "desired": "Desired",
+      "health": "Health",
+      "sessions": "Sessions",
+      "sessionRate": "Session rate",
+      "serversUp": "Servers up",
+      "bytesOut": "Bytes out"
+    },
+    "networksTitle": "Nettverkstilknytninger",
+    "networksHint": "Legg til, endre IP eller fjern Docker-nettverk uten recreate.",
+    "network": "Nettverk",
+    "selectNetwork": "Velg nettverk…",
+    "ipOptional": "IP (valgfritt)",
+    "dhcpPlaceholder": "DHCP hvis tom",
+    "statusUnavailable": "Status utilgjengelig",
+    "runtimeActionFailed": "Runtime-handling feilet",
+    "clearCountersResult": "clear counters: {{output}} (ephemeral)"
+  },
+
   "revisions": {
     "restore": "Gjenopprett",
     "pick": "Velg en revision"

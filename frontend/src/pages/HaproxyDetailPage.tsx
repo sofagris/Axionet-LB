@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   useHaproxyAcls,
   useHaproxyBackends,
@@ -38,21 +39,28 @@ type Tab =
   | "logs"
   | "revisions";
 
-const TABS: Array<{ id: Tab; label: string }> = [
-  { id: "overview", label: "Overview" },
-  { id: "frontends", label: "Frontends" },
-  { id: "backends", label: "Backends" },
-  { id: "servers", label: "Servers" },
-  { id: "certificates", label: "Certificates" },
-  { id: "maps", label: "Maps" },
-  { id: "acls", label: "ACLs" },
-  { id: "status", label: "Runtime Status" },
-  { id: "logs", label: "Logs" },
-  { id: "revisions", label: "Revisions" },
+const TAB_IDS: Tab[] = [
+  "overview",
+  "frontends",
+  "backends",
+  "servers",
+  "certificates",
+  "maps",
+  "acls",
+  "status",
+  "logs",
+  "revisions",
 ];
 
+function parseTab(value: string | null): Tab | null {
+  if (!value) return null;
+  return TAB_IDS.includes(value as Tab) ? (value as Tab) : null;
+}
+
 export function HaproxyDetailPage() {
+  const { t } = useTranslation();
   const { instanceId = "" } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const instancesQuery = useInstances();
   const instance = useMemo(
     () => instancesQuery.data?.find((item) => item.id === instanceId),
@@ -65,7 +73,8 @@ export function HaproxyDetailPage() {
   const [editingAttachmentId, setEditingAttachmentId] = useState<string | null>(null);
   const [editAttachmentIp, setEditAttachmentIp] = useState("");
 
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>(() => parseTab(searchParams.get("tab")) ?? "overview");
+  const focusNodeId = searchParams.get("node");
   const [selectedRevisionId, setSelectedRevisionId] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState(false);
   const [revisionView, setRevisionView] = useState<"diff" | "full">("diff");
@@ -90,6 +99,19 @@ export function HaproxyDetailPage() {
   const validateMutation = useValidateExistingInstance();
   const [overviewValidation, setOverviewValidation] = useState<InstanceValidateResult | null>(null);
   const mutations = useHaproxyMutations(instanceId);
+
+  const selectTab = (next: Tab, nodeId?: string | null) => {
+    setTab(next);
+    const params = new URLSearchParams();
+    if (next !== "overview") params.set("tab", next);
+    if (nodeId) params.set("node", nodeId);
+    setSearchParams(params, { replace: true });
+  };
+
+  useEffect(() => {
+    const fromUrl = parseTab(searchParams.get("tab")) ?? "overview";
+    setTab((current) => (current === fromUrl ? current : fromUrl));
+  }, [searchParams]);
 
   const [editingFrontend, setEditingFrontend] = useState<string | null>(null);
   const [frontendName, setFrontendName] = useState("web");
@@ -336,152 +358,266 @@ export function HaproxyDetailPage() {
     resetServerForm();
   }
 
+  const unhealthyRows =
+    statusQuery.data?.servers.filter((row) => row.status && row.status.toUpperCase() !== "UP") ??
+    [];
+  const unhealthyServers = unhealthyRows.length;
   const serverCount =
     backendsQuery.data?.reduce((sum, backend) => sum + backend.servers.length, 0) ?? 0;
-  const unhealthyServers =
-    statusQuery.data?.servers.filter((row) => row.status && row.status.toUpperCase() !== "UP")
-      .length ?? 0;
 
   return (
     <div className="space-y-6">
-      <section className="flex flex-wrap items-end justify-between gap-3">
+      <section className="flex flex-wrap items-end justify-between gap-3 border-l-2 border-domain-traffic pl-4">
         <div>
-          <p className="font-mono text-xs text-ink-muted">
+          <p className="font-mono text-[10px] tracking-[0.14em] text-domain-traffic uppercase">
             <Link to="/instances" className="hover:underline">
-              Instances
-            </Link>{" "}
-            / HAProxy
+              {t("haproxyDetail.breadcrumbInstances")}
+            </Link>
+            <span className="text-ink-muted"> / </span>
+            {t("haproxyDetail.breadcrumbService")}
           </p>
           <h2 className="mt-1 text-xl font-semibold tracking-tight text-ink">
             {instance?.name ?? instanceId}
           </h2>
           <p className="mt-1 font-mono text-xs text-ink-muted">
             {instance?.actual_state ?? "…"} · {instance?.health_status ?? "…"} ·{" "}
-            {instance?.container_name ?? "no container"}
+            {instance?.container_name ?? t("haproxyDetail.noContainer")}
           </p>
         </div>
       </section>
 
-      <nav className="flex flex-wrap gap-2 border-b border-line pb-2">
-        {TABS.map((item) => (
+      <nav
+        className="flex flex-wrap gap-1 border-b border-line pb-2"
+        aria-label={t("haproxyDetail.tabsLabel")}
+      >
+        {TAB_IDS.map((id) => (
           <button
-            key={item.id}
+            key={id}
             type="button"
-            onClick={() => setTab(item.id)}
+            onClick={() => selectTab(id)}
             className={`px-3 py-1.5 text-sm ${
-              tab === item.id
-                ? "border-b-2 border-accent font-medium text-ink"
+              tab === id
+                ? "border-b-2 border-domain-traffic font-medium text-domain-traffic"
                 : "text-ink-muted hover:text-ink"
             }`}
           >
-            {item.label}
+            {t(`haproxyDetail.tabs.${id}`)}
           </button>
         ))}
       </nav>
 
       {tab === "overview" ? (
         <section className="space-y-6">
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              disabled={actionMutation.isPending}
-              className="border border-line px-3 py-1.5 text-sm hover:border-accent disabled:opacity-60"
-              onClick={() => actionMutation.mutate({ id: instanceId, action: "reload" })}
-            >
-              Soft reload
-            </button>
-            <button
-              type="button"
-              disabled={actionMutation.isPending}
-              className="border border-line px-3 py-1.5 text-sm hover:border-accent disabled:opacity-60"
-              onClick={() => actionMutation.mutate({ id: instanceId, action: "reconcile" })}
-            >
-              Reconcile
-            </button>
-            <button
-              type="button"
-              disabled={validateMutation.isPending}
-              className="border border-line px-3 py-1.5 text-sm hover:border-accent disabled:opacity-60"
-              onClick={() => {
-                void validateMutation.mutateAsync(instanceId).then(setOverviewValidation);
-              }}
-            >
-              Validate
-            </button>
-            <button
-              type="button"
-              disabled={actionMutation.isPending}
-              className="border border-line px-3 py-1.5 text-sm hover:border-accent disabled:opacity-60"
-              onClick={() => actionMutation.mutate({ id: instanceId, action: "restart" })}
-            >
-              Restart
-            </button>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-ink">{t("haproxyDetail.overviewTitle")}</h3>
+              <p className="mt-0.5 text-sm text-ink-muted">{t("haproxyDetail.overviewSubtitle")}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={actionMutation.isPending}
+                className="border border-line px-3 py-1.5 text-sm hover:border-domain-traffic disabled:opacity-60"
+                onClick={() => actionMutation.mutate({ id: instanceId, action: "reload" })}
+              >
+                {t("haproxyDetail.actions.softReload")}
+              </button>
+              <button
+                type="button"
+                disabled={actionMutation.isPending}
+                className="border border-line px-3 py-1.5 text-sm hover:border-domain-traffic disabled:opacity-60"
+                onClick={() => actionMutation.mutate({ id: instanceId, action: "reconcile" })}
+              >
+                {t("haproxyDetail.actions.reconcile")}
+              </button>
+              <button
+                type="button"
+                disabled={validateMutation.isPending}
+                className="border border-line px-3 py-1.5 text-sm hover:border-domain-traffic disabled:opacity-60"
+                onClick={() => {
+                  void validateMutation.mutateAsync(instanceId).then(setOverviewValidation);
+                }}
+              >
+                {t("haproxyDetail.actions.validate")}
+              </button>
+              <button
+                type="button"
+                disabled={actionMutation.isPending}
+                className="border border-line px-3 py-1.5 text-sm hover:border-domain-traffic disabled:opacity-60"
+                onClick={() => actionMutation.mutate({ id: instanceId, action: "restart" })}
+              >
+                {t("haproxyDetail.actions.restart")}
+              </button>
+            </div>
           </div>
           {actionMutation.isError ? (
             <p className="text-sm text-danger">
-              {actionMutation.error instanceof Error ? actionMutation.error.message : "Feil"}
+              {actionMutation.error instanceof Error
+                ? actionMutation.error.message
+                : t("common.unknownError")}
             </p>
           ) : null}
           {overviewValidation ? (
             <p className={`font-mono text-sm ${overviewValidation.ok ? "text-ok" : "text-danger"}`}>
-              {overviewValidation.ok ? "Config valid" : "Config invalid"}: {overviewValidation.output}
+              {overviewValidation.ok
+                ? t("haproxyDetail.configValid")
+                : t("haproxyDetail.configInvalid")}
+              : {overviewValidation.output}
             </p>
           ) : null}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Frontends" value={String(frontendsQuery.data?.length ?? "…")} />
-            <StatCard label="Backends" value={String(backendsQuery.data?.length ?? "…")} />
-            <StatCard label="Servers" value={String(serverCount || "…")} />
-            <StatCard
-              label="Unhealthy"
-              value={statusQuery.isError ? "—" : String(unhealthyServers)}
-            />
-            <StatCard
-              label="IP / VIP"
-              value={
-                instance?.networks?.length
-                  ? instance.networks.map((item) => item.ip_address || "dhcp").join(", ")
-                  : "—"
-              }
-            />
-            <StatCard label="Image" value={instance?.image ?? "—"} />
-            <StatCard label="Desired" value={instance?.desired_state ?? "—"} />
-            <StatCard label="Health" value={instance?.health_status ?? "—"} />
-            <StatCard
-              label="Sessions"
-              value={
-                metricsQuery.data?.available
-                  ? String(metricsQuery.data.current_sessions)
-                  : metricsQuery.data?.detail
-                    ? "—"
-                    : "…"
-              }
-            />
-            <StatCard
-              label="Session rate"
-              value={metricsQuery.data?.available ? String(metricsQuery.data.session_rate) : "—"}
-            />
-            <StatCard
-              label="Servers up"
-              value={
-                metricsQuery.data?.available
-                  ? `${metricsQuery.data.servers_up}/${metricsQuery.data.servers_total}`
-                  : "—"
-              }
-            />
-            <StatCard
-              label="Bytes out"
-              value={
-                metricsQuery.data?.available ? String(metricsQuery.data.bytes_out) : "—"
-              }
-            />
+
+          <div className="grid gap-2 sm:grid-cols-3">
+            <button
+              type="button"
+              className="border border-line border-l-2 border-l-domain-traffic bg-paper-elevated/40 px-3 py-2.5 text-left hover:bg-domain-traffic-soft/40"
+              onClick={() => selectTab("status")}
+            >
+              <p className="font-mono text-[10px] tracking-wide text-domain-traffic uppercase">
+                {t("haproxyDetail.shortcuts.runtime")}
+              </p>
+              <p className="mt-1 text-sm text-ink">{t("haproxyDetail.shortcuts.runtimeHint")}</p>
+            </button>
+            <button
+              type="button"
+              className="border border-line border-l-2 border-l-domain-traffic bg-paper-elevated/40 px-3 py-2.5 text-left hover:bg-domain-traffic-soft/40"
+              onClick={() => selectTab("frontends")}
+            >
+              <p className="font-mono text-[10px] tracking-wide text-domain-traffic uppercase">
+                {t("haproxyDetail.shortcuts.frontends")}
+              </p>
+              <p className="mt-1 text-sm text-ink">
+                {t("haproxyDetail.shortcuts.frontendsHint", {
+                  count: frontendsQuery.data?.length ?? 0,
+                })}
+              </p>
+            </button>
+            <button
+              type="button"
+              className="border border-line border-l-2 border-l-domain-traffic bg-paper-elevated/40 px-3 py-2.5 text-left hover:bg-domain-traffic-soft/40"
+              onClick={() => selectTab("backends")}
+            >
+              <p className="font-mono text-[10px] tracking-wide text-domain-traffic uppercase">
+                {t("haproxyDetail.shortcuts.backends")}
+              </p>
+              <p className="mt-1 text-sm text-ink">
+                {t("haproxyDetail.shortcuts.backendsHint", {
+                  count: backendsQuery.data?.length ?? 0,
+                })}
+              </p>
+            </button>
+          </div>
+
+          {unhealthyServers > 0 ? (
+            <div className="border border-danger/40 bg-danger/5 px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-medium text-danger">
+                  {t("haproxyDetail.unhealthyBanner", { count: unhealthyServers })}
+                </p>
+                <button
+                  type="button"
+                  className="border border-danger/50 px-2.5 py-1 text-xs text-danger hover:bg-danger/10"
+                  onClick={() => {
+                    const first = unhealthyRows[0];
+                    const nodeId = first
+                      ? `srv:${first.proxy}:${first.server}`
+                      : null;
+                    selectTab("status", nodeId);
+                  }}
+                >
+                  {t("haproxyDetail.openRuntimeGraph")}
+                </button>
+              </div>
+              <ul className="mt-2 space-y-1 font-mono text-[11px] text-ink-muted">
+                {unhealthyRows.slice(0, 5).map((row) => (
+                  <li key={`${row.proxy}-${row.server}`}>
+                    <button
+                      type="button"
+                      className="hover:text-domain-traffic hover:underline"
+                      onClick={() => selectTab("status", `srv:${row.proxy}:${row.server}`)}
+                    >
+                      {row.proxy}/{row.server} · {row.status}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          <div>
+            <p className="mb-2 font-mono text-[10px] tracking-[0.12em] text-ink-muted uppercase">
+              {t("haproxyDetail.metricsHeading")}
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                label={t("haproxyDetail.stats.frontends")}
+                value={String(frontendsQuery.data?.length ?? "…")}
+              />
+              <StatCard
+                label={t("haproxyDetail.stats.backends")}
+                value={String(backendsQuery.data?.length ?? "…")}
+              />
+              <StatCard
+                label={t("haproxyDetail.stats.servers")}
+                value={String(serverCount || "…")}
+              />
+              <StatCard
+                label={t("haproxyDetail.stats.unhealthy")}
+                value={statusQuery.isError ? "—" : String(unhealthyServers)}
+              />
+              <StatCard
+                label={t("haproxyDetail.stats.ipVip")}
+                value={
+                  instance?.networks?.length
+                    ? instance.networks.map((item) => item.ip_address || "dhcp").join(", ")
+                    : "—"
+                }
+              />
+              <StatCard label={t("haproxyDetail.stats.image")} value={instance?.image ?? "—"} />
+              <StatCard
+                label={t("haproxyDetail.stats.desired")}
+                value={instance?.desired_state ?? "—"}
+              />
+              <StatCard
+                label={t("haproxyDetail.stats.health")}
+                value={instance?.health_status ?? "—"}
+              />
+              <StatCard
+                label={t("haproxyDetail.stats.sessions")}
+                value={
+                  metricsQuery.data?.available
+                    ? String(metricsQuery.data.current_sessions)
+                    : metricsQuery.data?.detail
+                      ? "—"
+                      : "…"
+                }
+              />
+              <StatCard
+                label={t("haproxyDetail.stats.sessionRate")}
+                value={
+                  metricsQuery.data?.available ? String(metricsQuery.data.session_rate) : "—"
+                }
+              />
+              <StatCard
+                label={t("haproxyDetail.stats.serversUp")}
+                value={
+                  metricsQuery.data?.available
+                    ? `${metricsQuery.data.servers_up}/${metricsQuery.data.servers_total}`
+                    : "—"
+                }
+              />
+              <StatCard
+                label={t("haproxyDetail.stats.bytesOut")}
+                value={
+                  metricsQuery.data?.available ? String(metricsQuery.data.bytes_out) : "—"
+                }
+              />
+            </div>
           </div>
 
           <div className="space-y-3 border border-line bg-paper-elevated/40 p-4">
             <div>
-              <h3 className="font-semibold text-ink">Nettverkstilknytninger</h3>
-              <p className="mt-1 text-sm text-ink-muted">
-                Legg til, endre IP eller fjern Docker-nettverk for denne instansen uten recreate.
-              </p>
+              <h3 className="font-semibold text-ink">{t("haproxyDetail.networksTitle")}</h3>
+              <p className="mt-1 text-sm text-ink-muted">{t("haproxyDetail.networksHint")}</p>
             </div>
             <form
               className="grid gap-3 md:grid-cols-3"
@@ -502,14 +638,14 @@ export function HaproxyDetailPage() {
                   });
               }}
             >
-              <FormField label="Nettverk">
+              <FormField label={t("haproxyDetail.network")}>
                 <select
                   className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
                   value={attachNetworkId}
                   onChange={(e) => setAttachNetworkId(e.target.value)}
                   required
                 >
-                  <option value="">Velg nettverk…</option>
+                  <option value="">{t("haproxyDetail.selectNetwork")}</option>
                   {(networksQuery.data ?? [])
                     .filter(
                       (net) =>
@@ -524,12 +660,12 @@ export function HaproxyDetailPage() {
                     ))}
                 </select>
               </FormField>
-              <FormField label="IP (valgfritt)">
+              <FormField label={t("haproxyDetail.ipOptional")}>
                 <input
                   className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
                   value={attachIp}
                   onChange={(e) => setAttachIp(e.target.value)}
-                  placeholder="DHCP hvis tom"
+                  placeholder={t("haproxyDetail.dhcpPlaceholder")}
                 />
               </FormField>
               <FormActions>
@@ -1541,11 +1677,12 @@ export function HaproxyDetailPage() {
           frontends={frontendsQuery.data ?? []}
           backends={backendsQuery.data ?? []}
           status={statusQuery.data}
+          focusNodeId={focusNodeId}
           statusError={
             statusQuery.isError
               ? statusQuery.error instanceof Error
                 ? statusQuery.error.message
-                : "Status utilgjengelig"
+                : t("haproxyDetail.statusUnavailable")
               : null
           }
           isFetching={statusQuery.isFetching}
@@ -1556,7 +1693,7 @@ export function HaproxyDetailPage() {
             mutations.runtimeServer.isError || mutations.clearCounters.isError
               ? (mutations.runtimeServer.error || mutations.clearCounters.error) instanceof Error
                 ? ((mutations.runtimeServer.error || mutations.clearCounters.error) as Error).message
-                : "Runtime-handling feilet"
+                : t("haproxyDetail.runtimeActionFailed")
               : null
           }
           onRefresh={() => void statusQuery.refetch()}
@@ -1564,7 +1701,9 @@ export function HaproxyDetailPage() {
             setRuntimeMessage(null);
             mutations.clearCounters.mutate(undefined, {
               onSuccess: (data) => {
-                setRuntimeMessage(`clear counters: ${data.output} (ephemeral)`);
+                setRuntimeMessage(
+                  t("haproxyDetail.clearCountersResult", { output: data.output }),
+                );
               },
             });
           }}
