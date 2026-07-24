@@ -19,6 +19,8 @@ export function buildFlowSlides(input: {
   vips: Vip[];
   instances: Instance[];
   lbMetrics: LbMetrics | undefined;
+  /** When true, only VIP slides with advertised === true (fleet always kept). */
+  advertisedOnly?: boolean;
 }): FlowSlide[] {
   const byId = new Map(input.instances.map((item) => [item.id, item]));
   const lbById = new Map((input.lbMetrics?.instances ?? []).map((row) => [row.instance_id, row]));
@@ -29,8 +31,12 @@ export function buildFlowSlides(input: {
     title: "Fleet",
   };
 
-  const vipSlides: FlowSlide[] = input.vips
-    .slice()
+  let vipList = input.vips.slice();
+  if (input.advertisedOnly) {
+    vipList = vipList.filter((vip) => vip.advertised);
+  }
+
+  const vipSlides: FlowSlide[] = vipList
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((vip) => {
       const frr = byId.get(vip.frr_instance_id);

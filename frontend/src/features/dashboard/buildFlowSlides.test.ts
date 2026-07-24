@@ -126,6 +126,25 @@ describe("buildFlowSlides", () => {
     expect(slides[1].lbRow?.servers_up).toBe(1);
   });
 
+  it("filters to advertised VIP slides when requested", () => {
+    const quiet: Vip = {
+      ...vip,
+      id: "vip-2",
+      name: "vip-quiet",
+      address: "203.0.113.20",
+      advertised: false,
+    };
+    const slides = buildFlowSlides({
+      vips: [vip, quiet],
+      instances: [haproxy, frr],
+      lbMetrics: undefined,
+      advertisedOnly: true,
+    });
+    expect(slides).toHaveLength(2);
+    expect(slides[0].kind).toBe("fleet");
+    expect(slides[1].title).toBe("vip-routed-10");
+  });
+
   it("resolves attachment IP for network", () => {
     expect(haproxyAttachmentIp(haproxy, "net-1")).toBe("192.168.22.10");
     expect(haproxyAttachmentIp(haproxy, "other")).toBe("192.168.22.10");

@@ -897,9 +897,9 @@ Venstremeny med grupperte seksjoner og **visuelle domener** (ikon + domenefarge 
 
 Mobil: kollapsbar drawer. Runtime Status bruker `@xyflow/react` for zoom/pan/minimap; config-editing skjer fortsatt i egne faner (ikke på canvas).
 
-**Traffic Flow-signaturkort (v2):** karusell med **All / Fleet** + én slide per VIP. Logical/Physical-toggle. Stilert verdenskart i Internet-noden (ikke ekte geo). VIP-sti: Internet → FRR → Frontend → Backend → Servers. Komponenten er props-drevet (`TrafficFlowCard`) for senere publish til konfigurerbare dashboards.
+**Traffic Flow-signaturkort (v2):** karusell med **All / Fleet** + én slide per VIP. Logical/Physical-toggle. Filter «kun annonserte». Autoplay (pause ved hover/fokus). Stilert verdenskart i Internet-noden (ikke ekte geo). VIP-sti: Internet → FRR → Frontend → Backend → Servers; Physical viser IP:port + sti-stripe. Komponenten er props-drevet (`TrafficFlowCard`) og kan publiseres til konfigurerbare dashboards via «Publish to dashboard».
 
-**Senere GUI (ikke nå):** «Add dashboard», widget-katalog, «Publish to dashboard»; ekte geo-map / per-VIP world dots / Logical vs Physical for flere widget-typer.
+**Konfigurerbare dashboards (MVP):** `/` er fortsatt fast systemoversikt. `/dashboards` + `/dashboards/:id` for egendefinerte boards med JSON-widget-layout. Første widget: `traffic_flow`. Publish fra system-dashboard; «Add widget» i board-editor.
 
 ### 12.6 API-klient
 

@@ -9,10 +9,12 @@ from app.models import (  # noqa: F401
     AppMeta,
     AuditEvent,
     ConfigRevision,
+    Dashboard,
     Network,
     NetworkAttachment,
     PhysicalInterface,
     ServiceInstance,
+    ServiceVip,
     User,
 )
 

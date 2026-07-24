@@ -72,7 +72,10 @@ const NAV_GROUPS: NavGroup[] = [
     id: "system",
     labelKey: "nav.groups.system",
     domain: "system",
-    items: [{ to: "/settings", labelKey: "nav.settings", icon: IconSettings }],
+    items: [
+      { to: "/dashboards", labelKey: "nav.dashboards", icon: IconDashboard },
+      { to: "/settings", labelKey: "nav.settings", icon: IconSettings },
+    ],
   },
 ];
 

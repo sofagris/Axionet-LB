@@ -3,7 +3,9 @@ import { RequireAuth } from "./components/RequireAuth";
 import { AppLayout } from "./layouts/AppLayout";
 import { CatalogPage } from "./pages/CatalogPage";
 import { CreateInstanceWizardPage } from "./pages/CreateInstanceWizardPage";
+import { CustomDashboardPage } from "./pages/CustomDashboardPage";
 import { DashboardPage } from "./pages/DashboardPage";
+import { DashboardsPage } from "./pages/DashboardsPage";
 import { FrrDetailPage } from "./pages/FrrDetailPage";
 import { HaproxyDetailPage } from "./pages/HaproxyDetailPage";
 import { InstancesPage } from "./pages/InstancesPage";
@@ -21,6 +23,8 @@ export function App() {
       <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
+          <Route path="dashboards" element={<DashboardsPage />} />
+          <Route path="dashboards/:dashboardId" element={<CustomDashboardPage />} />
           <Route path="interfaces" element={<InterfacesPage />} />
           <Route path="networks" element={<NetworksPage />} />
           <Route path="catalog" element={<CatalogPage />} />

@@ -4,13 +4,17 @@
     "product": "Load Balancer",
     "loading": "Laster…",
     "unknownError": "Ukjent feil",
-    "saving": "Lagrer…"
+    "saving": "Lagrer…",
+    "save": "Lagre",
+    "cancel": "Avbryt",
+    "delete": "Slett"
   },
   "nav": {
     "main": "Hovedmeny",
     "openMenu": "Åpne meny",
     "closeMenu": "Lukk meny",
     "dashboard": "Dashboard",
+    "dashboards": "Dashboards",
     "interfaces": "Interfaces",
     "networks": "Networks",
     "catalog": "Catalog",
@@ -83,7 +87,15 @@
       "physical": "Physical",
       "fleetSlide": "All / Fleet",
       "prev": "Forrige flyt",
-      "next": "Neste flyt"
+      "next": "Neste flyt",
+      "advertisedOnly": "Kun annonserte",
+      "advertisedOnlyHint": "Vis bare VIP-slides som er annonsert nå",
+      "advertised": "Annonserte",
+      "notAdvertised": "Ikke annonsert",
+      "physicalPath": "Fysisk sti",
+      "autoplayPlay": "Spill",
+      "autoplayPause": "Pause",
+      "vipCount": "VIP-er"
     },
     "viewAll": "Vis alle",
     "manage": "Administrer",
@@ -120,6 +132,49 @@
     "database": "Database",
     "docker": "Docker"
   },
+
+  "dashboards": {
+    "eyebrow": "System",
+    "title": "Dashboards",
+    "subtitle": "Egendefinerte boards med publiserte widgets. Hjem-oversikten forblir fast.",
+    "add": "Nytt dashboard",
+    "createTitle": "Opprett dashboard",
+    "create": "Opprett",
+    "createFailed": "Kunne ikke opprette dashboard",
+    "loadFailed": "Kunne ikke hente dashboards",
+    "empty": "Ingen egendefinerte dashboards ennå. Opprett ett, eller publiser Traffic Flow fra hjem-oversikten.",
+    "name": "Navn",
+    "description": "Beskrivelse",
+    "open": "Åpne",
+    "confirmDelete": "Slette dashboard «{{name}}»?",
+    "widgetCount": "{{count}} widgets",
+    "rename": "Gi nytt navn",
+    "renameFailed": "Kunne ikke endre navn",
+    "notFound": "Dashboard ikke funnet",
+    "backToList": "Tilbake til dashboards",
+    "addWidget": "Legg til widget",
+    "addWidgetFailed": "Kunne ikke legge til widget",
+    "removeWidget": "Fjern",
+    "removeWidgetFailed": "Kunne ikke fjerne widget",
+    "catalogTitle": "Widget-katalog",
+    "noWidgets": "Ingen widgets ennå. Legg til Traffic Flow fra katalogen, eller publiser fra hjem-oversikten.",
+    "unknownWidget": "Ukjent widget-type: {{type}}",
+    "publishTitle": "Publiser til dashboard",
+    "publishHint": "Legg Traffic Flow på et eksisterende board, eller opprett et nytt.",
+    "publishExisting": "Eksisterende",
+    "publishNew": "Nytt dashboard",
+    "publishNoDashboards": "Ingen dashboards ennå — bytt til Nytt dashboard.",
+    "publishNeedTarget": "Velg eller opprett et dashboard først.",
+    "publishAction": "Publiser til dashboard",
+    "publishFailed": "Kunne ikke publisere widget",
+    "widgets": {
+      "trafficFlow": {
+        "label": "Traffic Flow",
+        "description": "Flåte-aggregat og per-VIP-sti: Internet → FRR → Frontend → Backend → Servers."
+      }
+    }
+  },
+
   "interfaces": {
     "title": "Fysiske interfaces",
     "subtitle": "Oppdagede NIC-er fra vertens sysfs. Klikk et navn for å redigere. Virtuelle Docker-/bridge-interface filtreres bort.",

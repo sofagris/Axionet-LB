@@ -345,6 +345,7 @@ export function DashboardPage() {
         lbMetrics={lbMetricsQuery.data}
         bitRates={{ rxBps: lbRx, txBps: lbTx }}
         loading={instancesQuery.isLoading || lbMetricsQuery.isLoading || vipsQuery.isLoading}
+        enablePublish
       />
 
       <section>

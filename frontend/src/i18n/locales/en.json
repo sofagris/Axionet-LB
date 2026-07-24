@@ -4,13 +4,17 @@
     "product": "Load Balancer",
     "loading": "Loading…",
     "unknownError": "Unknown error",
-    "saving": "Saving…"
+    "saving": "Saving…",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete"
   },
   "nav": {
     "main": "Main navigation",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
     "dashboard": "Dashboard",
+    "dashboards": "Dashboards",
     "interfaces": "Interfaces",
     "networks": "Networks",
     "catalog": "Catalog",
@@ -83,7 +87,15 @@
       "physical": "Physical",
       "fleetSlide": "All / Fleet",
       "prev": "Previous flow",
-      "next": "Next flow"
+      "next": "Next flow",
+      "advertisedOnly": "Advertised only",
+      "advertisedOnlyHint": "Show only VIP slides that are currently advertised",
+      "advertised": "Advertised",
+      "notAdvertised": "Not advertised",
+      "physicalPath": "Physical path",
+      "autoplayPlay": "Play",
+      "autoplayPause": "Pause",
+      "vipCount": "VIPs"
     },
     "viewAll": "View all",
     "manage": "Manage",
@@ -119,6 +131,48 @@
     "api": "API",
     "database": "Database",
     "docker": "Docker"
+  },
+
+  "dashboards": {
+    "eyebrow": "System",
+    "title": "Dashboards",
+    "subtitle": "Custom boards with published widgets. The home overview stays fixed.",
+    "add": "Add dashboard",
+    "createTitle": "Create dashboard",
+    "create": "Create",
+    "createFailed": "Could not create dashboard",
+    "loadFailed": "Could not load dashboards",
+    "empty": "No custom dashboards yet. Create one or publish Traffic Flow from the home overview.",
+    "name": "Name",
+    "description": "Description",
+    "open": "Open",
+    "confirmDelete": "Delete dashboard “{{name}}”?",
+    "widgetCount": "{{count}} widgets",
+    "rename": "Rename",
+    "renameFailed": "Could not rename dashboard",
+    "notFound": "Dashboard not found",
+    "backToList": "Back to dashboards",
+    "addWidget": "Add widget",
+    "addWidgetFailed": "Could not add widget",
+    "removeWidget": "Remove",
+    "removeWidgetFailed": "Could not remove widget",
+    "catalogTitle": "Widget catalog",
+    "noWidgets": "No widgets yet. Add Traffic Flow from the catalog or publish from the home overview.",
+    "unknownWidget": "Unknown widget type: {{type}}",
+    "publishTitle": "Publish to dashboard",
+    "publishHint": "Add Traffic Flow to an existing board or create a new one.",
+    "publishExisting": "Existing",
+    "publishNew": "New dashboard",
+    "publishNoDashboards": "No dashboards yet — switch to New dashboard.",
+    "publishNeedTarget": "Select or create a dashboard first.",
+    "publishAction": "Publish to dashboard",
+    "publishFailed": "Could not publish widget",
+    "widgets": {
+      "trafficFlow": {
+        "label": "Traffic Flow",
+        "description": "Fleet aggregate and per-VIP path: Internet → FRR → Frontend → Backend → Servers."
+      }
+    }
   },
   "interfaces": {
     "title": "Physical interfaces",

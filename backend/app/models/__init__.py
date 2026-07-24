@@ -1,6 +1,7 @@
 from app.models.app_meta import AppMeta
 from app.models.audit_event import AuditEvent
 from app.models.config_revision import ConfigRevision, DeploymentStatus, ValidationStatus
+from app.models.dashboard import Dashboard
 from app.models.network import Network, NetworkType
 from app.models.network_attachment import NetworkAttachment
 from app.models.physical_interface import AdministrativeState, LinkState, PhysicalInterface
@@ -19,6 +20,7 @@ __all__ = [
     "ActualState",
     "AuditEvent",
     "ConfigRevision",
+    "Dashboard",
     "DeploymentStatus",
     "DesiredState",
     "HealthStatus",
