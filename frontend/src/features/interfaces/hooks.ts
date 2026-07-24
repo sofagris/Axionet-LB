@@ -2,9 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   confirmInterfaceChange,
   fetchInterfaces,
+  fetchLldpStatus,
   promoteManagement,
   rescanInterfaces,
   updateInterface,
+  updateLldpStatus,
 } from "../../api/interfaces";
 import type { InterfaceUpdatePayload } from "../../types/interfaces";
 
@@ -12,6 +14,14 @@ export function useInterfaces() {
   return useQuery({
     queryKey: ["interfaces"],
     queryFn: fetchInterfaces,
+    refetchInterval: 15_000,
+  });
+}
+
+export function useLldpStatus() {
+  return useQuery({
+    queryKey: ["interfaces", "lldp"],
+    queryFn: fetchLldpStatus,
     refetchInterval: 15_000,
   });
 }
@@ -39,6 +49,18 @@ export function useUpdateInterface() {
         );
       });
       void queryClient.invalidateQueries({ queryKey: ["system", "info"] });
+      void queryClient.invalidateQueries({ queryKey: ["interfaces", "lldp"] });
+    },
+  });
+}
+
+export function useUpdateLldp() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (enabled: boolean) => updateLldpStatus(enabled),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["interfaces", "lldp"], data);
+      void queryClient.invalidateQueries({ queryKey: ["interfaces"] });
     },
   });
 }

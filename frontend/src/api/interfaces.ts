@@ -2,12 +2,14 @@ import { apiFetch } from "./client";
 import {
   InterfaceApplyResultSchema,
   InterfaceRescanSchema,
+  LldpStatusSchema,
   PendingChangeSchema,
   PhysicalInterfaceSchema,
   PromoteManagementResultSchema,
   type InterfaceApplyResult,
   type InterfaceRescan,
   type InterfaceUpdatePayload,
+  type LldpStatus,
   type PhysicalInterface,
   type PromoteManagementResult,
 } from "../types/interfaces";
@@ -48,4 +50,15 @@ export function confirmInterfaceChange(changeId: string): Promise<{ id: string; 
     (data) => PendingChangeSchema.parse(data),
     { method: "POST" },
   );
+}
+
+export function fetchLldpStatus(): Promise<LldpStatus> {
+  return apiFetch("/api/v1/interfaces/lldp", (data) => LldpStatusSchema.parse(data));
+}
+
+export function updateLldpStatus(enabled: boolean): Promise<LldpStatus> {
+  return apiFetch("/api/v1/interfaces/lldp", (data) => LldpStatusSchema.parse(data), {
+    method: "PUT",
+    body: { enabled },
+  });
 }

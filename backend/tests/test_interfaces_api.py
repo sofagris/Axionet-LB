@@ -58,3 +58,59 @@ def test_interface_rescan_and_list(fake_sysfs: Path, client: TestClient) -> None
     assert patched.status_code == 200
     assert patched.json()["interface"]["description"] == "Uplink A"
     assert patched.json()["interface"]["exclusive_use"] is True
+
+
+def test_lldp_status_and_enable(fake_sysfs: Path, client: TestClient) -> None:
+    from app.api.v1 import interfaces as interfaces_routes
+    from app.services.networking.host import LldpDaemonStatus, LldpNeighbor
+
+    class FakeHost:
+        def __init__(self) -> None:
+            self.enabled = False
+
+        def lldp_daemon_status(self) -> LldpDaemonStatus:
+            return LldpDaemonStatus(
+                installed=True,
+                enabled=self.enabled,
+                active=self.enabled,
+            )
+
+        def set_lldp_daemon(self, *, enabled: bool) -> LldpDaemonStatus:
+            self.enabled = enabled
+            return self.lldp_daemon_status()
+
+        def list_lldp_neighbors(self) -> list[LldpNeighbor]:
+            if not self.enabled:
+                return []
+            return [
+                LldpNeighbor(
+                    local_port="eth0",
+                    chassis_name="ax-sw-core02",
+                    chassis_id="00:11:22:33:44:55",
+                    port_id="Ethernet0",
+                    port_description="Eth1/1",
+                    system_description="SONiC",
+                    mgmt_ips=("192.168.50.199",),
+                )
+            ]
+
+        def get_lldp_port_modes(self) -> dict:
+            return {"eth0": "rx-and-tx"} if self.enabled else {}
+
+    fake = FakeHost()
+    client.app.dependency_overrides[interfaces_routes.get_host_net] = lambda: fake
+    try:
+        status = client.get("/api/v1/interfaces/lldp")
+        assert status.status_code == 200, status.text
+        body = status.json()
+        assert body["installed"] is True
+        assert body["active"] is False
+        assert body["neighbors"] == []
+
+        enabled = client.put("/api/v1/interfaces/lldp", json={"enabled": True})
+        assert enabled.status_code == 200, enabled.text
+        assert enabled.json()["active"] is True
+        assert enabled.json()["neighbors"][0]["chassis_name"] == "ax-sw-core02"
+        assert enabled.json()["neighbors"][0]["port_id"] == "Ethernet0"
+    finally:
+        client.app.dependency_overrides.pop(interfaces_routes.get_host_net, None)

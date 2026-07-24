@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const LldpModeSchema = z.enum(["rx-and-tx", "rx-only", "tx-only", "disabled", "unknown"]);
+
 export const PhysicalInterfaceSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -14,6 +16,7 @@ export const PhysicalInterfaceSchema = z.object({
   administrative_state: z.enum(["enabled", "disabled"]),
   exclusive_use: z.boolean(),
   is_management: z.boolean().default(false),
+  lldp_mode: LldpModeSchema.nullable().optional(),
   discovered_at: z.string(),
   updated_at: z.string(),
 });
@@ -48,10 +51,32 @@ export const PendingChangeSchema = z.object({
   confirmed: z.boolean(),
 });
 
+export const LldpNeighborSchema = z.object({
+  local_port: z.string(),
+  chassis_name: z.string().nullable().optional(),
+  chassis_id: z.string().nullable().optional(),
+  port_id: z.string().nullable().optional(),
+  port_description: z.string().nullable().optional(),
+  system_description: z.string().nullable().optional(),
+  mgmt_ips: z.array(z.string()).default([]),
+});
+
+export const LldpStatusSchema = z.object({
+  installed: z.boolean(),
+  enabled: z.boolean(),
+  active: z.boolean(),
+  detail: z.string().nullable().optional(),
+  neighbors: z.array(LldpNeighborSchema).default([]),
+  port_modes: z.record(z.string(), LldpModeSchema).default({}),
+});
+
 export type PhysicalInterface = z.infer<typeof PhysicalInterfaceSchema>;
 export type InterfaceRescan = z.infer<typeof InterfaceRescanSchema>;
 export type InterfaceApplyResult = z.infer<typeof InterfaceApplyResultSchema>;
 export type PromoteManagementResult = z.infer<typeof PromoteManagementResultSchema>;
+export type LldpStatus = z.infer<typeof LldpStatusSchema>;
+export type LldpNeighbor = z.infer<typeof LldpNeighborSchema>;
+export type LldpMode = z.infer<typeof LldpModeSchema>;
 
 export type InterfaceUpdatePayload = {
   description?: string | null;
@@ -60,5 +85,6 @@ export type InterfaceUpdatePayload = {
   mtu?: number;
   speed_mbps?: number;
   speed_autoneg?: boolean;
+  lldp_mode?: "rx-and-tx" | "rx-only" | "tx-only" | "disabled";
   confirm?: boolean;
 };

@@ -1,8 +1,11 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.physical_interface import AdministrativeState, LinkState
+
+LldpModeLiteral = Literal["rx-and-tx", "rx-only", "tx-only", "disabled", "unknown"]
 
 
 class PhysicalInterfaceRead(BaseModel):
@@ -21,6 +24,7 @@ class PhysicalInterfaceRead(BaseModel):
     administrative_state: AdministrativeState
     exclusive_use: bool
     is_management: bool = False
+    lldp_mode: LldpModeLiteral | None = None
     discovered_at: datetime
     updated_at: datetime
 
@@ -32,6 +36,7 @@ class PhysicalInterfaceUpdate(BaseModel):
     mtu: int | None = Field(default=None, ge=68, le=9216)
     speed_mbps: int | None = Field(default=None, ge=10, le=400_000)
     speed_autoneg: bool | None = None
+    lldp_mode: Literal["rx-and-tx", "rx-only", "tx-only", "disabled"] | None = None
     confirm: bool = False
 
 
@@ -63,3 +68,26 @@ class InterfaceRescanResponse(BaseModel):
     updated: int
     removed: int
     interfaces: list[PhysicalInterfaceRead]
+
+
+class LldpNeighborRead(BaseModel):
+    local_port: str
+    chassis_name: str | None = None
+    chassis_id: str | None = None
+    port_id: str | None = None
+    port_description: str | None = None
+    system_description: str | None = None
+    mgmt_ips: list[str] = Field(default_factory=list)
+
+
+class LldpStatusRead(BaseModel):
+    installed: bool
+    enabled: bool
+    active: bool
+    detail: str | None = None
+    neighbors: list[LldpNeighborRead] = Field(default_factory=list)
+    port_modes: dict[str, LldpModeLiteral] = Field(default_factory=dict)
+
+
+class LldpUpdate(BaseModel):
+    enabled: bool

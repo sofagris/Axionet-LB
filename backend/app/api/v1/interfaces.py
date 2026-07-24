@@ -5,6 +5,9 @@ from app.core.config import Settings, get_settings
 from app.db.session import get_db
 from app.schemas.interfaces import (
     InterfaceRescanResponse,
+    LldpNeighborRead,
+    LldpStatusRead,
+    LldpUpdate,
     PendingChangeRead,
     PhysicalInterfaceApplyResult,
     PhysicalInterfaceRead,
@@ -13,7 +16,7 @@ from app.schemas.interfaces import (
 )
 from app.services.audit.service import AuditService
 from app.services.networking.discovery import InterfaceDiscoveryService
-from app.services.networking.host import HostNetworkAdapter
+from app.services.networking.host import HostNetworkAdapter, HostNetworkError
 from app.services.networking.mutation import InterfaceMutationService
 from app.services.networking.pending_runtime import get_pending_store
 from app.services.networking.safety import InterfaceSafetyError
@@ -49,24 +52,98 @@ def get_mutation_service(
     )
 
 
+def _enrich_interface(
+    interface: PhysicalInterfaceRead,
+    *,
+    port_modes: dict[str, str] | None = None,
+) -> PhysicalInterfaceRead:
+    modes = port_modes if port_modes is not None else {}
+    mode = modes.get(interface.name)
+    data = interface.model_dump()
+    data["lldp_mode"] = mode
+    return PhysicalInterfaceRead.model_validate(data)
+
+
+def _lldp_status(host_net: HostNetworkAdapter) -> LldpStatusRead:
+    status = host_net.lldp_daemon_status()
+    neighbors = [
+        LldpNeighborRead(
+            local_port=item.local_port,
+            chassis_name=item.chassis_name,
+            chassis_id=item.chassis_id,
+            port_id=item.port_id,
+            port_description=item.port_description,
+            system_description=item.system_description,
+            mgmt_ips=list(item.mgmt_ips),
+        )
+        for item in host_net.list_lldp_neighbors()
+    ]
+    port_modes = host_net.get_lldp_port_modes()
+    return LldpStatusRead(
+        installed=status.installed,
+        enabled=status.enabled,
+        active=status.active,
+        detail=status.detail,
+        neighbors=neighbors,
+        port_modes=port_modes,
+    )
+
+
 @router.get("", response_model=list[PhysicalInterfaceRead])
 def list_interfaces(
     service: InterfaceDiscoveryService = Depends(get_interface_service),
+    host_net: HostNetworkAdapter = Depends(get_host_net),
 ) -> list[PhysicalInterfaceRead]:
-    return [PhysicalInterfaceRead.model_validate(item) for item in service.list_interfaces()]
+    port_modes = host_net.get_lldp_port_modes()
+    return [
+        _enrich_interface(PhysicalInterfaceRead.model_validate(item), port_modes=port_modes)
+        for item in service.list_interfaces()
+    ]
+
+
+@router.get("/lldp", response_model=LldpStatusRead)
+def get_lldp_status(
+    host_net: HostNetworkAdapter = Depends(get_host_net),
+) -> LldpStatusRead:
+    return _lldp_status(host_net)
+
+
+@router.put("/lldp", response_model=LldpStatusRead)
+def update_lldp(
+    payload: LldpUpdate,
+    host_net: HostNetworkAdapter = Depends(get_host_net),
+    db: Session = Depends(get_db),
+) -> LldpStatusRead:
+    try:
+        host_net.set_lldp_daemon(enabled=payload.enabled)
+    except HostNetworkError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    AuditService(db).record(
+        event_type="interface.lldp",
+        resource_type="lldp",
+        resource_id="host",
+        payload={"enabled": payload.enabled},
+        commit=True,
+    )
+    return _lldp_status(host_net)
 
 
 @router.post("/rescan", response_model=InterfaceRescanResponse)
 def rescan_interfaces(
     service: InterfaceDiscoveryService = Depends(get_interface_service),
+    host_net: HostNetworkAdapter = Depends(get_host_net),
 ) -> InterfaceRescanResponse:
     interfaces, stats = service.rescan()
+    port_modes = host_net.get_lldp_port_modes()
     return InterfaceRescanResponse(
         discovered=stats["discovered"],
         created=stats["created"],
         updated=stats["updated"],
         removed=stats["removed"],
-        interfaces=[PhysicalInterfaceRead.model_validate(item) for item in interfaces],
+        interfaces=[
+            _enrich_interface(PhysicalInterfaceRead.model_validate(item), port_modes=port_modes)
+            for item in interfaces
+        ],
     )
 
 
@@ -92,11 +169,13 @@ def confirm_interface_change(
 def get_interface(
     interface_id: str,
     service: InterfaceDiscoveryService = Depends(get_interface_service),
+    host_net: HostNetworkAdapter = Depends(get_host_net),
 ) -> PhysicalInterfaceRead:
     interface = service.get_interface(interface_id)
     if interface is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Interface not found")
-    return PhysicalInterfaceRead.model_validate(interface)
+    port_modes = host_net.get_lldp_port_modes()
+    return _enrich_interface(PhysicalInterfaceRead.model_validate(interface), port_modes=port_modes)
 
 
 @router.patch("/{interface_id}", response_model=PhysicalInterfaceApplyResult)
@@ -105,6 +184,7 @@ def update_interface(
     payload: PhysicalInterfaceUpdate,
     service: InterfaceDiscoveryService = Depends(get_interface_service),
     mutation: InterfaceMutationService = Depends(get_mutation_service),
+    host_net: HostNetworkAdapter = Depends(get_host_net),
     db: Session = Depends(get_db),
 ) -> PhysicalInterfaceApplyResult:
     interface = service.get_interface(interface_id)
@@ -116,6 +196,7 @@ def update_interface(
             payload.administrative_state is not None,
             payload.speed_mbps is not None,
             payload.speed_autoneg is True,
+            payload.lldp_mode is not None,
         ]
     )
     try:
@@ -137,7 +218,11 @@ def update_interface(
         raise HTTPException(status_code=code, detail={"code": exc.code, "message": exc.message}) from exc
     db.commit()
     db.refresh(interface)
-    result.interface = PhysicalInterfaceRead.model_validate(interface)
+    port_modes = host_net.get_lldp_port_modes()
+    result.interface = _enrich_interface(
+        PhysicalInterfaceRead.model_validate(interface),
+        port_modes=port_modes,
+    )
     return result
 
 
@@ -146,6 +231,7 @@ def promote_management(
     interface_id: str,
     service: InterfaceDiscoveryService = Depends(get_interface_service),
     mutation: InterfaceMutationService = Depends(get_mutation_service),
+    host_net: HostNetworkAdapter = Depends(get_host_net),
     db: Session = Depends(get_db),
 ) -> PromoteManagementResult:
     interface = service.get_interface(interface_id)
@@ -167,5 +253,9 @@ def promote_management(
     )
     db.commit()
     db.refresh(interface)
-    result.interface = PhysicalInterfaceRead.model_validate(interface)
+    port_modes = host_net.get_lldp_port_modes()
+    result.interface = _enrich_interface(
+        PhysicalInterfaceRead.model_validate(interface),
+        port_modes=port_modes,
+    )
     return result

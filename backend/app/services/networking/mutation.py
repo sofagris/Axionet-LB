@@ -68,6 +68,8 @@ class InterfaceMutationService:
                 self._host.set_speed_mbps(interface.name, None)
             elif payload.speed_mbps is not None:
                 self._host.set_speed_mbps(interface.name, payload.speed_mbps)
+            if payload.lldp_mode is not None:
+                self._host.set_lldp_port(interface.name, payload.lldp_mode)
         except HostNetworkError as exc:
             raise InterfaceSafetyError("host_apply_failed", str(exc)) from exc
 

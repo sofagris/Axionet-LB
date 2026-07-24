@@ -4,11 +4,13 @@ import { useSystemInfo } from "../features/system/hooks";
 import {
   useConfirmInterfaceChange,
   useInterfaces,
+  useLldpStatus,
   usePromoteManagement,
   useRescanInterfaces,
   useUpdateInterface,
+  useUpdateLldp,
 } from "../features/interfaces/hooks";
-import type { PhysicalInterface } from "../types/interfaces";
+import type { LldpMode, LldpNeighbor, PhysicalInterface } from "../types/interfaces";
 
 function linkTone(state: string): string {
   if (state === "up") return "text-ok";
@@ -48,6 +50,7 @@ type EditDraft = {
   exclusive_use: boolean;
   speedMode: "keep" | "autoneg" | "fixed";
   speedMbps: string;
+  lldpMode: "keep" | "rx-and-tx" | "rx-only" | "tx-only" | "disabled";
 };
 
 function draftFrom(iface: PhysicalInterface): EditDraft {
@@ -58,15 +61,31 @@ function draftFrom(iface: PhysicalInterface): EditDraft {
     exclusive_use: iface.exclusive_use,
     speedMode: "keep",
     speedMbps: iface.speed_mbps != null ? String(iface.speed_mbps) : "1000",
+    lldpMode: "keep",
   };
+}
+
+function neighborLabel(neighbors: LldpNeighbor[]): string {
+  if (!neighbors.length) return "—";
+  return neighbors
+    .map((item) => {
+      const chassis = item.chassis_name || item.chassis_id || "?";
+      const port = item.port_id || item.port_description || "?";
+      return `${chassis} / ${port}`;
+    })
+    .join(", ");
 }
 
 function InterfaceEditor({
   iface,
   onClose,
+  lldpActive,
+  neighbors,
 }: {
   iface: PhysicalInterface;
   onClose: () => void;
+  lldpActive: boolean;
+  neighbors: LldpNeighbor[];
 }) {
   const { t } = useTranslation();
   const update = useUpdateInterface();
@@ -118,6 +137,9 @@ function InterfaceEditor({
       payload.speed_autoneg = true;
     } else if (draft.speedMode === "fixed" && draft.speedMbps !== "") {
       payload.speed_mbps = Number(draft.speedMbps);
+    }
+    if (draft.lldpMode !== "keep") {
+      payload.lldp_mode = draft.lldpMode;
     }
     try {
       const result = await update.mutateAsync({
@@ -235,6 +257,29 @@ function InterfaceEditor({
           />
           {t("interfaces.exclusiveUse")}
         </label>
+        <label className="block text-sm">
+          <span className="text-ink-muted">{t("interfaces.lldpMode")}</span>
+          <select
+            className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm text-ink"
+            value={draft.lldpMode}
+            disabled={!lldpActive}
+            onChange={(e) =>
+              setDraft((d) => ({
+                ...d,
+                lldpMode: e.target.value as EditDraft["lldpMode"],
+              }))
+            }
+          >
+            <option value="keep">{t("interfaces.lldpKeep")}</option>
+            <option value="rx-and-tx">rx-and-tx</option>
+            <option value="rx-only">rx-only</option>
+            <option value="tx-only">tx-only</option>
+            <option value="disabled">disabled</option>
+          </select>
+          <span className="mt-1 block font-mono text-xs text-ink-muted">
+            {t("interfaces.lldpNeighbor")}: {neighborLabel(neighbors)}
+          </span>
+        </label>
       </div>
 
       {iface.is_management ? (
@@ -298,10 +343,16 @@ function InterfaceRow({
   iface,
   expanded,
   onToggle,
+  lldpActive,
+  neighbors,
+  lldpMode,
 }: {
   iface: PhysicalInterface;
   expanded: boolean;
   onToggle: () => void;
+  lldpActive: boolean;
+  neighbors: LldpNeighbor[];
+  lldpMode: LldpMode | null | undefined;
 }) {
   const { t } = useTranslation();
   return (
@@ -327,12 +378,21 @@ function InterfaceRow({
           {iface.numa_node == null ? "—" : iface.numa_node}
         </td>
         <td className="py-3 pr-4 font-mono text-sm text-ink-muted">{formatSpeed(iface.speed_mbps)}</td>
-        <td className="py-3 font-mono text-sm text-ink-muted">{iface.mtu ?? "—"}</td>
+        <td className="py-3 pr-4 font-mono text-sm text-ink-muted">{iface.mtu ?? "—"}</td>
+        <td className="py-3 font-mono text-xs text-ink-muted">
+          <div>{lldpMode ?? iface.lldp_mode ?? "—"}</div>
+          <div className="mt-0.5 text-[11px]">{neighborLabel(neighbors)}</div>
+        </td>
       </tr>
       {expanded ? (
         <tr>
-          <td colSpan={8} className="bg-paper-elevated/40 px-2 pb-4">
-            <InterfaceEditor iface={iface} onClose={onToggle} />
+          <td colSpan={9} className="bg-paper-elevated/40 px-2 pb-4">
+            <InterfaceEditor
+              iface={iface}
+              onClose={onToggle}
+              lldpActive={lldpActive}
+              neighbors={neighbors}
+            />
           </td>
         </tr>
       ) : null}
@@ -343,12 +403,24 @@ function InterfaceRow({
 export function InterfacesPage() {
   const { t } = useTranslation();
   const interfacesQuery = useInterfaces();
+  const lldpQuery = useLldpStatus();
+  const updateLldp = useUpdateLldp();
   const rescan = useRescanInterfaces();
   const infoQuery = useSystemInfo();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const bindIp = infoQuery.data?.management_bind_ip;
   const mgmtName = infoQuery.data?.management_interface;
+  const lldp = lldpQuery.data;
+  const neighborsByPort = useMemo(() => {
+    const map = new Map<string, LldpNeighbor[]>();
+    for (const item of lldp?.neighbors ?? []) {
+      const list = map.get(item.local_port) ?? [];
+      list.push(item);
+      map.set(item.local_port, list);
+    }
+    return map;
+  }, [lldp?.neighbors]);
 
   return (
     <div className="space-y-6">
@@ -369,16 +441,48 @@ export function InterfacesPage() {
           ) : (
             <p className="mt-2 text-sm text-warn">{t("interfaces.noMgmt")}</p>
           )}
+          {lldp ? (
+            <p className="mt-2 font-mono text-xs text-ink-muted">
+              {t("interfaces.lldpStatus", {
+                state: !lldp.installed
+                  ? t("interfaces.lldpMissing")
+                  : lldp.active
+                    ? t("interfaces.lldpActive")
+                    : t("interfaces.lldpInactive"),
+              })}
+              {lldp.detail ? <span className="ml-2 text-warn">{lldp.detail}</span> : null}
+            </p>
+          ) : null}
         </div>
-        <button
-          type="button"
-          onClick={() => rescan.mutate()}
-          disabled={rescan.isPending}
-          className="border border-accent bg-accent px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
-        >
-          {rescan.isPending ? t("interfaces.scanning") : t("interfaces.rescan")}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => updateLldp.mutate(!(lldp?.active ?? false))}
+            disabled={updateLldp.isPending || lldpQuery.isLoading || lldp?.installed === false}
+            className="border border-line px-4 py-2 text-sm font-medium text-ink transition hover:opacity-90 disabled:opacity-60"
+          >
+            {updateLldp.isPending
+              ? t("interfaces.lldpUpdating")
+              : lldp?.active
+                ? t("interfaces.lldpDisable")
+                : t("interfaces.lldpEnable")}
+          </button>
+          <button
+            type="button"
+            onClick={() => rescan.mutate()}
+            disabled={rescan.isPending}
+            className="border border-accent bg-accent px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+          >
+            {rescan.isPending ? t("interfaces.scanning") : t("interfaces.rescan")}
+          </button>
+        </div>
       </section>
+
+      {updateLldp.isError ? (
+        <p className="text-sm text-danger" role="alert">
+          {updateLldp.error instanceof Error ? updateLldp.error.message : t("common.unknownError")}
+        </p>
+      ) : null}
 
       {rescan.isSuccess ? (
         <p className="font-mono text-xs text-ink-muted">
@@ -427,7 +531,8 @@ export function InterfacesPage() {
                   <th className="pb-2 pr-4 font-medium">{t("interfaces.colPci")}</th>
                   <th className="pb-2 pr-4 font-medium">{t("interfaces.colNuma")}</th>
                   <th className="pb-2 pr-4 font-medium">{t("interfaces.colSpeed")}</th>
-                  <th className="pb-2 font-medium">{t("interfaces.colMtu")}</th>
+                  <th className="pb-2 pr-4 font-medium">{t("interfaces.colMtu")}</th>
+                  <th className="pb-2 font-medium">{t("interfaces.colLldp")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -437,6 +542,9 @@ export function InterfacesPage() {
                     iface={iface}
                     expanded={expandedId === iface.id}
                     onToggle={() => setExpandedId((id) => (id === iface.id ? null : iface.id))}
+                    lldpActive={Boolean(lldp?.active)}
+                    neighbors={neighborsByPort.get(iface.name) ?? []}
+                    lldpMode={lldp?.port_modes?.[iface.name] ?? iface.lldp_mode}
                   />
                 ))}
               </tbody>
