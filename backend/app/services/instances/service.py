@@ -859,9 +859,18 @@ class InstanceService:
         if instance.container_id:
             attrs = self._docker.inspect_container(instance.container_id)
             if attrs is not None:
-                self._sync_container_networks(instance, attrs=attrs)
-                return
-            instance.container_id = None
+                if self._network_mode_is_stale(attrs):
+                    logger.warning(
+                        "Recreating instance %s container: NetworkMode references a missing Docker network",
+                        instance.id,
+                    )
+                    self._docker.remove_container(instance.container_id)
+                    instance.container_id = None
+                else:
+                    self._sync_container_networks(instance, attrs=attrs)
+                    return
+            else:
+                instance.container_id = None
 
         latest = self._revisions.list_revisions(instance.id)
         revision_label = str(latest[0].revision_number) if latest else "0"
@@ -894,6 +903,33 @@ class InstanceService:
         )
         instance.container_id = container_id
 
+    @staticmethod
+    def _network_mode_value(attrs: dict) -> str:
+        return str((attrs.get("HostConfig") or {}).get("NetworkMode") or "")
+
+    def _network_mode_is_stale(self, attrs: dict) -> bool:
+        """True when HostConfig.NetworkMode points at a Docker network that no longer exists.
+
+        NetworkMode is immutable after create. If that network was deleted (e.g. user
+        recreated ipvlan→macvlan), connect/disconnect against the container fails with 404.
+        """
+        mode = self._network_mode_value(attrs)
+        if not mode or mode in {"default", "bridge", "host", "none"}:
+            return False
+        if mode.startswith("container:"):
+            return False
+        return not self._docker.network_exists(mode)
+
+    def _recreate_container_for_networks(self, instance: ServiceInstance) -> None:
+        """Remove broken container and create a fresh one matching DB attachments."""
+        if instance.container_id:
+            self._docker.remove_container(instance.container_id)
+            instance.container_id = None
+        networks = self._networks_for_instance(instance.id)
+        self._ensure_container(instance, networks)
+        if instance.desired_state == DesiredState.RUNNING.value and instance.container_id:
+            self._docker.start_container(instance.container_id)
+
     def _sync_container_networks(
         self,
         instance: ServiceInstance,
@@ -906,6 +942,14 @@ class InstanceService:
         if attrs is None:
             attrs = self._docker.inspect_container(instance.container_id)
         if attrs is None:
+            return
+
+        if self._network_mode_is_stale(attrs):
+            logger.warning(
+                "Recreating instance %s container during network sync: stale NetworkMode",
+                instance.id,
+            )
+            self._recreate_container_for_networks(instance)
             return
 
         attachments = self.list_attachments(instance.id)
@@ -930,32 +974,46 @@ class InstanceService:
             if item.docker_network_id
         }
 
-        for docker_network_id, ipv4 in desired.items():
-            current_ip = connected.get(docker_network_id)
-            if docker_network_id not in connected:
-                self._docker.connect_container_network(
-                    instance.container_id,
-                    docker_network_id,
-                    ipv4_address=ipv4,
-                )
-                continue
-            if ipv4 and current_ip != ipv4:
+        try:
+            for docker_network_id, ipv4 in desired.items():
+                current_ip = connected.get(docker_network_id)
+                if docker_network_id not in connected:
+                    self._docker.connect_container_network(
+                        instance.container_id,
+                        docker_network_id,
+                        ipv4_address=ipv4,
+                    )
+                    continue
+                if ipv4 and current_ip != ipv4:
+                    self._docker.disconnect_container_network(
+                        instance.container_id,
+                        docker_network_id,
+                    )
+                    self._docker.connect_container_network(
+                        instance.container_id,
+                        docker_network_id,
+                        ipv4_address=ipv4,
+                    )
+
+            for docker_network_id in connected:
+                if docker_network_id in desired:
+                    continue
+                if docker_network_id not in managed_ids:
+                    continue
                 self._docker.disconnect_container_network(
                     instance.container_id,
                     docker_network_id,
                 )
-                self._docker.connect_container_network(
-                    instance.container_id,
-                    docker_network_id,
-                    ipv4_address=ipv4,
+        except DockerException as exc:
+            message = str(exc).lower()
+            if "matching network mode" in message or (
+                "network" in message and "not found" in message and self._network_mode_is_stale(attrs)
+            ):
+                logger.warning(
+                    "Network sync failed for instance %s (%s); recreating container",
+                    instance.id,
+                    exc,
                 )
-
-        for docker_network_id in connected:
-            if docker_network_id in desired:
-                continue
-            if docker_network_id not in managed_ids:
-                continue
-            self._docker.disconnect_container_network(
-                instance.container_id,
-                docker_network_id,
-            )
+                self._recreate_container_for_networks(instance)
+                return
+            raise
