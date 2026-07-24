@@ -147,7 +147,7 @@
     "noNetwork": "None (default bridge)",
     "addNetwork": "Add network",
     "remove": "Remove",
-    "ipsHint": "Set a static IP/VIP per attachment (optional).",
+    "ipsHint": "Enter a host IP per network (no /prefix). Example: 192.168.21.2 — not 192.168.21.2/24.",
     "skipIp": "No network selected for attachment",
     "mode": "Mode",
     "bindPort": "Frontend bind port",

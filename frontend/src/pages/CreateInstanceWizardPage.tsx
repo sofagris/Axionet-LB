@@ -541,17 +541,52 @@ export function CreateInstanceWizardPage() {
               <div>
                 <dt className="text-ink-muted">{t("wizard.version")}</dt>
                 <dd className="font-mono">
-                  {serviceType}:{version}
+                  {selectedDef?.container_image ?? serviceType}:{version}
                 </dd>
               </div>
-              <div>
-                <dt className="text-ink-muted">{t("wizard.bindPort")}</dt>
-                <dd className="font-mono">{bindPort}</dd>
-              </div>
-              <div>
-                <dt className="text-ink-muted">{t("wizard.serverAddress")}</dt>
-                <dd className="font-mono">
-                  {serverAddress}:{serverPort}
+              {serviceType === "frr" ? (
+                <>
+                  <div>
+                    <dt className="text-ink-muted">{t("frr.localAs")}</dt>
+                    <dd className="font-mono">{frrLocalAs}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-muted">{t("frr.neighborAddress")}</dt>
+                    <dd className="font-mono">{frrNeighbor || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-muted">{t("frr.remoteAs")}</dt>
+                    <dd className="font-mono">{frrRemoteAs}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-muted">{t("frr.networks")}</dt>
+                    <dd className="font-mono whitespace-pre-wrap">{frrNetworks || "—"}</dd>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <dt className="text-ink-muted">{t("wizard.bindPort")}</dt>
+                    <dd className="font-mono">{bindPort}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-muted">{t("wizard.serverAddress")}</dt>
+                    <dd className="font-mono">
+                      {serverAddress}:{serverPort}
+                    </dd>
+                  </div>
+                </>
+              )}
+              <div className="md:col-span-2">
+                <dt className="text-ink-muted">{t("wizard.network")}</dt>
+                <dd className="font-mono text-xs">
+                  {attachments
+                    .filter((item) => item.network_id)
+                    .map((item) => {
+                      const network = networks.find((net) => net.id === item.network_id);
+                      return `${network?.name ?? item.network_id}${item.ip_address ? ` @ ${item.ip_address}` : ""}`;
+                    })
+                    .join(", ") || "—"}
                 </dd>
               </div>
             </dl>

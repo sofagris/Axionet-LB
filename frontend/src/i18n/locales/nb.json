@@ -147,7 +147,7 @@
     "noNetwork": "Ingen (default bridge)",
     "addNetwork": "Legg til nettverk",
     "remove": "Fjern",
-    "ipsHint": "Angi statisk IP/VIP per nettverkstilknytning (valgfritt).",
+    "ipsHint": "Angi statisk host-IP per nettverk (uten /prefix). Eksempel: 192.168.21.2 — ikke 192.168.21.2/24.",
     "skipIp": "Ingen nettverk valgt for tilknytning",
     "mode": "Mode",
     "bindPort": "Frontend bind-port",

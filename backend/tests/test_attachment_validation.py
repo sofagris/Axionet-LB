@@ -92,3 +92,10 @@ def test_validate_accepts_unique_ip_in_subnet(db: Session) -> None:
         networks=networks,
     )
     assert ipaddress.ip_address("172.30.60.20") in ipaddress.ip_network("172.30.60.0/24")
+
+
+def test_validate_accepts_cidr_host_form_and_normalizes(db: Session) -> None:
+    networks = list(db.scalars(select(Network)))
+    attachment = NetworkAttachmentCreate(network_id="net-1", ip_address="172.30.60.20/24")
+    validate_network_attachments(db, [attachment], networks=networks)
+    assert attachment.ip_address == "172.30.60.20"

@@ -10,6 +10,21 @@ from app.models.network_attachment import NetworkAttachment
 from app.schemas.instances import NetworkAttachmentCreate
 
 
+def normalize_host_ip(value: str) -> str:
+    """Accept a host IP or CIDR (``192.168.21.2/24``) and return the host address."""
+    raw = value.strip()
+    if not raw:
+        raise ValueError("IP address cannot be empty")
+    try:
+        if "/" in raw:
+            return str(ipaddress.ip_interface(raw).ip)
+        return str(ipaddress.ip_address(raw))
+    except ValueError as exc:
+        raise ValueError(
+            f"Invalid IP address: {value} (use host IP only, e.g. 192.168.21.2 — not network CIDR)"
+        ) from exc
+
+
 def validate_network_attachments(
     db: Session,
     attachments: list[NetworkAttachmentCreate],
@@ -20,6 +35,7 @@ def validate_network_attachments(
     """Validate IPAM rules for instance network attachments.
 
     Raises ValueError with a human-readable message on failure.
+    Normalizes ``ip_address`` in-place when a CIDR host form is provided.
     """
     if not attachments:
         return
@@ -39,10 +55,8 @@ def validate_network_attachments(
         if not item.ip_address:
             continue
 
-        try:
-            address = ipaddress.ip_address(item.ip_address)
-        except ValueError as exc:
-            raise ValueError(f"Invalid IP address: {item.ip_address}") from exc
+        address = ipaddress.ip_address(normalize_host_ip(item.ip_address))
+        item.ip_address = str(address)
 
         if network.subnet:
             try:
