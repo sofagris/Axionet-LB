@@ -1101,6 +1101,33 @@ Dokumenter og verifiser før lab-smoke:
 - Reachability: ping FRR↔peer; TCP 179 ikke blokkert
 - Vert støtter ipvlan-l2 mot parent/VLAN som for HAProxy
 
+### Milestone 9 – VIP via BGP (same-L2 MVP)
+
+Knytt en VIP til en HAProxy-instans og annonser den via en FRR-instans. **Modell 1 (bevisst midlertidig):** VIP = HAProxy-dataplan-IP på samme L2 som BGP-peer (f.eks. `BGP-SONIC-01`). FRR annonserer VIP som `/32`. Ingen DNAT via FRR.
+
+#### Funksjon
+
+- Ressurs `ServiceVip` / API `/api/v1/vips`
+- Felter: name, address, haproxy_instance_id, frr_instance_id, network_id, enabled, advertise
+- Orkestrering: sikre HAProxy-attachment med VIP-IP; append `/32` til FRR `networks` og deploy; reverse ved disable/delete
+- GUI: liste/opprett/enable/disable VIP
+- Modell 1 skal ikke blokkere senere modell 2 (eget VIP-prefiks + FRR DNAT)
+
+#### Akseptansekriterium (lab)
+
+1. Opprett VIP knyttet til HAProxy + FRR + peer-nett
+2. HAProxy har VIP-IP på attachment
+3. FRR annonserer VIP `/32`
+4. Peer (f.eks. SONiC) ser prefikset
+5. HTTP mot VIP når frontend binder VIP (eller `*`)
+
+#### Utenfor Milestone 9
+
+- Health-gated withdraw (M9.1)
+- Eget VIP-prefiks + DNAT via FRR (M9.2)
+- Multi-homing / ECMP (M9.3)
+- Anycast-eierskap, VRRP, multi-node (M10+)
+
 ---
 
 ## 16. Testkrav
@@ -1210,7 +1237,6 @@ Valider alle navn før de brukes som:
 Ikke implementer disse nå, men unngå arkitekturvalg som blokkerer dem:
 
 - to-node cluster
-- BGP-annonserte VIP-er (automatisk VIP/anycast knyttet til LB-instanser; grunnleggende BGP-peering er Milestone 8)
 - VRRP
 - config sync
 - PostgreSQL
@@ -1228,6 +1254,20 @@ Ikke implementer disse nå, men unngå arkitekturvalg som blokkerer dem:
 - frontpanel LCD og knapper
 - FreeHCI-integrasjon
 - GitOps/Ansible
+
+### Roadmap VIP / anycast
+
+Grunnleggende BGP-peering er Milestone 8. VIP-orkestrering starter i Milestone 9 med **modell 1** (same-L2). Senere faser skal perfeksjonere uten å låse arkitekturen til modell 1:
+
+| Fase | Innhold |
+|------|---------|
+| **M9** (nå) | Same-L2 VIP = HAProxy-IP + FRR `/32`-annonsering |
+| **M9.1** | Health-gated withdraw (stopp/unhealthy HAProxy → fjern `/32`) |
+| **M9.2** | Modell 2: eget VIP-prefiks (f.eks. `203.0.113.10/32`) med FRR-mottak + DNAT/forward til HAProxy |
+| **M9.3** | Multi-homing / ECMP (flere dataplan-linker) |
+| **M10+** | Anycast-eierskap, VRRP, multi-node |
+
+Modell 1 er bevisst midlertidig lab-/MVP-strategi.
 
 ---
 

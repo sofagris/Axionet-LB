@@ -10,6 +10,7 @@ from app.api.v1 import (
     revisions,
     service_definitions,
     system,
+    vips,
 )
 from app.core.security import enforce_auth
 
@@ -23,3 +24,4 @@ api_router.include_router(instances.router)
 api_router.include_router(revisions.router)
 api_router.include_router(haproxy.router)
 api_router.include_router(frr.router)
+api_router.include_router(vips.router)

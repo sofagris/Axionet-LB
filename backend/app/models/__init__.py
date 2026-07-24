@@ -10,6 +10,7 @@ from app.models.service_instance import (
     HealthStatus,
     ServiceInstance,
 )
+from app.models.service_vip import ServiceVip
 from app.models.user import User
 
 __all__ = [
@@ -27,6 +28,7 @@ __all__ = [
     "NetworkType",
     "PhysicalInterface",
     "ServiceInstance",
+    "ServiceVip",
     "User",
     "ValidationStatus",
 ]

@@ -85,6 +85,8 @@ class SystemService:
                 "frr.bgp",
                 "frr.structured_config",
                 "frr.revisions",
+                "vips.crud",
+                "vips.bgp_announce",
                 "system.logs",
                 "system.audit",
                 "system.orphans",

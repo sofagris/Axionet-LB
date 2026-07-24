@@ -12,6 +12,7 @@
     "networks": "Networks",
     "catalog": "Catalog",
     "instances": "Instances",
+    "vips": "VIPs",
     "logs": "Logs",
     "settings": "Settings"
   },
@@ -297,6 +298,35 @@
     "bgpSummary": "show bgp summary",
     "bgpNeighbors": "show bgp neighbors",
     "noBgpData": "No BGP data (is the instance running?)"
+  },
+
+  "vips": {
+    "title": "Service VIPs",
+    "subtitle": "VIP on the same L2 as the BGP peer: HAProxy owns the IP, FRR announces /32 (model 1).",
+    "createTitle": "Create VIP",
+    "create": "Create VIP",
+    "empty": "No VIPs yet.",
+    "colName": "Name",
+    "colAddress": "Address",
+    "colHaproxy": "HAProxy",
+    "colFrr": "FRR",
+    "colNetwork": "Network",
+    "colStatus": "Status",
+    "colActions": "Actions",
+    "selectInstance": "Select instance…",
+    "selectNetwork": "Select network…",
+    "bindFrontends": "Set HAProxy frontend bind_address to VIP",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "attached": "Attached",
+    "notAttached": "Not attached",
+    "advertised": "Advertised",
+    "notAdvertised": "Not advertised",
+    "enable": "Enable",
+    "disable": "Disable",
+    "delete": "Delete",
+    "confirmDelete": "Delete VIP {{name}}?",
+    "bgpLink": "BGP"
   },
 
   "revisions": {

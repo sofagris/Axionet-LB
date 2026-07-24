@@ -12,6 +12,7 @@
     "networks": "Networks",
     "catalog": "Catalog",
     "instances": "Instances",
+    "vips": "VIPs",
     "logs": "Logs",
     "settings": "Settings"
   },
@@ -297,6 +298,35 @@
     "bgpSummary": "show bgp summary",
     "bgpNeighbors": "show bgp neighbors",
     "noBgpData": "Ingen BGP-data (er instansen startet?)"
+  },
+
+  "vips": {
+    "title": "Service VIPs",
+    "subtitle": "VIP på samme L2 som BGP-peer: HAProxy får IP-en, FRR annonserer /32 (modell 1).",
+    "createTitle": "Opprett VIP",
+    "create": "Opprett VIP",
+    "empty": "Ingen VIP-er ennå.",
+    "colName": "Navn",
+    "colAddress": "Adresse",
+    "colHaproxy": "HAProxy",
+    "colFrr": "FRR",
+    "colNetwork": "Nettverk",
+    "colStatus": "Status",
+    "colActions": "Handlinger",
+    "selectInstance": "Velg instans…",
+    "selectNetwork": "Velg nettverk…",
+    "bindFrontends": "Sett HAProxy frontend bind_address til VIP",
+    "enabled": "Aktiv",
+    "disabled": "Deaktivert",
+    "attached": "Attached",
+    "notAttached": "Ikke attached",
+    "advertised": "Annonseres",
+    "notAdvertised": "Ikke annonsert",
+    "enable": "Aktiver",
+    "disable": "Deaktiver",
+    "delete": "Slett",
+    "confirmDelete": "Slette VIP {{name}}?",
+    "bgpLink": "BGP"
   },
 
   "revisions": {
