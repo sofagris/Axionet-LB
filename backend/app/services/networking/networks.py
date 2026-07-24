@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.models.network import Network, NetworkType
 from app.models.network_attachment import NetworkAttachment
 from app.models.physical_interface import PhysicalInterface
+from app.models.service_instance import ServiceInstance
 from app.schemas.networks import NetworkCreate, NetworkUpdate, NetworkValidationResult
 from app.services.docker.client import DockerClientAdapter
 from app.services.networking.host import HostNetworkAdapter, HostNetworkError
@@ -109,11 +110,19 @@ class NetworkService:
         return network
 
     def delete_network(self, network: Network) -> None:
-        in_use = self._db.scalars(
-            select(NetworkAttachment).where(NetworkAttachment.network_id == network.id).limit(1)
-        ).first()
-        if in_use is not None:
-            raise ValueError("Network is in use by one or more service instances")
+        attachments = self._db.scalars(
+            select(NetworkAttachment).where(NetworkAttachment.network_id == network.id)
+        ).all()
+        if attachments:
+            instance_ids = {item.service_instance_id for item in attachments}
+            names = self._db.scalars(
+                select(ServiceInstance.name).where(ServiceInstance.id.in_(instance_ids))
+            ).all()
+            label = ", ".join(sorted(names)) if names else f"{len(instance_ids)} instance(s)"
+            raise ValueError(
+                f"Cannot delete network '{network.name}': still attached to {label}. "
+                "Detach it from those instances first."
+            )
         if network.docker_network_id:
             try:
                 self._docker.remove_managed_network(network.docker_network_id)

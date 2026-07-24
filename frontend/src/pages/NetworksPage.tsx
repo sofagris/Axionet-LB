@@ -156,6 +156,13 @@ export function NetworksPage() {
           {networksQuery.error instanceof Error ? networksQuery.error.message : "Feil"}
         </p>
       ) : null}
+      {deleteMutation.isError ? (
+        <p className="rounded-lg border border-danger/40 bg-danger/5 px-4 py-3 text-sm text-danger" role="alert">
+          {deleteMutation.error instanceof Error
+            ? deleteMutation.error.message
+            : "Kunne ikke slette nettverket"}
+        </p>
+      ) : null}
 
       {networksQuery.data ? (
         <div className="overflow-x-auto rounded-lg border border-line bg-paper-elevated p-4 shadow-sm">
@@ -196,7 +203,10 @@ export function NetworksPage() {
                         type="button"
                         className="text-sm text-danger hover:underline"
                         disabled={deleteMutation.isPending}
-                        onClick={() => deleteMutation.mutate(network.id)}
+                        onClick={() => {
+                          deleteMutation.reset();
+                          deleteMutation.mutate(network.id);
+                        }}
                       >
                         Slett
                       </button>

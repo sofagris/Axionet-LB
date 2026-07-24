@@ -117,6 +117,42 @@ def test_create_list_delete_ipvlan_network(client: TestClient, docker_adapter: M
     docker_adapter.remove_managed_network.assert_called_once_with("docker-net-1")
 
 
+def test_delete_network_in_use_returns_409(client: TestClient, db_session: Session) -> None:
+    from app.models.network_attachment import NetworkAttachment
+    from app.models.service_instance import ServiceInstance
+
+    created = client.post(
+        "/api/v1/networks",
+        json={
+            "name": "peer-net",
+            "network_type": "untagged-access",
+            "parent_interface_id": "ifc-eth0",
+            "subnet": "192.168.21.0/24",
+            "gateway": "192.168.21.1",
+        },
+    )
+    assert created.status_code == 201, created.text
+    network_id = created.json()["id"]
+
+    instance = ServiceInstance(name="edge-mt-a", service_type="frr", image="frr:test", image_version="test")
+    db_session.add(instance)
+    db_session.flush()
+    db_session.add(
+        NetworkAttachment(
+            service_instance_id=instance.id,
+            network_id=network_id,
+            ip_address="192.168.21.2",
+            attachment_order=0,
+        )
+    )
+    db_session.commit()
+
+    deleted = client.delete(f"/api/v1/networks/{network_id}")
+    assert deleted.status_code == 409
+    assert "edge-mt-a" in deleted.json()["detail"]
+    assert "Detach" in deleted.json()["detail"]
+
+
 def test_validate_endpoint(client: TestClient) -> None:
     response = client.post(
         "/api/v1/networks/validate",
