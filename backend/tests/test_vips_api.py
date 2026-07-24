@@ -49,8 +49,8 @@ def db_session() -> Generator[Session, None, None]:
             id="hap-1",
             name="haproxy-lab",
             service_type="haproxy",
-            desired_state=DesiredState.STOPPED.value,
-            actual_state=ActualState.STOPPED.value,
+            desired_state=DesiredState.RUNNING.value,
+            actual_state=ActualState.RUNNING.value,
             image="haproxy:3.2.6",
             image_version="3.2.6",
             restart_policy="unless-stopped",
@@ -75,7 +75,8 @@ def db_session() -> Generator[Session, None, None]:
                     }
                 ],
             },
-            health_status=HealthStatus.UNKNOWN.value,
+            container_id="hap-container-1",
+            health_status=HealthStatus.HEALTHY.value,
         )
     )
     session.add(
@@ -220,3 +221,58 @@ def test_create_vip_rejects_wrong_service_type(client: TestClient) -> None:
         },
     )
     assert response.status_code == 400
+
+
+def test_health_gate_withdraws_and_reannounces(
+    client: TestClient,
+    db_session: Session,
+    docker_adapter: MagicMock,
+) -> None:
+    from app.core.config import get_settings
+    from app.services.instances.service import InstanceService
+    from app.services.vips.service import VipService
+
+    created = client.post(
+        "/api/v1/vips",
+        json={
+            "name": "vip-health",
+            "address": "192.168.22.12",
+            "haproxy_instance_id": "hap-1",
+            "frr_instance_id": "frr-1",
+            "network_id": "net-sonic",
+        },
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["advertised"] is True
+    vip_id = created.json()["id"]
+
+    hap = db_session.get(ServiceInstance, "hap-1")
+    assert hap is not None
+    hap.desired_state = DesiredState.STOPPED.value
+    hap.actual_state = ActualState.STOPPED.value
+    db_session.commit()
+
+    instances = InstanceService(db=db_session, docker=docker_adapter, settings=get_settings())
+    VipService(db=db_session, instances=instances).sync_for_haproxy_instance("hap-1")
+
+    withdrawn = client.get(f"/api/v1/vips/{vip_id}")
+    assert withdrawn.status_code == 200
+    assert withdrawn.json()["enabled"] is True
+    assert withdrawn.json()["advertise"] is True
+    assert withdrawn.json()["advertised"] is False
+    frr = client.get("/api/v1/instances/frr-1")
+    assert "192.168.22.12/32" not in frr.json()["configuration"]["networks"]
+
+    hap = db_session.get(ServiceInstance, "hap-1")
+    assert hap is not None
+    hap.desired_state = DesiredState.RUNNING.value
+    hap.actual_state = ActualState.RUNNING.value
+    hap.health_status = HealthStatus.HEALTHY.value
+    db_session.commit()
+
+    VipService(db=db_session, instances=instances).sync_for_haproxy_instance("hap-1")
+
+    restored = client.get(f"/api/v1/vips/{vip_id}")
+    assert restored.json()["advertised"] is True
+    frr_back = client.get("/api/v1/instances/frr-1")
+    assert "192.168.22.12/32" in frr_back.json()["configuration"]["networks"]

@@ -322,6 +322,7 @@
     "notAttached": "Ikke attached",
     "advertised": "Annonseres",
     "notAdvertised": "Ikke annonsert",
+    "withdrawnHealth": "Trukket (HAProxy ikke klar)",
     "enable": "Aktiver",
     "disable": "Deaktiver",
     "delete": "Slett",

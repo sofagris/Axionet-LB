@@ -221,6 +221,9 @@ export function VipsPage() {
                     <div className={vip.advertised ? "text-ok" : "text-ink-muted"}>
                       {vip.advertised ? t("vips.advertised") : t("vips.notAdvertised")}
                     </div>
+                    {vip.enabled && vip.advertise && !vip.advertised ? (
+                      <div className="mt-1 text-warn">{t("vips.withdrawnHealth")}</div>
+                    ) : null}
                     {vip.last_error ? (
                       <div className="mt-1 max-w-xs truncate text-danger" title={vip.last_error}>
                         {vip.last_error}

@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.network import Network
-from app.models.service_instance import ServiceInstance
+from app.models.service_instance import ActualState, HealthStatus, ServiceInstance
 from app.models.service_vip import ServiceVip
 from app.plugins.frr.schemas import FrrConfig
 from app.plugins.haproxy.schemas import HaproxyConfig
@@ -27,6 +27,15 @@ NAME_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$")
 def vip_announce_prefix(address: str) -> str:
     host = normalize_host_ip(address)
     return str(ipaddress.ip_network(f"{host}/{32 if ipaddress.ip_address(host).version == 4 else 128}"))
+
+
+def haproxy_ready_for_announce(haproxy: ServiceInstance) -> bool:
+    """True when HAProxy can accept VIP traffic (M9.1)."""
+    if haproxy.actual_state != ActualState.RUNNING.value:
+        return False
+    if haproxy.health_status == HealthStatus.UNHEALTHY.value:
+        return False
+    return True
 
 
 class VipService:
@@ -166,9 +175,71 @@ class VipService:
         )
         self._db.commit()
 
+    def reconcile_advertise_all(self) -> int:
+        """Sync FRR announce state for all VIPs (health-gated). Returns changed count."""
+        changed = 0
+        for vip in self.list_vips():
+            before = vip.advertised
+            try:
+                self._reconcile(vip)
+            except (ValueError, RuntimeError) as exc:
+                vip.last_error = str(exc)
+                vip.updated_at = datetime.now(UTC)
+                logger.warning("VIP advertise reconcile failed for %s: %s", vip.id, exc)
+            if vip.advertised != before:
+                changed += 1
+                self._audit.record(
+                    event_type="vip.advertise.sync",
+                    resource_type="vip",
+                    resource_id=vip.id,
+                    payload={
+                        "name": vip.name,
+                        "advertised": vip.advertised,
+                        "enabled": vip.enabled,
+                    },
+                )
+        if changed:
+            self._db.commit()
+        return changed
+
+    def sync_for_haproxy_instance(self, haproxy_instance_id: str) -> int:
+        """Re-evaluate advertise for VIPs tied to one HAProxy instance."""
+        vips = list(
+            self._db.scalars(
+                select(ServiceVip).where(ServiceVip.haproxy_instance_id == haproxy_instance_id)
+            )
+        )
+        if not vips:
+            return 0
+        changed = 0
+        for vip in vips:
+            before = vip.advertised
+            try:
+                self._reconcile(vip)
+            except (ValueError, RuntimeError) as exc:
+                vip.last_error = str(exc)
+                vip.updated_at = datetime.now(UTC)
+                logger.warning("VIP sync after HAProxy change failed for %s: %s", vip.id, exc)
+            if vip.advertised != before:
+                changed += 1
+                self._audit.record(
+                    event_type="vip.advertise.sync",
+                    resource_type="vip",
+                    resource_id=vip.id,
+                    payload={
+                        "name": vip.name,
+                        "advertised": vip.advertised,
+                        "haproxy_instance_id": haproxy_instance_id,
+                    },
+                )
+        self._db.commit()
+        return changed
+
     def _reconcile(self, vip: ServiceVip, *, bind_frontends: bool = False) -> None:
         should_live = vip.enabled
-        should_announce = should_live and vip.advertise
+        haproxy = self._instances.get_instance(vip.haproxy_instance_id)
+        ready = bool(haproxy and haproxy_ready_for_announce(haproxy))
+        should_announce = should_live and vip.advertise and ready
 
         if should_live:
             self._ensure_haproxy_attachment(vip, attach=True)
@@ -186,7 +257,7 @@ class VipService:
         if should_announce:
             self._set_frr_announce(vip, announce=True)
             vip.advertised = True
-        elif vip.advertised:
+        else:
             self._set_frr_announce(vip, announce=False)
             vip.advertised = False
 

@@ -1128,6 +1128,23 @@ Knytt en VIP til en HAProxy-instans og annonser den via en FRR-instans. **Modell
 - Multi-homing / ECMP (M9.3)
 - Anycast-eierskap, VRRP, multi-node (M10+)
 
+### Milestone 9.1 – Health-gated VIP withdraw
+
+Når en VIP er `enabled` + `advertise`, skal `/32` kun annonseres mens tilknyttet HAProxy er klar til å ta trafikk.
+
+#### Funksjon
+
+- Annonser kun når HAProxy `actual_state=running` og `health_status` ikke er `unhealthy`
+- Ved stopp, error eller unhealthy: trekk `/32` fra FRR (sett `advertised=false`)
+- Ved start/healthy igjen: re-annonser hvis VIP fortsatt er enabled+advertise
+- Kjør VIP-sync i bakgrunns-reconcile og etter HAProxy start/stopp/restart
+
+#### Akseptansekriterium (lab)
+
+1. VIP annonseres mens HAProxy kjører
+2. Stopp HAProxy → prefiks forsvinner fra peer (SONiC)
+3. Start HAProxy → prefiks kommer tilbake
+
 ---
 
 ## 16. Testkrav
@@ -1261,8 +1278,8 @@ Grunnleggende BGP-peering er Milestone 8. VIP-orkestrering starter i Milestone 9
 
 | Fase | Innhold |
 |------|---------|
-| **M9** (nå) | Same-L2 VIP = HAProxy-IP + FRR `/32`-annonsering |
-| **M9.1** | Health-gated withdraw (stopp/unhealthy HAProxy → fjern `/32`) |
+| **M9** | Same-L2 VIP = HAProxy-IP + FRR `/32`-annonsering |
+| **M9.1** (nå) | Health-gated withdraw (stopp/unhealthy HAProxy → fjern `/32`) |
 | **M9.2** | Modell 2: eget VIP-prefiks (f.eks. `203.0.113.10/32`) med FRR-mottak + DNAT/forward til HAProxy |
 | **M9.3** | Multi-homing / ECMP (flere dataplan-linker) |
 | **M10+** | Anycast-eierskap, VRRP, multi-node |

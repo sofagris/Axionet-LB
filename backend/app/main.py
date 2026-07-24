@@ -84,7 +84,13 @@ def run_reconcile_pass() -> int:
     try:
         docker = create_docker_adapter(settings)
         service = InstanceService(db=db, docker=docker, settings=settings)
-        return service.reconcile_all()
+        count = service.reconcile_all()
+        from app.services.vips.service import VipService
+
+        vip_count = VipService(db=db, instances=service).reconcile_advertise_all()
+        if vip_count:
+            logger.info("VIP advertise sync updated %s VIP(s)", vip_count)
+        return count + vip_count
     finally:
         db.close()
 

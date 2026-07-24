@@ -87,6 +87,7 @@ class SystemService:
                 "frr.revisions",
                 "vips.crud",
                 "vips.bgp_announce",
+                "vips.health_gated_withdraw",
                 "system.logs",
                 "system.audit",
                 "system.orphans",

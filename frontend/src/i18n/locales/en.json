@@ -322,6 +322,7 @@
     "notAttached": "Not attached",
     "advertised": "Advertised",
     "notAdvertised": "Not advertised",
+    "withdrawnHealth": "Withdrawn (HAProxy not ready)",
     "enable": "Enable",
     "disable": "Disable",
     "delete": "Delete",

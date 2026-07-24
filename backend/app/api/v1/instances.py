@@ -19,6 +19,7 @@ from app.schemas.instances import (
 from app.services.docker.client import DockerClientAdapter, create_docker_adapter
 from app.services.instances.metrics import HaproxyMetricsCollector
 from app.services.instances.service import InstanceService
+from app.services.vips.service import VipService
 
 router = APIRouter(prefix="/instances", tags=["instances"])
 
@@ -308,4 +309,9 @@ def _action(service: InstanceService, instance_id: str, fn) -> InstanceRead:
         updated = fn(instance)
     except RuntimeError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+    if updated.service_type == "haproxy":
+        VipService(db=service._db, instances=service).sync_for_haproxy_instance(updated.id)
+        refreshed = service.get_instance(updated.id)
+        if refreshed is not None:
+            updated = refreshed
     return _to_read(service, updated)
