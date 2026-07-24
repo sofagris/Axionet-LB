@@ -266,6 +266,9 @@
     "networks": "Networks / prefixes (one per line)",
     "saveConfig": "Save and deploy",
     "rendered": "Rendered frr.conf",
+    "containerIpTitle": "Container IP (Docker)",
+    "containerIpHint": "IP is assigned on the network attachment, not in frr.conf. BGP router-id is only an identifier.",
+    "noStaticIp": "(no static IP)",
     "bgpSummary": "show bgp summary",
     "bgpNeighbors": "show bgp neighbors",
     "noBgpData": "No BGP data (is the instance running?)"

@@ -266,6 +266,9 @@
     "networks": "Networks / prefixes (én per linje)",
     "saveConfig": "Lagre og deploy",
     "rendered": "Rendered frr.conf",
+    "containerIpTitle": "Container IP (Docker)",
+    "containerIpHint": "IP settes på nettverkstilknytningen, ikke i frr.conf. BGP router-id er kun identifikator.",
+    "noStaticIp": "(ingen statisk IP)",
     "bgpSummary": "show bgp summary",
     "bgpNeighbors": "show bgp neighbors",
     "noBgpData": "Ingen BGP-data (er instansen startet?)"

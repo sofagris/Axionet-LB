@@ -188,6 +188,25 @@ export function FrrDetailPage() {
 
       {tab === "overview" ? (
         <div className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-4">
+            <div className="border border-line bg-paper-elevated p-4">
+              <h3 className="font-medium text-ink">{t("frr.containerIpTitle")}</h3>
+              <p className="mt-1 text-sm text-ink-muted">{t("frr.containerIpHint")}</p>
+              {(instance?.networks ?? []).length === 0 ? (
+                <p className="mt-3 font-mono text-sm text-ink-muted">—</p>
+              ) : (
+                <ul className="mt-3 space-y-2 font-mono text-sm">
+                  {(instance?.networks ?? []).map((attachment) => (
+                    <li key={attachment.id} className="border-t border-line pt-2 first:border-t-0 first:pt-0">
+                      <span className="text-ink">{attachment.ip_address || t("frr.noStaticIp")}</span>
+                      <span className="mt-0.5 block text-xs text-ink-muted">
+                        network {attachment.network_id.slice(0, 8)}…
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           <form className="space-y-4 border border-line bg-paper-elevated p-4" onSubmit={(e) => void onSave(e)}>
             <h3 className="font-medium text-ink">{t("frr.configTitle")}</h3>
             <label className="block text-sm">
@@ -298,6 +317,7 @@ export function FrrDetailPage() {
               </p>
             ) : null}
           </form>
+          </div>
           <div className="border border-line bg-paper-elevated p-4">
             <h3 className="font-medium text-ink">{t("frr.rendered")}</h3>
             <pre className="mt-3 max-h-[32rem] overflow-auto font-mono text-xs text-ink">

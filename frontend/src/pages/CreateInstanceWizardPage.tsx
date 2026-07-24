@@ -125,7 +125,7 @@ export function CreateInstanceWizardPage() {
   const [serverAddress, setServerAddress] = useState("127.0.0.1");
   const [serverPort, setServerPort] = useState(8080);
   const [frrHostname, setFrrHostname] = useState("ax-frr");
-  const [frrRouterId, setFrrRouterId] = useState("10.50.10.10");
+  const [frrRouterId, setFrrRouterId] = useState("");
   const [frrLocalAs, setFrrLocalAs] = useState(65001);
   const [frrNeighbor, setFrrNeighbor] = useState("");
   const [frrRemoteAs, setFrrRemoteAs] = useState(65000);
@@ -140,9 +140,15 @@ export function CreateInstanceWizardPage() {
 
   const configuration = useMemo(() => {
     if (serviceType === "frr") {
+      const attachmentIp =
+        attachments.map((item) => item.ip_address.trim()).find(Boolean) || "";
+      const routerId =
+        frrRouterId.trim() ||
+        (attachmentIp.includes("/") ? attachmentIp.split("/")[0] : attachmentIp) ||
+        "1.1.1.1";
       return buildFrrConfig({
         hostname: frrHostname || name || "ax-frr",
-        routerId: frrRouterId,
+        routerId,
         localAs: frrLocalAs,
         neighborAddress: frrNeighbor,
         remoteAs: frrRemoteAs,
@@ -161,6 +167,7 @@ export function CreateInstanceWizardPage() {
     frrHostname,
     name,
     frrRouterId,
+    attachments,
     frrLocalAs,
     frrNeighbor,
     frrRemoteAs,
@@ -183,7 +190,8 @@ export function CreateInstanceWizardPage() {
     }
     if (step === 5) {
       if (serviceType === "frr") {
-        return frrLocalAs > 0 && Boolean(frrRouterId.trim());
+        const hasIp = attachments.some((item) => item.ip_address.trim());
+        return frrLocalAs > 0 && (Boolean(frrRouterId.trim()) || hasIp);
       }
       return bindPort > 0 && serverPort > 0;
     }
@@ -401,6 +409,10 @@ export function CreateInstanceWizardPage() {
                   value={frrRouterId}
                   onChange={(e) => setFrrRouterId(e.target.value)}
                   className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                  placeholder={
+                    attachments.map((item) => item.ip_address.trim()).find(Boolean)?.split("/")[0] ||
+                    "192.168.21.2"
+                  }
                 />
               </label>
               <label className="block text-sm">
