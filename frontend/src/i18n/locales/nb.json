@@ -7,6 +7,9 @@
     "saving": "Lagrer…"
   },
   "nav": {
+    "main": "Hovedmeny",
+    "openMenu": "Åpne meny",
+    "closeMenu": "Lukk meny",
     "dashboard": "Dashboard",
     "interfaces": "Interfaces",
     "networks": "Networks",
@@ -14,7 +17,13 @@
     "instances": "Instances",
     "vips": "VIPs",
     "logs": "Logs",
-    "settings": "Settings"
+    "settings": "Settings",
+    "groups": {
+      "traffic": "Trafikk & LB",
+      "network": "Nettverk",
+      "observe": "Observability",
+      "system": "System"
+    }
   },
   "theme": {
     "toLight": "Bytt til lys modus",
@@ -335,6 +344,38 @@
     "delete": "Slett",
     "confirmDelete": "Slette VIP {{name}}?",
     "bgpLink": "BGP"
+  },
+
+  "runtimeGraph": {
+    "ephemeralHint": "Runtime-handlinger (enable/disable/drain/weight) er ephemeral — de lagres ikke i config før du endrer Servers-fanen eksplisitt.",
+    "weight": "Vekt (0–256)",
+    "refresh": "Oppdater status",
+    "refreshing": "Henter…",
+    "clearCounters": "Clear counters",
+    "clearing": "Nullstiller…",
+    "selected": "Valgt node",
+    "selectHint": "Klikk en node for detaljer og handlinger.",
+    "sessions": "Sesjoner",
+    "bytes": "Bytes inn/ut",
+    "bind": "Bind",
+    "mode": "Modus",
+    "defaultBackend": "Default backend",
+    "algorithm": "Algoritme",
+    "address": "Adresse",
+    "backend": "Backend",
+    "check": "Health check",
+    "weightLabel": "Vekt",
+    "interval": "Intervall",
+    "riseFall": "Rise / Fall",
+    "actions": "Handlinger",
+    "enable": "Enable",
+    "disable": "Disable",
+    "drain": "Drain",
+    "setWeight": "Set weight",
+    "legendUp": "UP / OPEN",
+    "legendDown": "DOWN",
+    "legendDrain": "DRAIN",
+    "legendMaint": "MAINT"
   },
 
   "revisions": {

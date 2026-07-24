@@ -109,4 +109,5 @@ export type HaproxyCertificate = z.infer<typeof HaproxyCertificateSchema>;
 export type HaproxyMap = z.infer<typeof HaproxyMapSchema>;
 export type HaproxyMapDetail = z.infer<typeof HaproxyMapDetailSchema>;
 export type HaproxyAcl = z.infer<typeof HaproxyAclSchema>;
+export type HaproxyStatRow = z.infer<typeof HaproxyStatRowSchema>;
 export type HaproxyRuntimeStatus = z.infer<typeof HaproxyRuntimeStatusSchema>;

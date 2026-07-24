@@ -7,6 +7,9 @@
     "saving": "Saving…"
   },
   "nav": {
+    "main": "Main navigation",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
     "dashboard": "Dashboard",
     "interfaces": "Interfaces",
     "networks": "Networks",
@@ -14,7 +17,13 @@
     "instances": "Instances",
     "vips": "VIPs",
     "logs": "Logs",
-    "settings": "Settings"
+    "settings": "Settings",
+    "groups": {
+      "traffic": "Traffic & LB",
+      "network": "Network",
+      "observe": "Observability",
+      "system": "System"
+    }
   },
   "theme": {
     "toLight": "Switch to light mode",
@@ -335,6 +344,38 @@
     "delete": "Delete",
     "confirmDelete": "Delete VIP {{name}}?",
     "bgpLink": "BGP"
+  },
+
+  "runtimeGraph": {
+    "ephemeralHint": "Runtime actions (enable/disable/drain/weight) are ephemeral — they are not saved to config until you change the Servers tab.",
+    "weight": "Weight (0–256)",
+    "refresh": "Refresh status",
+    "refreshing": "Refreshing…",
+    "clearCounters": "Clear counters",
+    "clearing": "Clearing…",
+    "selected": "Selected node",
+    "selectHint": "Click a node to see details and actions.",
+    "sessions": "Sessions",
+    "bytes": "Bytes in/out",
+    "bind": "Bind",
+    "mode": "Mode",
+    "defaultBackend": "Default backend",
+    "algorithm": "Algorithm",
+    "address": "Address",
+    "backend": "Backend",
+    "check": "Health check",
+    "weightLabel": "Weight",
+    "interval": "Interval",
+    "riseFall": "Rise / Fall",
+    "actions": "Actions",
+    "enable": "Enable",
+    "disable": "Disable",
+    "drain": "Drain",
+    "setWeight": "Set weight",
+    "legendUp": "UP / OPEN",
+    "legendDown": "DOWN",
+    "legendDrain": "DRAIN",
+    "legendMaint": "MAINT"
   },
 
   "revisions": {

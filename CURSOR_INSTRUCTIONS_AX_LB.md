@@ -878,9 +878,13 @@ Egne faner:
 - Servers
 - Certificates
 - ACLs
-- Runtime Status
+- Runtime Status (status-graf: frontend → backend → server, sidepanel med ephemeral runtime-actions)
 - Logs
 - Revisions
+
+### 12.5.1 App-navigasjon (GUI UX)
+
+Venstremeny med grupperte seksjoner (Traffic & LB, Network, Observability, System). Mobil: kollapsbar drawer. Runtime Status bruker `@xyflow/react` for zoom/pan/minimap; config-editing skjer fortsatt i egne faner (ikke på canvas).
 
 ### 12.6 API-klient
 
