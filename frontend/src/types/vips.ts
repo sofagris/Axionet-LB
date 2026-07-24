@@ -4,12 +4,15 @@ export const VipSchema = z.object({
   id: z.string(),
   name: z.string(),
   address: z.string(),
+  mode: z.enum(["same_l2", "routed"]).default("same_l2"),
+  backend_ip: z.string().nullable().optional(),
   haproxy_instance_id: z.string(),
   frr_instance_id: z.string(),
   network_id: z.string(),
   enabled: z.boolean(),
   advertise: z.boolean(),
   attached: z.boolean(),
+  dataplane_ready: z.boolean().default(false),
   advertised: z.boolean(),
   last_error: z.string().nullable(),
   created_at: z.string(),
@@ -25,6 +28,8 @@ export type VipCreatePayload = {
   haproxy_instance_id: string;
   frr_instance_id: string;
   network_id: string;
+  mode?: "same_l2" | "routed";
+  backend_ip?: string | null;
   enabled?: boolean;
   advertise?: boolean;
   bind_frontends?: boolean;

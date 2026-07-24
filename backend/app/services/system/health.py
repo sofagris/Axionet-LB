@@ -88,6 +88,7 @@ class SystemService:
                 "vips.crud",
                 "vips.bgp_announce",
                 "vips.health_gated_withdraw",
+                "vips.routed_dnat",
                 "system.logs",
                 "system.audit",
                 "system.orphans",

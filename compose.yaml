@@ -46,6 +46,15 @@ services:
     networks:
       - control
 
+  # Dataplane FRR image with iptables (M9.2 routed VIP DNAT).
+  # Build: docker compose --profile tools build frr
+  frr:
+    image: axionet/frr:10.2.6
+    build:
+      context: ./backend/docker/frr
+    profiles:
+      - tools
+
 networks:
   control:
     driver: bridge

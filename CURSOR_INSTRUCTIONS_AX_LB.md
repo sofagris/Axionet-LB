@@ -1145,6 +1145,25 @@ Når en VIP er `enabled` + `advertise`, skal `/32` kun annonseres mens tilknytte
 2. Stopp HAProxy → prefiks forsvinner fra peer (SONiC)
 3. Start HAProxy → prefiks kommer tilbake
 
+### Milestone 9.2 – Routed VIP + FRR DNAT
+
+Eget VIP-prefiks (ikke nødvendigvis på peer-L2). **Modell 2:** VIP ligger på FRR `lo`, FRR annonserer `/32`, og DNATer TCP/UDP til HAProxy `backend_ip`. Modell 1 (`same_l2`) beholdes.
+
+#### Funksjon
+
+- `ServiceVip.mode`: `same_l2` | `routed`
+- `backend_ip` (valgfri; default = HAProxy-attachment-IP på `network_id`)
+- FRR-image `axionet/frr:10.2.6` (basert på `quay.io/frrouting/frr:10.2.6` + iptables)
+- Dataplan: `ip addr` på `lo` + iptables DNAT/MASQUERADE (tag `ax-vip-<id>`)
+- Health-gate (M9.1) gjelder: unhealthy/stopp → withdraw + teardown DNAT
+
+#### Akseptansekriterium (lab)
+
+1. Opprett routed VIP (f.eks. `203.0.113.10`) mot HAProxy bak FRR
+2. FRR har VIP på lo og DNAT-regler
+3. Peer ser `/32`
+4. Stopp HAProxy → prefiks/DNAT trekkes
+
 ---
 
 ## 16. Testkrav
@@ -1279,8 +1298,8 @@ Grunnleggende BGP-peering er Milestone 8. VIP-orkestrering starter i Milestone 9
 | Fase | Innhold |
 |------|---------|
 | **M9** | Same-L2 VIP = HAProxy-IP + FRR `/32`-annonsering |
-| **M9.1** (nå) | Health-gated withdraw (stopp/unhealthy HAProxy → fjern `/32`) |
-| **M9.2** | Modell 2: eget VIP-prefiks (f.eks. `203.0.113.10/32`) med FRR-mottak + DNAT/forward til HAProxy |
+| **M9.1** | Health-gated withdraw (stopp/unhealthy HAProxy → fjern `/32`) |
+| **M9.2** (nå) | Modell 2: eget VIP-prefiks med FRR-mottak + DNAT/forward til HAProxy |
 | **M9.3** | Multi-homing / ECMP (flere dataplan-linker) |
 | **M10+** | Anycast-eierskap, VRRP, multi-node |
 

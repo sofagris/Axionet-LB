@@ -24,6 +24,8 @@ export function VipsPage() {
 
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
+  const [mode, setMode] = useState<"same_l2" | "routed">("same_l2");
+  const [backendIp, setBackendIp] = useState("");
   const [haproxyId, setHaproxyId] = useState("");
   const [frrId, setFrrId] = useState("");
   const [networkId, setNetworkId] = useState("");
@@ -53,12 +55,15 @@ export function VipsPage() {
         haproxy_instance_id: haproxyId,
         frr_instance_id: frrId,
         network_id: networkId,
+        mode,
+        backend_ip: mode === "routed" && backendIp.trim() ? backendIp.trim() : null,
         enabled: true,
         advertise: true,
-        bind_frontends: bindFrontends,
+        bind_frontends: mode === "same_l2" ? bindFrontends : false,
       });
       setName("");
       setAddress("");
+      setBackendIp("");
       setBindFrontends(false);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : t("common.unknownError"));
@@ -92,10 +97,32 @@ export function VipsPage() {
               className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-ink"
               value={address}
               onChange={(event) => setAddress(event.target.value)}
-              placeholder="192.168.22.10"
+              placeholder={mode === "routed" ? "203.0.113.10" : "192.168.22.10"}
               required
             />
           </label>
+          <label className="block text-sm">
+            <span className="text-ink-muted">{t("vips.colMode")}</span>
+            <select
+              className="mt-1 w-full border border-line bg-paper px-3 py-2 text-ink"
+              value={mode}
+              onChange={(event) => setMode(event.target.value as "same_l2" | "routed")}
+            >
+              <option value="same_l2">{t("vips.modeSameL2")}</option>
+              <option value="routed">{t("vips.modeRouted")}</option>
+            </select>
+          </label>
+          {mode === "routed" ? (
+            <label className="block text-sm md:col-span-2">
+              <span className="text-ink-muted">{t("vips.colBackendIp")}</span>
+              <input
+                className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-ink"
+                value={backendIp}
+                onChange={(event) => setBackendIp(event.target.value)}
+                placeholder={t("vips.backendIpHint")}
+              />
+            </label>
+          ) : null}
           <label className="block text-sm">
             <span className="text-ink-muted">{t("vips.colHaproxy")}</span>
             <select
@@ -145,14 +172,16 @@ export function VipsPage() {
               ))}
             </select>
           </label>
-          <label className="flex items-center gap-2 text-sm md:col-span-2">
-            <input
-              type="checkbox"
-              checked={bindFrontends}
-              onChange={(event) => setBindFrontends(event.target.checked)}
-            />
-            <span className="text-ink-muted">{t("vips.bindFrontends")}</span>
-          </label>
+          {mode === "same_l2" ? (
+            <label className="flex items-center gap-2 text-sm md:col-span-2">
+              <input
+                type="checkbox"
+                checked={bindFrontends}
+                onChange={(event) => setBindFrontends(event.target.checked)}
+              />
+              <span className="text-ink-muted">{t("vips.bindFrontends")}</span>
+            </label>
+          ) : null}
           {formError ? <p className="text-sm text-danger md:col-span-2">{formError}</p> : null}
           <div className="md:col-span-2">
             <button
@@ -176,6 +205,7 @@ export function VipsPage() {
             <thead>
               <tr className="text-xs tracking-wide text-ink-muted uppercase">
                 <th className="pb-2 pr-4 font-medium">{t("vips.colName")}</th>
+                <th className="pb-2 pr-4 font-medium">{t("vips.colMode")}</th>
                 <th className="pb-2 pr-4 font-medium">{t("vips.colAddress")}</th>
                 <th className="pb-2 pr-4 font-medium">{t("vips.colHaproxy")}</th>
                 <th className="pb-2 pr-4 font-medium">{t("vips.colFrr")}</th>
@@ -188,10 +218,16 @@ export function VipsPage() {
               {vipsQuery.data.map((vip) => (
                 <tr key={vip.id} className="border-t border-line/70">
                   <td className="py-3 pr-4 font-medium text-ink">{vip.name}</td>
+                  <td className="py-3 pr-4 font-mono text-xs text-ink">
+                    {vip.mode === "routed" ? t("vips.modeRouted") : t("vips.modeSameL2")}
+                  </td>
                   <td className="py-3 pr-4 font-mono text-ink">
                     {vip.address}
                     {vip.announce_prefix ? (
                       <span className="ml-2 text-xs text-ink-muted">{vip.announce_prefix}</span>
+                    ) : null}
+                    {vip.mode === "routed" && vip.backend_ip ? (
+                      <div className="text-xs text-ink-muted">→ {vip.backend_ip}</div>
                     ) : null}
                   </td>
                   <td className="py-3 pr-4">
@@ -215,9 +251,15 @@ export function VipsPage() {
                     <div className={vip.enabled ? "text-ok" : "text-ink-muted"}>
                       {vip.enabled ? t("vips.enabled") : t("vips.disabled")}
                     </div>
-                    <div className={vip.attached ? "text-ok" : "text-warn"}>
-                      {vip.attached ? t("vips.attached") : t("vips.notAttached")}
-                    </div>
+                    {vip.mode === "same_l2" ? (
+                      <div className={vip.attached ? "text-ok" : "text-warn"}>
+                        {vip.attached ? t("vips.attached") : t("vips.notAttached")}
+                      </div>
+                    ) : (
+                      <div className={vip.dataplane_ready ? "text-ok" : "text-warn"}>
+                        {vip.dataplane_ready ? t("vips.dataplaneReady") : t("vips.dataplaneNotReady")}
+                      </div>
+                    )}
                     <div className={vip.advertised ? "text-ok" : "text-ink-muted"}>
                       {vip.advertised ? t("vips.advertised") : t("vips.notAdvertised")}
                     </div>

@@ -118,7 +118,7 @@ def test_create_frr_instance(client: TestClient, docker_adapter: MagicMock) -> N
     assert created.status_code == 201, created.text
     body = created.json()
     assert body["service_type"] == "frr"
-    assert body["image"] == "quay.io/frrouting/frr:10.2.6"
+    assert body["image"] == "axionet/frr:10.2.6"
     assert body["container_name"].startswith("ax-frr-")
     assert body["configuration"]["local_as"] == 65001
 

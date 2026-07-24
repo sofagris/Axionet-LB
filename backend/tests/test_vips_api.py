@@ -120,6 +120,23 @@ def docker_adapter(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     adapter.disconnect_container_network.return_value = None
     adapter.inspect_container.return_value = {"State": {"Status": "running"}}
 
+    def _exec(_container_id: str, command: list[str]) -> str:
+        from docker.errors import DockerException
+
+        if command == ["iptables", "-V"]:
+            return "iptables v1.8.7"
+        if command[:1] == ["iptables"] and "-C" in command:
+            raise DockerException("iptables: Bad rule (does a matching rule exist in that chain?)")
+        if command[:3] == ["ip", "addr", "add"]:
+            return ""
+        if command[:3] == ["ip", "addr", "del"]:
+            return ""
+        if len(command) >= 5 and command[0] == "iptables" and command[3] == "-S":
+            return ""
+        return "ok"
+
+    adapter.exec_in_container.side_effect = _exec
+
     monkeypatch.setattr(
         FrrPlugin,
         "validate",
@@ -276,3 +293,49 @@ def test_health_gate_withdraws_and_reannounces(
     assert restored.json()["advertised"] is True
     frr_back = client.get("/api/v1/instances/frr-1")
     assert "192.168.22.12/32" in frr_back.json()["configuration"]["networks"]
+
+
+def test_routed_vip_dnat_and_announce(client: TestClient, docker_adapter: MagicMock) -> None:
+    # Give HAProxy a backend IP on the peer network (DNAT target).
+    attached = client.post(
+        "/api/v1/instances/hap-1/networks",
+        json={"network_id": "net-sonic", "ip_address": "192.168.22.20"},
+    )
+    assert attached.status_code == 201, attached.text
+
+    created = client.post(
+        "/api/v1/vips",
+        json={
+            "name": "vip-routed-10",
+            "address": "203.0.113.10",
+            "mode": "routed",
+            "haproxy_instance_id": "hap-1",
+            "frr_instance_id": "frr-1",
+            "network_id": "net-sonic",
+            "enabled": True,
+            "advertise": True,
+        },
+    )
+    assert created.status_code == 201, created.text
+    body = created.json()
+    assert body["mode"] == "routed"
+    assert body["backend_ip"] == "192.168.22.20"
+    assert body["attached"] is False
+    assert body["dataplane_ready"] is True
+    assert body["advertised"] is True
+    assert body["announce_prefix"] == "203.0.113.10/32"
+
+    # HAProxy should keep .20, not take VIP .10
+    hap = client.get("/api/v1/instances/hap-1")
+    ips = [item["ip_address"] for item in hap.json()["networks"]]
+    assert "192.168.22.20" in ips
+    assert "203.0.113.10" not in ips
+
+    frr = client.get("/api/v1/instances/frr-1")
+    assert "203.0.113.10/32" in frr.json()["configuration"]["networks"]
+    assert docker_adapter.exec_in_container.call_count >= 3
+
+    disabled = client.post(f"/api/v1/vips/{body['id']}/disable")
+    assert disabled.status_code == 200
+    assert disabled.json()["advertised"] is False
+    assert disabled.json()["dataplane_ready"] is False
