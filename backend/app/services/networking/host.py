@@ -225,10 +225,19 @@ class HostNetworkAdapter:
             chassis = neighbor.get("chassis") or {}
             if isinstance(chassis, list):
                 chassis = chassis[0] if chassis else {}
+            chassis_name: str | None = None
+            if isinstance(chassis, dict) and "id" not in chassis and "name" not in chassis:
+                # lldpcli nests SysName as the dict key: {"ax-sw-core02": {"id": ...}}
+                for key, value in chassis.items():
+                    if isinstance(value, dict):
+                        chassis_name = str(key)
+                        chassis = value
+                        break
             port = neighbor.get("port") or {}
             if isinstance(port, list):
                 port = port[0] if port else {}
-            chassis_name = self._lldp_scalar(chassis.get("name"))
+            if chassis_name is None:
+                chassis_name = self._lldp_scalar(chassis.get("name"))
             chassis_id = self._lldp_scalar(chassis.get("id") or chassis.get("chid"))
             port_id = self._lldp_scalar(port.get("id") or port.get("local"))
             port_description = self._lldp_scalar(port.get("descr") or port.get("description"))
