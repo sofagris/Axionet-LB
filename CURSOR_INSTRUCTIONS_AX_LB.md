@@ -897,7 +897,9 @@ Venstremeny med grupperte seksjoner og **visuelle domener** (ikon + domenefarge 
 
 Mobil: kollapsbar drawer. Runtime Status bruker `@xyflow/react` for zoom/pan/minimap; config-editing skjer fortsatt i egne faner (ikke på canvas).
 
-**Traffic Flow-signaturkort** (Clients → Cluster → Services → Backends, world map) er planlagt som egen GUI-fase — ikke del av denne baseline.
+**Traffic Flow-signaturkort (v1):** Clients → Cluster → Services → Backends som flåte-aggregat på dashboard (uten world map). Komponenten er props-drevet (`TrafficFlowCard`) slik at den senere kan publiseres til konfigurerbare dashboards.
+
+**Senere GUI (ikke nå):** «Add dashboard», widget-katalog, «Publish to dashboard»; world map / per-VIP-flyt / Logical vs Physical.
 
 ### 12.6 API-klient
 

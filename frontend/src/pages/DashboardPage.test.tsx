@@ -187,6 +187,8 @@ describe("Dashboard", () => {
     });
     expect(screen.getByText("Oversikt")).toBeInTheDocument();
     expect(screen.getByText("Routing / BGP")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Traffic flow" })).toBeInTheDocument();
+    expect(screen.getByText(/Ingen HAProxy-instanser/i)).toBeInTheDocument();
     expect(screen.getAllByText("ok").length).toBeGreaterThan(0);
   });
 });

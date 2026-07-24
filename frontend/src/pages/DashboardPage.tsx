@@ -19,6 +19,7 @@ import {
   IconRouting,
   IconTraffic,
 } from "../components/icons/NavIcons";
+import { TrafficFlowCard } from "../features/dashboard/TrafficFlowCard";
 import { useInstances } from "../features/instances/hooks";
 import { useInterfaces } from "../features/interfaces/hooks";
 import { useNetworks } from "../features/networks/hooks";
@@ -335,6 +336,13 @@ export function DashboardPage() {
           </div>
         </div>
       </section>
+
+      <TrafficFlowCard
+        instances={instancesQuery.data ?? []}
+        lbMetrics={lbMetricsQuery.data}
+        bitRates={{ rxBps: lbRx, txBps: lbTx }}
+        loading={instancesQuery.isLoading || lbMetricsQuery.isLoading}
+      />
 
       <section>
         <h3 className="mb-2 flex items-center gap-2 text-xs tracking-wide uppercase">
