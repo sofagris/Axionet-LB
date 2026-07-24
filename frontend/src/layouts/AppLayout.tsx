@@ -1,58 +1,92 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType, type SVGProps } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import {
+  IconCatalog,
+  IconDashboard,
+  IconInstances,
+  IconInterfaces,
+  IconLogs,
+  IconNetworks,
+  IconSettings,
+  IconVips,
+} from "../components/icons/NavIcons";
 import { useAuth } from "../features/auth/AuthProvider";
 import { useTheme } from "../features/theme/ThemeProvider";
 import { setAppLocale, type AppLocale } from "../i18n";
+import {
+  domainBorder,
+  domainSoftBg,
+  domainText,
+  type UiDomain,
+} from "../lib/domains";
 
-type NavItem = { to: string; labelKey: string; end?: boolean };
+type IconComp = ComponentType<SVGProps<SVGSVGElement>>;
+
+type NavItem = {
+  to: string;
+  labelKey: string;
+  end?: boolean;
+  icon: IconComp;
+};
 
 type NavGroup = {
   id: string;
   labelKey?: string;
+  domain: UiDomain;
   items: NavItem[];
 };
 
 const NAV_GROUPS: NavGroup[] = [
   {
     id: "dashboard",
-    items: [{ to: "/", labelKey: "nav.dashboard", end: true }],
+    domain: "system",
+    items: [{ to: "/", labelKey: "nav.dashboard", end: true, icon: IconDashboard }],
   },
   {
     id: "traffic",
     labelKey: "nav.groups.traffic",
+    domain: "traffic",
     items: [
-      { to: "/catalog", labelKey: "nav.catalog" },
-      { to: "/instances", labelKey: "nav.instances" },
-      { to: "/vips", labelKey: "nav.vips" },
+      { to: "/catalog", labelKey: "nav.catalog", icon: IconCatalog },
+      { to: "/instances", labelKey: "nav.instances", icon: IconInstances },
+      { to: "/vips", labelKey: "nav.vips", icon: IconVips },
     ],
   },
   {
-    id: "network",
-    labelKey: "nav.groups.network",
+    id: "interfaces",
+    labelKey: "nav.groups.interfaces",
+    domain: "interfaces",
     items: [
-      { to: "/interfaces", labelKey: "nav.interfaces" },
-      { to: "/networks", labelKey: "nav.networks" },
+      { to: "/interfaces", labelKey: "nav.interfaces", icon: IconInterfaces },
+      { to: "/networks", labelKey: "nav.networks", icon: IconNetworks },
     ],
   },
   {
     id: "observe",
     labelKey: "nav.groups.observe",
-    items: [{ to: "/logs", labelKey: "nav.logs" }],
+    domain: "observe",
+    items: [{ to: "/logs", labelKey: "nav.logs", icon: IconLogs }],
   },
   {
     id: "system",
     labelKey: "nav.groups.system",
-    items: [{ to: "/settings", labelKey: "nav.settings" }],
+    domain: "system",
+    items: [{ to: "/settings", labelKey: "nav.settings", icon: IconSettings }],
   },
 ];
 
-function sideNavClass({ isActive }: { isActive: boolean }): string {
+function sideNavClass(domain: UiDomain, { isActive }: { isActive: boolean }): string {
+  if (isActive) {
+    return [
+      "flex items-center gap-2.5 rounded-md border-l-2 px-3 py-2 text-sm font-medium text-ink",
+      domainBorder[domain],
+      domainSoftBg[domain],
+    ].join(" ");
+  }
   return [
-    "block rounded-md px-3 py-2 text-sm transition-colors",
-    isActive
-      ? "border-l-2 border-accent bg-accent-soft/60 font-medium text-ink"
-      : "border-l-2 border-transparent text-ink-muted hover:bg-paper-elevated hover:text-ink",
+    "flex items-center gap-2.5 rounded-md border-l-2 border-transparent px-3 py-2 text-sm",
+    "text-ink-muted hover:bg-paper-elevated hover:text-ink",
   ].join(" ");
 }
 
@@ -81,7 +115,7 @@ export function AppLayout() {
   const sidebar = (
     <div className="flex h-full flex-col">
       <div className="border-b border-line/80 px-4 py-5">
-        <p className="font-mono text-[10px] tracking-[0.18em] text-accent uppercase">
+        <p className="font-mono text-[10px] tracking-[0.18em] text-domain-traffic uppercase">
           {t("common.brand")}
         </p>
         <p className="mt-1 text-sm font-semibold tracking-tight text-ink">{t("common.product")}</p>
@@ -90,18 +124,40 @@ export function AppLayout() {
         {NAV_GROUPS.map((group) => (
           <div key={group.id}>
             {group.labelKey ? (
-              <p className="mb-1.5 px-3 font-mono text-[10px] tracking-[0.14em] text-ink-muted uppercase">
+              <p
+                className={[
+                  "mb-1.5 px-3 font-mono text-[10px] tracking-[0.14em] uppercase",
+                  domainText[group.domain],
+                  "opacity-80",
+                ].join(" ")}
+              >
                 {t(group.labelKey)}
               </p>
             ) : null}
             <ul className="space-y-0.5">
-              {group.items.map((item) => (
-                <li key={item.to}>
-                  <NavLink className={sideNavClass} to={item.to} end={item.end}>
-                    {t(item.labelKey)}
-                  </NavLink>
-                </li>
-              ))}
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <li key={item.to}>
+                    <NavLink
+                      className={(state) => sideNavClass(group.domain, state)}
+                      to={item.to}
+                      end={item.end}
+                    >
+                      {({ isActive }) => (
+                        <>
+                          <Icon
+                            className={
+                              isActive ? domainText[group.domain] : "text-ink-muted opacity-70"
+                            }
+                          />
+                          <span>{t(item.labelKey)}</span>
+                        </>
+                      )}
+                    </NavLink>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ))}
@@ -114,12 +170,10 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen lg:flex">
-      {/* Desktop sidebar */}
       <aside className="sticky top-0 hidden h-screen w-56 shrink-0 border-r border-line/80 bg-paper-elevated/90 backdrop-blur-md lg:block">
         {sidebar}
       </aside>
 
-      {/* Mobile drawer */}
       {mobileOpen ? (
         <div className="fixed inset-0 z-40 lg:hidden">
           <button
@@ -140,7 +194,7 @@ export function AppLayout() {
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                className="border border-line bg-paper px-2.5 py-1.5 font-mono text-xs text-ink hover:border-accent lg:hidden"
+                className="border border-line bg-paper px-2.5 py-1.5 font-mono text-xs text-ink hover:border-domain-traffic lg:hidden"
                 aria-label={t("nav.openMenu")}
                 aria-expanded={mobileOpen}
                 onClick={() => setMobileOpen(true)}
@@ -148,7 +202,7 @@ export function AppLayout() {
                 ☰
               </button>
               <div className="lg:hidden">
-                <p className="font-mono text-[10px] tracking-[0.18em] text-accent uppercase">
+                <p className="font-mono text-[10px] tracking-[0.18em] text-domain-traffic uppercase">
                   {t("common.brand")}
                 </p>
                 <p className="text-sm font-semibold text-ink">{t("common.product")}</p>
@@ -174,13 +228,13 @@ export function AppLayout() {
                 type="button"
                 onClick={toggleTheme}
                 aria-label={theme === "light" ? t("theme.toLight") : t("theme.toDark")}
-                className="border border-line bg-paper px-2.5 py-1 font-mono text-xs text-ink hover:border-accent"
+                className="border border-line bg-paper px-2.5 py-1 font-mono text-xs text-ink hover:border-domain-traffic"
               >
                 {theme === "light" ? "☾" : "☀"}
               </button>
               <button
                 type="button"
-                className="border border-line bg-paper px-2.5 py-1 font-mono text-xs text-ink hover:border-accent"
+                className="border border-line bg-paper px-2.5 py-1 font-mono text-xs text-ink hover:border-domain-traffic"
                 onClick={() => {
                   void logout().then(() => navigate("/login", { replace: true }));
                 }}

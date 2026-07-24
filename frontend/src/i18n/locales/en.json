@@ -20,7 +20,7 @@
     "settings": "Settings",
     "groups": {
       "traffic": "Traffic & LB",
-      "network": "Network",
+      "interfaces": "Interfaces",
       "observe": "Observability",
       "system": "System"
     }
@@ -45,11 +45,16 @@
     "statusHero": "System status",
     "checkedAt": "Last checked {{time}}",
     "fleet": "Fleet",
+    "overview": "Overview",
     "interfaces": "Interfaces",
     "interfacesUp": "{{up}} up / {{total}}",
     "networks": "Networks",
     "instances": "Instances",
     "instancesByState": "{{running}} running · {{degraded}} degraded · {{error}} error",
+    "frrRunning": "{{count}} FRR running",
+    "frrTeaser": "Routing / BGP",
+    "healthStatus": "Health",
+    "trafficNow": "LB traffic",
     "viewAll": "View all",
     "manage": "Manage",
     "telemetry": "Telemetry",

@@ -20,7 +20,7 @@
     "settings": "Settings",
     "groups": {
       "traffic": "Trafikk & LB",
-      "network": "Nettverk",
+      "interfaces": "Interfaces",
       "observe": "Observability",
       "system": "System"
     }
@@ -45,11 +45,16 @@
     "statusHero": "Systemstatus",
     "checkedAt": "Sist sjekket {{time}}",
     "fleet": "Flåte",
+    "overview": "Oversikt",
     "interfaces": "Interfaces",
     "interfacesUp": "{{up}} up / {{total}}",
     "networks": "Networks",
     "instances": "Instances",
     "instancesByState": "{{running}} running · {{degraded}} degraded · {{error}} error",
+    "frrRunning": "{{count}} FRR kjører",
+    "frrTeaser": "Routing / BGP",
+    "healthStatus": "Helse",
+    "trafficNow": "LB-trafikk",
     "viewAll": "Vis alle",
     "manage": "Administrer",
     "telemetry": "Telemetri",

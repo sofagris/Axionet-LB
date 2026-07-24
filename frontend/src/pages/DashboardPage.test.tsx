@@ -176,13 +176,17 @@ describe("Dashboard", () => {
     localStorage.setItem("ax-lb-token", "test-token");
   });
 
-  it("shows brand and health status", async () => {
+  it("shows brand, health, and domain overview", async () => {
     renderApp();
-    expect(screen.getAllByText("AxioNet").length).toBeGreaterThan(0);
-    expect(screen.getByText("Load Balancer")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getAllByText("AxioNet").length).toBeGreaterThan(0);
+    });
+    expect(screen.getAllByText("Load Balancer").length).toBeGreaterThan(0);
     await waitFor(() => {
       expect(screen.getByText("System health")).toBeInTheDocument();
     });
+    expect(screen.getByText("Oversikt")).toBeInTheDocument();
+    expect(screen.getByText("Routing / BGP")).toBeInTheDocument();
     expect(screen.getAllByText("ok").length).toBeGreaterThan(0);
   });
 });

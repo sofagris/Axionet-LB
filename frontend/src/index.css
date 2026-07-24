@@ -13,6 +13,18 @@
   --color-warn: var(--ax-warn);
   --color-danger: var(--ax-danger);
   --color-ok: var(--ax-ok);
+  --color-domain-traffic: var(--ax-domain-traffic);
+  --color-domain-traffic-soft: var(--ax-domain-traffic-soft);
+  --color-domain-routing: var(--ax-domain-routing);
+  --color-domain-routing-soft: var(--ax-domain-routing-soft);
+  --color-domain-interfaces: var(--ax-domain-interfaces);
+  --color-domain-interfaces-soft: var(--ax-domain-interfaces-soft);
+  --color-domain-security: var(--ax-domain-security);
+  --color-domain-security-soft: var(--ax-domain-security-soft);
+  --color-domain-observe: var(--ax-domain-observe);
+  --color-domain-observe-soft: var(--ax-domain-observe-soft);
+  --color-domain-system: var(--ax-domain-system);
+  --color-domain-system-soft: var(--ax-domain-system-soft);
 }
 
 :root,
@@ -23,6 +35,7 @@ html[data-theme="light"] {
   --ax-paper: #f3f6f8;
   --ax-paper-elevated: #ffffff;
   --ax-line: #d5dee5;
+  /* Primary accent = traffic domain */
   --ax-accent: #0f766e;
   --ax-accent-soft: #ccfbf1;
   --ax-warn: #b45309;
@@ -30,6 +43,19 @@ html[data-theme="light"] {
   --ax-ok: #15803d;
   --ax-hero-a: #d8ece8;
   --ax-hero-b: #dce6ef;
+  /* Visual domains — identity at component level */
+  --ax-domain-traffic: #0f766e;
+  --ax-domain-traffic-soft: #ccfbf1;
+  --ax-domain-routing: #c2410c;
+  --ax-domain-routing-soft: #ffedd5;
+  --ax-domain-interfaces: #1d4ed8;
+  --ax-domain-interfaces-soft: #dbeafe;
+  --ax-domain-security: #a21caf;
+  --ax-domain-security-soft: #fae8ff;
+  --ax-domain-observe: #4d7c0f;
+  --ax-domain-observe-soft: #ecfccb;
+  --ax-domain-system: #64748b;
+  --ax-domain-system-soft: #f1f5f9;
 }
 
 html[data-theme="dark"] {
@@ -46,6 +72,18 @@ html[data-theme="dark"] {
   --ax-ok: #4ade80;
   --ax-hero-a: #123038;
   --ax-hero-b: #1a2834;
+  --ax-domain-traffic: #2dd4bf;
+  --ax-domain-traffic-soft: #134e4a;
+  --ax-domain-routing: #fb923c;
+  --ax-domain-routing-soft: #431407;
+  --ax-domain-interfaces: #60a5fa;
+  --ax-domain-interfaces-soft: #1e3a5f;
+  --ax-domain-security: #e879f9;
+  --ax-domain-security-soft: #4a044e;
+  --ax-domain-observe: #a3e635;
+  --ax-domain-observe-soft: #365314;
+  --ax-domain-system: #94a3b8;
+  --ax-domain-system-soft: #1e293b;
 }
 
 @layer base {

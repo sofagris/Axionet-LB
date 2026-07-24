@@ -884,7 +884,20 @@ Egne faner:
 
 ### 12.5.1 App-navigasjon (GUI UX)
 
-Venstremeny med grupperte seksjoner (Traffic & LB, Network, Observability, System). Mobil: kollapsbar drawer. Runtime Status bruker `@xyflow/react` for zoom/pan/minimap; config-editing skjer fortsatt i egne faner (ikke på canvas).
+Venstremeny med grupperte seksjoner og **visuelle domener** (ikon + domenefarge på aktiv kant/label — nøytral base ellers):
+
+| Domene | Farge | Meny / bruk |
+|--------|-------|-------------|
+| Traffic / LB | cyan/turkis | Catalog, Instances, VIPs |
+| Interfaces | blå | Interfaces, Networks |
+| Observability | lime/grønn | Logs, health/metrics |
+| Routing / BGP | amber | reservert (+ FRR-teaser på dashboard) |
+| Security | magenta | reservert (ingen sider ennå) |
+| System | nøytral | Dashboard, Settings |
+
+Mobil: kollapsbar drawer. Runtime Status bruker `@xyflow/react` for zoom/pan/minimap; config-editing skjer fortsatt i egne faner (ikke på canvas).
+
+**Traffic Flow-signaturkort** (Clients → Cluster → Services → Backends, world map) er planlagt som egen GUI-fase — ikke del av denne baseline.
 
 ### 12.6 API-klient
 

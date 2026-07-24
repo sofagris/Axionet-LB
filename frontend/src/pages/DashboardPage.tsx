@@ -11,11 +11,20 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { DomainCard } from "../components/DomainCard";
+import {
+  IconHealth,
+  IconInstances,
+  IconInterfaces,
+  IconRouting,
+  IconTraffic,
+} from "../components/icons/NavIcons";
 import { useInstances } from "../features/instances/hooks";
 import { useInterfaces } from "../features/interfaces/hooks";
 import { useNetworks } from "../features/networks/hooks";
 import { useSystemHealth, useSystemInfo, useSystemMetrics, useLbMetrics } from "../features/system/hooks";
 import { useTelemetryHistory } from "../features/telemetry/useTelemetryHistory";
+import { domainCssVar } from "../lib/domains";
 import { instanceDetailPath } from "../lib/instancePaths";
 import type { ComponentHealth, HealthResponse } from "../types/system";
 
@@ -91,7 +100,7 @@ function HealthPanel({ health }: { health: HealthResponse }) {
     docker: t("dashboard.docker"),
   };
   return (
-    <section className="border-l-2 border-accent bg-paper-elevated/60 p-5">
+    <section className="border-l-2 border-domain-observe bg-paper-elevated/60 p-5">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-ink">{t("dashboard.health")}</h2>
@@ -115,10 +124,25 @@ function HealthPanel({ health }: { health: HealthResponse }) {
   );
 }
 
-function ChartFrame({ title, children }: { title: string; children: ReactNode }) {
+function ChartFrame({
+  title,
+  domainLabel,
+  children,
+}: {
+  title: string;
+  domainLabel?: string;
+  children: ReactNode;
+}) {
   return (
     <div className="min-h-[220px] border-t border-line pt-4">
-      <p className="mb-3 text-xs tracking-wide text-ink-muted uppercase">{title}</p>
+      <div className="mb-3 flex items-baseline justify-between gap-2">
+        <p className="text-xs tracking-wide text-ink-muted uppercase">{title}</p>
+        {domainLabel ? (
+          <p className="font-mono text-[10px] tracking-wide text-ink-muted uppercase opacity-70">
+            {domainLabel}
+          </p>
+        ) : null}
+      </div>
       <div className="h-44 w-full">{children}</div>
     </div>
   );
@@ -163,15 +187,24 @@ export function DashboardPage() {
     instancesQuery.data?.filter((item) => item.actual_state === "error").length ?? 0;
   const recentErrors =
     instancesQuery.data?.filter((item) => item.last_error).slice(0, 5) ?? [];
+  const frrRunning =
+    instancesQuery.data?.filter(
+      (item) => item.service_type === "frr" && item.actual_state === "running",
+    ).length ?? 0;
 
-  const accent = "var(--ax-accent)";
   const muted = "var(--ax-ink-muted)";
-  const warn = "var(--ax-warn)";
+  const observe = domainCssVar.observe;
+  const traffic = domainCssVar.traffic;
+  const routing = domainCssVar.routing;
+  const interfacesColor = domainCssVar.interfaces;
+
+  const lbRx = latestRate?.lbRxBps ?? null;
+  const lbTx = latestRate?.lbTxBps ?? null;
 
   return (
     <div className="space-y-10">
       <section className="relative overflow-hidden border-b border-line pb-8">
-        <p className="font-mono text-xs tracking-[0.2em] text-accent uppercase">
+        <p className="font-mono text-xs tracking-[0.2em] text-ink-muted uppercase">
           {t("dashboard.statusHero")}
         </p>
         <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
@@ -206,51 +239,109 @@ export function DashboardPage() {
       </section>
 
       <section>
-        <h3 className="mb-4 text-xs tracking-wide text-ink-muted uppercase">{t("dashboard.fleet")}</h3>
-        <div className="grid gap-6 sm:grid-cols-3">
-          <div className="border-l-2 border-accent pl-4">
-            <p className="text-xs tracking-wide text-ink-muted uppercase">{t("dashboard.interfaces")}</p>
-            <p className="mt-2 font-mono text-lg text-ink">
-              {interfacesQuery.isLoading
+        <h3 className="mb-4 text-xs tracking-wide text-ink-muted uppercase">{t("dashboard.overview")}</h3>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <DomainCard
+            domain="observe"
+            title={t("dashboard.healthStatus")}
+            icon={<IconHealth />}
+            value={
+              healthQuery.isLoading ? "…" : (healthQuery.data?.status.toUpperCase() ?? "—")
+            }
+            hint={
+              metricsQuery.data
+                ? `CPU ${metricsQuery.data.cpu_percent.toFixed(0)}% · Mem ${metricsQuery.data.mem_used_percent.toFixed(0)}%`
+                : undefined
+            }
+            to="/logs"
+            linkLabel={t("dashboard.viewAll")}
+          />
+          <DomainCard
+            domain="traffic"
+            title={t("dashboard.instances")}
+            icon={<IconInstances />}
+            value={
+              instancesQuery.isLoading
                 ? "…"
-                : t("dashboard.interfacesUp", { up: upCount, total: totalCount })}
-            </p>
-            <Link className="mt-2 inline-block text-xs text-accent hover:underline" to="/interfaces">
-              {t("dashboard.viewAll")}
-            </Link>
-          </div>
-          <div className="border-l-2 border-line pl-4">
+                : t("dashboard.instancesByState", { running, degraded, error: errored })
+            }
+            to="/instances"
+            linkLabel={t("dashboard.manage")}
+          />
+          <DomainCard
+            domain="interfaces"
+            title={t("dashboard.interfaces")}
+            icon={<IconInterfaces />}
+            value={
+              interfacesQuery.isLoading
+                ? "…"
+                : t("dashboard.interfacesUp", { up: upCount, total: totalCount })
+            }
+            hint={
+              networksQuery.isLoading
+                ? undefined
+                : `${networkCount} ${t("dashboard.networks").toLowerCase()}`
+            }
+            to="/interfaces"
+            linkLabel={t("dashboard.viewAll")}
+          />
+          <DomainCard
+            domain="traffic"
+            title={t("dashboard.trafficNow")}
+            icon={<IconTraffic />}
+            value={
+              lbMetricsQuery.isLoading
+                ? "…"
+                : `${formatBitRate(lbRx)} / ${formatBitRate(lbTx)}`
+            }
+            hint={
+              lbMetricsQuery.data
+                ? `${t("dashboard.currentSessions")} ${lbMetricsQuery.data.totals.current_sessions} · ${lbMetricsQuery.data.totals.servers_up}/${lbMetricsQuery.data.totals.servers_total} up`
+                : undefined
+            }
+            to="/instances"
+            linkLabel={t("dashboard.manage")}
+          />
+        </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <DomainCard
+            domain="routing"
+            title={t("dashboard.frrTeaser")}
+            icon={<IconRouting />}
+            value={
+              instancesQuery.isLoading
+                ? "…"
+                : t("dashboard.frrRunning", { count: frrRunning })
+            }
+            to="/instances"
+            linkLabel={t("dashboard.manage")}
+          />
+          <div className="border-l-2 border-line bg-paper-elevated/30 px-4 py-3">
             <p className="text-xs tracking-wide text-ink-muted uppercase">{t("dashboard.networks")}</p>
             <p className="mt-2 font-mono text-lg text-ink">
               {networksQuery.isLoading ? "…" : networkCount}
             </p>
-            <Link className="mt-2 inline-block text-xs text-accent hover:underline" to="/networks">
+            <Link
+              className="mt-2 inline-block text-xs text-domain-interfaces hover:underline"
+              to="/networks"
+            >
               {t("dashboard.manage")}
             </Link>
-          </div>
-          <div className="border-l-2 border-line pl-4">
-            <p className="text-xs tracking-wide text-ink-muted uppercase">{t("dashboard.instances")}</p>
-            <p className="mt-2 font-mono text-sm text-ink">
-              {instancesQuery.isLoading
-                ? "…"
-                : t("dashboard.instancesByState", { running, degraded, error: errored })}
-            </p>
-            <Link className="mt-2 inline-block text-xs text-accent hover:underline" to="/instances">
-              {t("dashboard.manage")}
-            </Link>
+            {infoQuery.data ? (
+              <p className="mt-3 font-mono text-[11px] text-ink-muted">
+                data · {infoQuery.data.data_dir}
+              </p>
+            ) : null}
           </div>
         </div>
-        {infoQuery.data ? (
-          <p className="mt-4 font-mono text-xs text-ink-muted">data · {infoQuery.data.data_dir}</p>
-        ) : null}
       </section>
 
       <section>
-        <h3 className="mb-2 text-xs tracking-wide text-ink-muted uppercase">
-          {t("dashboard.telemetry")}
+        <h3 className="mb-2 flex items-center gap-2 text-xs tracking-wide uppercase">
+          <span className="text-domain-observe">{t("dashboard.telemetry")}</span>
         </h3>
         <div className="grid gap-8 lg:grid-cols-2 xl:grid-cols-3">
-          <ChartFrame title={t("dashboard.cpu")}>
+          <ChartFrame title={t("dashboard.cpu")} domainLabel="observe">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <CartesianGrid stroke="var(--ax-line)" strokeDasharray="3 3" />
@@ -268,7 +359,7 @@ export function DashboardPage() {
                   type="monotone"
                   dataKey="cpu"
                   name="CPU %"
-                  stroke={accent}
+                  stroke={observe}
                   strokeWidth={2}
                   dot={false}
                   connectNulls
@@ -276,7 +367,7 @@ export function DashboardPage() {
               </LineChart>
             </ResponsiveContainer>
           </ChartFrame>
-          <ChartFrame title={t("dashboard.memory")}>
+          <ChartFrame title={t("dashboard.memory")} domainLabel="observe">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <CartesianGrid stroke="var(--ax-line)" strokeDasharray="3 3" />
@@ -294,7 +385,7 @@ export function DashboardPage() {
                   type="monotone"
                   dataKey="mem"
                   name="Mem %"
-                  stroke={accent}
+                  stroke={observe}
                   strokeWidth={2}
                   dot={false}
                   connectNulls
@@ -302,7 +393,7 @@ export function DashboardPage() {
               </LineChart>
             </ResponsiveContainer>
           </ChartFrame>
-          <ChartFrame title={t("dashboard.latency")}>
+          <ChartFrame title={t("dashboard.latency")} domainLabel="observe">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <CartesianGrid stroke="var(--ax-line)" strokeDasharray="3 3" />
@@ -321,7 +412,7 @@ export function DashboardPage() {
                   type="monotone"
                   dataKey="dbLatency"
                   name="DB"
-                  stroke={accent}
+                  stroke={observe}
                   strokeWidth={2}
                   dot={false}
                   connectNulls
@@ -330,7 +421,7 @@ export function DashboardPage() {
                   type="monotone"
                   dataKey="dockerLatency"
                   name="Docker"
-                  stroke={warn}
+                  stroke={routing}
                   strokeWidth={2}
                   dot={false}
                   connectNulls
@@ -338,7 +429,7 @@ export function DashboardPage() {
               </LineChart>
             </ResponsiveContainer>
           </ChartFrame>
-          <ChartFrame title={t("dashboard.networkThroughput")}>
+          <ChartFrame title={t("dashboard.networkThroughput")} domainLabel="interfaces">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <CartesianGrid stroke="var(--ax-line)" strokeDasharray="3 3" />
@@ -364,7 +455,7 @@ export function DashboardPage() {
                   type="monotone"
                   dataKey="rxBps"
                   name={t("dashboard.rx")}
-                  stroke={accent}
+                  stroke={interfacesColor}
                   strokeWidth={2}
                   dot={false}
                   connectNulls
@@ -373,7 +464,7 @@ export function DashboardPage() {
                   type="monotone"
                   dataKey="txBps"
                   name={t("dashboard.tx")}
-                  stroke={warn}
+                  stroke={routing}
                   strokeWidth={2}
                   dot={false}
                   connectNulls
@@ -381,7 +472,7 @@ export function DashboardPage() {
               </LineChart>
             </ResponsiveContainer>
           </ChartFrame>
-          <ChartFrame title={t("dashboard.lbSessions")}>
+          <ChartFrame title={t("dashboard.lbSessions")} domainLabel="traffic">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <CartesianGrid stroke="var(--ax-line)" strokeDasharray="3 3" />
@@ -400,7 +491,7 @@ export function DashboardPage() {
                   type="monotone"
                   dataKey="sessions"
                   name={t("dashboard.currentSessions")}
-                  stroke={accent}
+                  stroke={traffic}
                   strokeWidth={2}
                   dot={false}
                   connectNulls
@@ -409,7 +500,7 @@ export function DashboardPage() {
                   type="monotone"
                   dataKey="sessionRate"
                   name={t("dashboard.sessionRate")}
-                  stroke={warn}
+                  stroke={observe}
                   strokeWidth={2}
                   dot={false}
                   connectNulls
@@ -417,7 +508,7 @@ export function DashboardPage() {
               </LineChart>
             </ResponsiveContainer>
           </ChartFrame>
-          <ChartFrame title={t("dashboard.lbThroughput")}>
+          <ChartFrame title={t("dashboard.lbThroughput")} domainLabel="traffic">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <CartesianGrid stroke="var(--ax-line)" strokeDasharray="3 3" />
@@ -443,7 +534,7 @@ export function DashboardPage() {
                   type="monotone"
                   dataKey="lbRxBps"
                   name={t("dashboard.rx")}
-                  stroke={accent}
+                  stroke={traffic}
                   strokeWidth={2}
                   dot={false}
                   connectNulls
@@ -452,7 +543,7 @@ export function DashboardPage() {
                   type="monotone"
                   dataKey="lbTxBps"
                   name={t("dashboard.tx")}
-                  stroke={warn}
+                  stroke={observe}
                   strokeWidth={2}
                   dot={false}
                   connectNulls
@@ -500,7 +591,7 @@ export function DashboardPage() {
         ) : null}
       </section>
 
-      <section className="border-l-2 border-line bg-paper-elevated/40 p-5">
+      <section className="border-l-2 border-domain-traffic bg-paper-elevated/40 p-5">
         <h3 className="text-lg font-semibold text-ink">{t("dashboard.lbInstances")}</h3>
         {(lbMetricsQuery.data?.instances.length ?? 0) === 0 ? (
           <p className="mt-3 text-sm text-ink-muted">{t("dashboard.noLbInstances")}</p>
@@ -523,7 +614,7 @@ export function DashboardPage() {
                     <td className="py-2 pr-4">
                       <Link
                         to={instanceDetailPath(item.instance_id, "haproxy")}
-                        className="text-accent hover:underline"
+                        className="text-domain-traffic hover:underline"
                       >
                         {item.name}
                       </Link>
@@ -546,7 +637,7 @@ export function DashboardPage() {
         )}
       </section>
 
-      <section className="border-l-2 border-line bg-paper-elevated/40 p-5">
+      <section className="border-l-2 border-domain-interfaces bg-paper-elevated/40 p-5">
         <h3 className="text-lg font-semibold text-ink">{t("dashboard.networkInterfaces")}</h3>
         {(metricsQuery.data?.interfaces?.length ?? 0) === 0 ? (
           <p className="mt-3 text-sm text-ink-muted">{t("dashboard.noInterfaces")}</p>
@@ -610,7 +701,7 @@ export function DashboardPage() {
                 <li key={item.id} className="border-t border-line pt-3 first:border-t-0 first:pt-0">
                   <Link
                     to={instanceDetailPath(item.id, item.service_type)}
-                    className="font-medium text-accent hover:underline"
+                    className="font-medium text-domain-traffic hover:underline"
                   >
                     {item.name}
                   </Link>
