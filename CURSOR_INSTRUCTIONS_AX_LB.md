@@ -897,9 +897,9 @@ Venstremeny med grupperte seksjoner og **visuelle domener** (ikon + domenefarge 
 
 Mobil: kollapsbar drawer. Runtime Status bruker `@xyflow/react` for zoom/pan/minimap; config-editing skjer fortsatt i egne faner (ikke på canvas).
 
-**Traffic Flow-signaturkort (v1):** Clients → Cluster → Services → Backends som flåte-aggregat på dashboard (uten world map). Komponenten er props-drevet (`TrafficFlowCard`) slik at den senere kan publiseres til konfigurerbare dashboards.
+**Traffic Flow-signaturkort (v2):** karusell med **All / Fleet** + én slide per VIP. Logical/Physical-toggle. Stilert verdenskart i Internet-noden (ikke ekte geo). VIP-sti: Internet → FRR → Frontend → Backend → Servers. Komponenten er props-drevet (`TrafficFlowCard`) for senere publish til konfigurerbare dashboards.
 
-**Senere GUI (ikke nå):** «Add dashboard», widget-katalog, «Publish to dashboard»; world map / per-VIP-flyt / Logical vs Physical.
+**Senere GUI (ikke nå):** «Add dashboard», widget-katalog, «Publish to dashboard»; ekte geo-map / per-VIP world dots / Logical vs Physical for flere widget-typer.
 
 ### 12.6 API-klient
 

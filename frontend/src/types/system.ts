@@ -217,6 +217,7 @@ export const OrphanPruneResultSchema = z.object({
 export type HealthResponse = z.infer<typeof HealthResponseSchema>;
 export type SystemInfo = z.infer<typeof SystemInfoSchema>;
 export type SystemMetrics = z.infer<typeof SystemMetricsSchema>;
+export type LbInstanceMetrics = z.infer<typeof LbInstanceMetricsSchema>;
 export type LbMetrics = z.infer<typeof LbMetricsSchema>;
 export type Capabilities = z.infer<typeof CapabilitiesSchema>;
 export type InstanceMetrics = z.infer<typeof InstanceMetricsSchema>;

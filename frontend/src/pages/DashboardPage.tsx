@@ -25,6 +25,7 @@ import { useInterfaces } from "../features/interfaces/hooks";
 import { useNetworks } from "../features/networks/hooks";
 import { useSystemHealth, useSystemInfo, useSystemMetrics, useLbMetrics } from "../features/system/hooks";
 import { useTelemetryHistory } from "../features/telemetry/useTelemetryHistory";
+import { useVips } from "../features/vips/hooks";
 import { domainCssVar } from "../lib/domains";
 import { instanceDetailPath } from "../lib/instancePaths";
 import type { ComponentHealth, HealthResponse } from "../types/system";
@@ -158,6 +159,7 @@ export function DashboardPage() {
   const interfacesQuery = useInterfaces();
   const networksQuery = useNetworks();
   const instancesQuery = useInstances();
+  const vipsQuery = useVips();
 
   const history = useTelemetryHistory({
     metrics: metricsQuery.data,
@@ -339,9 +341,10 @@ export function DashboardPage() {
 
       <TrafficFlowCard
         instances={instancesQuery.data ?? []}
+        vips={vipsQuery.data ?? []}
         lbMetrics={lbMetricsQuery.data}
         bitRates={{ rxBps: lbRx, txBps: lbTx }}
-        loading={instancesQuery.isLoading || lbMetricsQuery.isLoading}
+        loading={instancesQuery.isLoading || lbMetricsQuery.isLoading || vipsQuery.isLoading}
       />
 
       <section>

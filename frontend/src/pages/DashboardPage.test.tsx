@@ -131,6 +131,14 @@ vi.mock("../api/networks", () => ({
   validateNetwork: vi.fn(),
 }));
 
+vi.mock("../api/vips", () => ({
+  fetchVips: vi.fn(async () => []),
+  createVip: vi.fn(),
+  enableVip: vi.fn(),
+  disableVip: vi.fn(),
+  deleteVip: vi.fn(),
+}));
+
 vi.mock("../api/instances", () => ({
   fetchInstances: vi.fn(async () => []),
   createInstance: vi.fn(),
@@ -188,6 +196,9 @@ describe("Dashboard", () => {
     expect(screen.getByText("Oversikt")).toBeInTheDocument();
     expect(screen.getByText("Routing / BGP")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Traffic flow" })).toBeInTheDocument();
+    expect(screen.getByText("Logical")).toBeInTheDocument();
+    expect(screen.getByText("Physical")).toBeInTheDocument();
+    expect(screen.getByText("All / Fleet")).toBeInTheDocument();
     expect(screen.getByText(/Ingen HAProxy-instanser/i)).toBeInTheDocument();
     expect(screen.getAllByText("ok").length).toBeGreaterThan(0);
   });

@@ -39,17 +39,19 @@ import type {
   HaproxyServer,
 } from "../../types/haproxy";
 
-export function useHaproxyFrontends(id: string) {
+export function useHaproxyFrontends(id: string, enabled = true) {
   return useQuery({
     queryKey: ["haproxy", id, "frontends"],
     queryFn: () => fetchHaproxyFrontends(id),
+    enabled: enabled && Boolean(id),
   });
 }
 
-export function useHaproxyBackends(id: string) {
+export function useHaproxyBackends(id: string, enabled = true) {
   return useQuery({
     queryKey: ["haproxy", id, "backends"],
     queryFn: () => fetchHaproxyBackends(id),
+    enabled: enabled && Boolean(id),
   });
 }
 
