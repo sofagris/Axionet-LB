@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import {
   Background,
   Controls,
@@ -21,6 +21,14 @@ import {
   type RuntimeGraphNode,
   type RuntimeGraphNodeData,
 } from "./buildGraph";
+import {
+  applyLayoutPositions,
+  clearLayoutPositions,
+  loadLayoutPositions,
+  positionsFromNodes,
+  saveLayoutPositions,
+  type LayoutPositions,
+} from "./layoutStorage";
 import { RuntimeNode } from "./RuntimeNode";
 
 const nodeTypes: NodeTypes = {
@@ -35,6 +43,7 @@ type RuntimeActionPayload = {
 };
 
 type Props = {
+  instanceId: string;
   frontends: HaproxyFrontend[];
   backends: HaproxyBackend[];
   status: HaproxyRuntimeStatus | undefined;
@@ -44,26 +53,37 @@ type Props = {
   clearPending: boolean;
   message: string | null;
   actionError: string | null;
-  /** Pre-select a graph node (e.g. from Overview deep-link). */
+  /** Pre-select a graph node (e.g. from Overview deep-link / URL). */
   focusNodeId?: string | null;
+  /** Persist selection (e.g. sync `?node=` in the URL). */
+  onSelectNode?: (nodeId: string | null) => void;
   onRefresh: () => void;
   onClearCounters: () => void;
   onServerAction: (payload: RuntimeActionPayload) => void;
 };
 
-function FitViewOnLoad({ nodeCount }: { nodeCount: number }) {
+function FitViewOnLoad({
+  nodeCount,
+  enabled,
+}: {
+  nodeCount: number;
+  enabled: boolean;
+}) {
   const { fitView } = useReactFlow();
+  const doneRef = useRef(false);
   useEffect(() => {
-    if (nodeCount === 0) return;
+    if (!enabled || nodeCount === 0 || doneRef.current) return;
+    doneRef.current = true;
     const timer = window.setTimeout(() => {
       void fitView({ padding: 0.2, duration: 200 });
     }, 50);
     return () => window.clearTimeout(timer);
-  }, [fitView, nodeCount]);
+  }, [fitView, nodeCount, enabled]);
   return null;
 }
 
 function RuntimeGraphInner({
+  instanceId,
   frontends,
   backends,
   status,
@@ -74,6 +94,7 @@ function RuntimeGraphInner({
   message,
   actionError,
   focusNodeId,
+  onSelectNode,
   onRefresh,
   onClearCounters,
   onServerAction,
@@ -81,37 +102,110 @@ function RuntimeGraphInner({
   const { t } = useTranslation();
   const [weight, setWeight] = useState("100");
   const [selectedId, setSelectedId] = useState<string | null>(focusNodeId ?? null);
+  const [savedPositions, setSavedPositions] = useState<LayoutPositions>(() =>
+    loadLayoutPositions(instanceId),
+  );
+  const hasSavedLayout = Object.keys(savedPositions).length > 0;
+  const nodesRef = useRef<RuntimeGraphNode[]>([]);
+  const ignorePreviousLayoutRef = useRef(false);
+  const selectedIdRef = useRef<string | null>(selectedId);
 
   const built = useMemo(
     () => buildRuntimeGraph({ frontends, backends, status }),
     [frontends, backends, status],
   );
 
-  const [nodes, setNodes, onNodesChange] = useNodesState<RuntimeGraphNode>(built.nodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(built.edges);
+  const [nodes, setNodes, onNodesChange] = useNodesState<RuntimeGraphNode>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
   useEffect(() => {
-    setNodes(built.nodes);
+    nodesRef.current = nodes;
+  }, [nodes]);
+
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+  }, [selectedId]);
+
+  useEffect(() => {
+    ignorePreviousLayoutRef.current = true;
+    setSavedPositions(loadLayoutPositions(instanceId));
+  }, [instanceId]);
+
+  useEffect(() => {
+    const previous = ignorePreviousLayoutRef.current
+      ? {}
+      : positionsFromNodes(nodesRef.current);
+    ignorePreviousLayoutRef.current = false;
+    const activeId = selectedIdRef.current;
+    const merged = applyLayoutPositions(built.nodes, savedPositions, previous).map((node) => ({
+      ...node,
+      selected: activeId != null && node.id === activeId,
+    }));
+    setNodes(merged);
     setEdges(built.edges);
-  }, [built.nodes, built.edges, setNodes, setEdges]);
+  }, [built.nodes, built.edges, savedPositions, setNodes, setEdges]);
 
   useEffect(() => {
-    if (!focusNodeId) return;
-    if (built.nodes.some((node) => node.id === focusNodeId)) {
-      setSelectedId(focusNodeId);
+    setNodes((current) =>
+      current.map((node) => ({
+        ...node,
+        selected: selectedId != null && node.id === selectedId,
+      })),
+    );
+  }, [selectedId, setNodes]);
+
+  useEffect(() => {
+    setSelectedId(focusNodeId ?? null);
+  }, [focusNodeId]);
+
+  useEffect(() => {
+    if (!selectedId || built.nodes.length === 0) return;
+    if (!built.nodes.some((node) => node.id === selectedId)) {
+      setSelectedId(null);
+      onSelectNode?.(null);
     }
-  }, [focusNodeId, built.nodes]);
+  }, [built.nodes, selectedId, onSelectNode]);
+
+  const persistCurrentLayout = useCallback(
+    (nextNodes: RuntimeGraphNode[]) => {
+      const positions = positionsFromNodes(nextNodes);
+      saveLayoutPositions(instanceId, positions);
+      setSavedPositions(positions);
+    },
+    [instanceId],
+  );
+
+  const onNodeDragStop = useCallback(() => {
+    persistCurrentLayout(nodesRef.current);
+  }, [persistCurrentLayout]);
+
+  const resetLayout = useCallback(() => {
+    clearLayoutPositions(instanceId);
+    ignorePreviousLayoutRef.current = true;
+    setSavedPositions({});
+  }, [instanceId]);
 
   const selected = useMemo(
     () => nodes.find((node) => node.id === selectedId)?.data ?? null,
     [nodes, selectedId],
   );
 
-  const onNodeClick = useCallback((_event: MouseEvent, node: RuntimeGraphNode) => {
-    setSelectedId(node.id);
-  }, []);
+  const selectNode = useCallback(
+    (nodeId: string | null) => {
+      setSelectedId(nodeId);
+      onSelectNode?.(nodeId);
+    },
+    [onSelectNode],
+  );
 
-  const onPaneClick = useCallback(() => setSelectedId(null), []);
+  const onNodeClick = useCallback(
+    (_event: MouseEvent, node: RuntimeGraphNode) => {
+      selectNode(node.id);
+    },
+    [selectNode],
+  );
+
+  const onPaneClick = useCallback(() => selectNode(null), [selectNode]);
 
   return (
     <section className="space-y-3">
@@ -146,6 +240,14 @@ function RuntimeGraphInner({
         >
           {clearPending ? t("runtimeGraph.clearing") : t("runtimeGraph.clearCounters")}
         </button>
+        <button
+          type="button"
+          className="border border-line px-3 py-1.5 text-sm text-ink-muted hover:border-accent hover:text-ink"
+          onClick={resetLayout}
+          title={t("runtimeGraph.resetLayoutHint")}
+        >
+          {t("runtimeGraph.resetLayout")}
+        </button>
       </div>
 
       {message ? <p className="font-mono text-xs text-ink-muted">{message}</p> : null}
@@ -159,9 +261,10 @@ function RuntimeGraphInner({
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onNodeClick={onNodeClick}
+            onNodeDragStop={onNodeDragStop}
             onPaneClick={onPaneClick}
             nodeTypes={nodeTypes}
-            fitView
+            fitView={!hasSavedLayout}
             minZoom={0.3}
             maxZoom={1.5}
             proOptions={{ hideAttribution: true }}
@@ -181,7 +284,7 @@ function RuntimeGraphInner({
                 return "var(--ax-ink-muted)";
               }}
             />
-            <FitViewOnLoad nodeCount={nodes.length} />
+            <FitViewOnLoad nodeCount={nodes.length} enabled={!hasSavedLayout} />
           </ReactFlow>
 
           <div className="pointer-events-none absolute bottom-3 left-3 flex flex-wrap gap-3 rounded border border-line/80 bg-paper-elevated/90 px-2.5 py-1.5 font-mono text-[10px] text-ink-muted backdrop-blur">

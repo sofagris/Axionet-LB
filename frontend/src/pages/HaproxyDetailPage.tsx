@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -107,6 +107,21 @@ export function HaproxyDetailPage() {
     if (nodeId) params.set("node", nodeId);
     setSearchParams(params, { replace: true });
   };
+
+  const selectRuntimeNode = useCallback(
+    (nodeId: string | null) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (nodeId) next.set("node", nodeId);
+          else next.delete("node");
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
 
   useEffect(() => {
     const fromUrl = parseTab(searchParams.get("tab")) ?? "overview";
@@ -1674,10 +1689,12 @@ export function HaproxyDetailPage() {
 
       {tab === "status" ? (
         <RuntimeGraph
+          instanceId={instanceId}
           frontends={frontendsQuery.data ?? []}
           backends={backendsQuery.data ?? []}
           status={statusQuery.data}
           focusNodeId={focusNodeId}
+          onSelectNode={selectRuntimeNode}
           statusError={
             statusQuery.isError
               ? statusQuery.error instanceof Error

@@ -472,7 +472,9 @@
     "legendUp": "UP / OPEN",
     "legendDown": "DOWN",
     "legendDrain": "DRAIN",
-    "legendMaint": "MAINT"
+    "legendMaint": "MAINT",
+    "resetLayout": "Reset layout",
+    "resetLayoutHint": "Clear saved node positions and restore autolayout"
   },
 
   "haproxyDetail": {
