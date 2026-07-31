@@ -25,6 +25,12 @@
   --color-domain-observe-soft: var(--ax-domain-observe-soft);
   --color-domain-system: var(--ax-domain-system);
   --color-domain-system-soft: var(--ax-domain-system-soft);
+  --color-catalog-core: var(--ax-catalog-core);
+  --color-catalog-core-soft: var(--ax-catalog-core-soft);
+  --color-catalog-provider: var(--ax-catalog-provider);
+  --color-catalog-provider-soft: var(--ax-catalog-provider-soft);
+  --color-catalog-blueprint: var(--ax-catalog-blueprint);
+  --color-catalog-blueprint-soft: var(--ax-catalog-blueprint-soft);
 }
 
 :root,
@@ -56,6 +62,12 @@ html[data-theme="light"] {
   --ax-domain-observe-soft: #ecfccb;
   --ax-domain-system: #64748b;
   --ax-domain-system-soft: #f1f5f9;
+  --ax-catalog-core: #5b21b6;
+  --ax-catalog-core-soft: #ede9fe;
+  --ax-catalog-provider: #0369a1;
+  --ax-catalog-provider-soft: #e0f2fe;
+  --ax-catalog-blueprint: #9a3412;
+  --ax-catalog-blueprint-soft: #ffedd5;
 }
 
 html[data-theme="dark"] {
@@ -84,6 +96,12 @@ html[data-theme="dark"] {
   --ax-domain-observe-soft: #365314;
   --ax-domain-system: #94a3b8;
   --ax-domain-system-soft: #1e293b;
+  --ax-catalog-core: #a78bfa;
+  --ax-catalog-core-soft: #2e1065;
+  --ax-catalog-provider: #38bdf8;
+  --ax-catalog-provider-soft: #0c4a6e;
+  --ax-catalog-blueprint: #fb923c;
+  --ax-catalog-blueprint-soft: #431407;
 }
 
 @layer base {

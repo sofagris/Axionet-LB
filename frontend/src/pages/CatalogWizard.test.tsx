@@ -104,6 +104,15 @@ vi.mock("../api/system", () => ({
   })),
   fetchSystemMetrics: vi.fn(),
   fetchLbMetrics: vi.fn(),
+  fetchOrphans: vi.fn(async () => ({
+    docker_ok: true,
+    orphan_containers: [],
+    orphan_networks: [],
+    missing_containers: [],
+    missing_networks: [],
+    collected_at: "2026-07-20T16:00:00Z",
+  })),
+  pruneOrphans: vi.fn(),
 }));
 
 vi.mock("../api/interfaces", () => ({
@@ -152,10 +161,12 @@ describe("Service catalog and wizard", () => {
   it("lists catalog services", async () => {
     renderAt("/catalog");
     await waitFor(() => {
-      expect(screen.getByText("HAProxy")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "HAProxy" })).toBeInTheDocument();
     });
-    expect(screen.getByText("Varnish")).toBeInTheDocument();
-    expect(screen.getByText(/Opprett instans|Create instance/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Varnish" })).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("link", { name: /Opprett instans|Create instance/ }).length,
+    ).toBeGreaterThan(0);
   });
 
   it("advances wizard from type to name step", async () => {

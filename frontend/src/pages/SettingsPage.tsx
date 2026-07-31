@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   useCapabilities,
@@ -8,6 +8,7 @@ import {
   useSystemHealth,
   useSystemInfo,
 } from "../features/system/hooks";
+import { FrontPanelSettings } from "../features/settings/front-panel/FrontPanelSettings";
 import type { ComponentHealth, OrphanReport } from "../types/system";
 
 function statusTone(status: string): string {
@@ -19,6 +20,7 @@ function statusTone(status: string): string {
 
 export function SettingsPage() {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
   const infoQuery = useSystemInfo();
   const healthQuery = useSystemHealth();
   const capsQuery = useCapabilities();
@@ -27,6 +29,14 @@ export function SettingsPage() {
 
   const [selectedContainers, setSelectedContainers] = useState<Set<string>>(new Set());
   const [selectedNetworks, setSelectedNetworks] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (searchParams.get("section") !== "front-panel") return;
+    const el = document.getElementById("front-panel");
+    if (el && typeof el.scrollIntoView === "function") {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [searchParams]);
 
   const info = infoQuery.data;
   const health = healthQuery.data;
@@ -305,6 +315,8 @@ export function SettingsPage() {
           </div>
         ) : null}
       </section>
+
+      <FrontPanelSettings />
     </div>
   );
 }

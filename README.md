@@ -82,6 +82,10 @@ cd backend && pytest
 cd frontend && npm test
 ```
 
+## Catalog mockup
+
+GUI-katalogen (`/catalog`) inkluderer blueprints, stacks og providers som **designmockup**. Bare HAProxy og FRR oppretter reelle instanser. Se [docs/CATALOG_MOCKUP.md](docs/CATALOG_MOCKUP.md). Frontpanel/LCD-mockup ligger under Settings.
+
 ## Repo
 
 https://github.com/Sofagris/axionet-lb

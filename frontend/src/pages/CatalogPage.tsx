@@ -1,21 +1,76 @@
-import { Link } from "react-router-dom";
+import { useCallback, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useServiceDefinitions } from "../features/catalog/hooks";
+import { CatalogDetailDrawer } from "../features/catalog/CatalogDetailDrawer";
+import { CatalogFeatured } from "../features/catalog/CatalogFeatured";
+import { CatalogFilters, parseCategoryParam, parseKindParam } from "../features/catalog/CatalogFilters";
+import { CatalogGrid } from "../features/catalog/CatalogGrid";
+import { filterCatalogItems } from "../features/catalog/filterCatalog";
+import { mergeCatalogWithApi } from "../features/catalog/mergeCatalog";
+import { MockActionDialog } from "../features/catalog/MockActionDialog";
+import type { CatalogItem } from "../features/catalog/catalogTypes";
 
 export function CatalogPage() {
   const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const catalogQuery = useServiceDefinitions();
+  const [mockItem, setMockItem] = useState<CatalogItem | null>(null);
+
+  const filters = useMemo(
+    () => ({
+      category: parseCategoryParam(searchParams.get("category")),
+      kind: parseKindParam(searchParams.get("kind")),
+      query: searchParams.get("q") ?? "",
+    }),
+    [searchParams],
+  );
+
+  const selectedSlug = searchParams.get("item");
+
+  const items = useMemo(
+    () => mergeCatalogWithApi(undefined, catalogQuery.data),
+    [catalogQuery.data],
+  );
+
+  const filtered = useMemo(() => filterCatalogItems(items, filters), [items, filters]);
+
+  const selectedItem = useMemo(
+    () => (selectedSlug ? (items.find((item) => item.slug === selectedSlug) ?? null) : null),
+    [items, selectedSlug],
+  );
+
+  const updateParams = useCallback(
+    (patch: Record<string, string | null>) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          for (const [key, value] of Object.entries(patch)) {
+            if (!value) next.delete(key);
+            else next.set(key, value);
+          }
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
+  const openDetails = useCallback(
+    (slug: string) => updateParams({ item: slug }),
+    [updateParams],
+  );
+
+  const closeDetails = useCallback(() => updateParams({ item: null }), [updateParams]);
 
   return (
     <div className="space-y-8">
       <section>
         <h2 className="text-xl font-semibold tracking-tight text-ink">{t("catalog.title")}</h2>
         <p className="mt-1 max-w-2xl text-ink-muted">{t("catalog.subtitle")}</p>
+        <p className="mt-2 max-w-2xl text-sm text-ink-muted">{t("catalog.mockupHint")}</p>
       </section>
-
-      {catalogQuery.isLoading ? (
-        <p className="text-ink-muted">{t("common.loading")}</p>
-      ) : null}
 
       {catalogQuery.isError ? (
         <p className="text-sm text-danger">
@@ -28,47 +83,33 @@ export function CatalogPage() {
         </p>
       ) : null}
 
-      {catalogQuery.data ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {catalogQuery.data.map((service) => (
-            <article
-              key={service.service_type}
-              className={`border border-line bg-paper-elevated p-5 shadow-sm ${
-                service.enabled ? "" : "opacity-70"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <h3 className="text-lg font-semibold text-ink">{service.display_name}</h3>
-                <span
-                  className={`font-mono text-[10px] tracking-wide uppercase ${
-                    service.enabled ? "text-ok" : "text-ink-muted"
-                  }`}
-                >
-                  {service.enabled ? t("catalog.available") : t("catalog.comingSoon")}
-                </span>
-              </div>
-              <p className="mt-2 text-sm text-ink-muted">{service.description}</p>
-              <p className="mt-3 font-mono text-xs text-ink-muted">
-                {service.container_image}:{service.default_version}
-              </p>
-              <div className="mt-5">
-                {service.enabled ? (
-                  <Link
-                    to={`/instances/new?type=${service.service_type}`}
-                    className="inline-block border border-accent bg-accent px-4 py-2 text-sm font-medium text-white"
-                  >
-                    {t("catalog.create")}
-                  </Link>
-                ) : (
-                  <span className="inline-block border border-line px-4 py-2 text-sm text-ink-muted">
-                    {t("catalog.unavailable")}
-                  </span>
-                )}
-              </div>
-            </article>
-          ))}
-        </div>
-      ) : null}
+      <CatalogFeatured items={items} onOpenDetails={openDetails} />
+
+      <CatalogFilters
+        filters={filters}
+        resultCount={filtered.length}
+        onChange={(next) =>
+          updateParams({
+            category: next.category === "all" ? null : next.category,
+            kind: next.kind === "all" ? null : next.kind,
+            q: next.query.trim() ? next.query : null,
+          })
+        }
+      />
+
+      <CatalogGrid
+        items={filtered}
+        onOpenDetails={openDetails}
+        onMockAction={setMockItem}
+      />
+
+      <CatalogDetailDrawer
+        item={selectedItem}
+        onClose={closeDetails}
+        onMockAction={setMockItem}
+      />
+
+      <MockActionDialog open={Boolean(mockItem)} item={mockItem} onClose={() => setMockItem(null)} />
     </div>
   );
 }
