@@ -72,7 +72,7 @@ export function CatalogDetailDrawer({ item, onClose, onMockAction }: Props) {
         className="relative flex h-full w-full max-w-lg flex-col border-l border-line bg-paper shadow-xl"
       >
         <header className="flex items-start gap-3 border-b border-line p-4">
-          <CatalogBrandIcon brand={item.brand} name={item.name} />
+          <CatalogBrandIcon brand={item.brand} name={item.name} itemId={item.id} />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h2 id={titleId} className="text-lg font-semibold text-ink">

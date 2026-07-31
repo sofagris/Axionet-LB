@@ -39,7 +39,7 @@ export function CatalogCard({ item, onOpenDetails, onMockAction }: Props) {
         className={["absolute inset-y-0 left-0 w-0.5", accentBar[item.brand.accent]].join(" ")}
       />
       <div className="flex items-start gap-3 pl-1">
-        <CatalogBrandIcon brand={item.brand} name={item.name} />
+        <CatalogBrandIcon brand={item.brand} name={item.name} itemId={item.id} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="truncate text-base font-semibold text-ink">{item.name}</h3>

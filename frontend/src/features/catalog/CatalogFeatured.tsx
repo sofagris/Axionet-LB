@@ -29,7 +29,7 @@ export function CatalogFeatured({ items, onOpenDetails }: Props) {
             onClick={() => onOpenDetails(item.slug)}
             className="flex items-start gap-3 border border-line bg-paper-elevated p-3 text-left hover:border-accent"
           >
-            <CatalogBrandIcon brand={item.brand} name={item.name} size="sm" />
+            <CatalogBrandIcon brand={item.brand} name={item.name} itemId={item.id} size="sm" />
             <span className="min-w-0">
               <span className="block truncate text-sm font-semibold text-ink">{item.name}</span>
               <span className="mt-1 block">
