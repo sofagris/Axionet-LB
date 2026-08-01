@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="t d">
+<title id="t">Secure Web Frontend</title><desc id="d">A web browser protected by a security shield.</desc><style>
+.p{fill:none;stroke:var(--icon-primary,#35D0C2);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+.s{fill:none;stroke:var(--icon-secondary,#7586FF);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+.m{fill:none;stroke:var(--icon-muted,#8292A6);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.f1{fill:var(--icon-primary-fill,#DDF8F5);stroke:var(--icon-primary,#35D0C2);stroke-width:3.5}
+.f2{fill:var(--icon-secondary-fill,#E7EAFF);stroke:var(--icon-secondary,#7586FF);stroke-width:3.5}
+.ok{fill:var(--icon-ok,#52D273)}
+</style>
+<rect class="f2" x="9" y="15" width="66" height="54" rx="7"/><path class="s" d="M9 29h66"/>
+<circle class="ok" cx="18" cy="22" r="2.5"/><circle class="ok" cx="26" cy="22" r="2.5"/>
+<path class="m" d="M20 40h28M20 49h20M20 58h14"/>
+<path class="f1" d="M64 39l20 8v14c0 11-8 18-20 23-12-5-20-12-20-23V47z"/>
+<rect class="p" x="57" y="57" width="14" height="11" rx="2"/><path class="p" d="M60 57v-4a4 4 0 0 1 8 0v4"/></svg>

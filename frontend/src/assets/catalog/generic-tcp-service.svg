@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="t d">
+<title id="t">Generic TCP Service</title><desc id="d">A bidirectional TCP connection between a client and server.</desc><style>
+.p{fill:none;stroke:var(--icon-primary,#35D0C2);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+.s{fill:none;stroke:var(--icon-secondary,#7586FF);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+.m{fill:none;stroke:var(--icon-muted,#8292A6);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.f1{fill:var(--icon-primary-fill,#DDF8F5);stroke:var(--icon-primary,#35D0C2);stroke-width:3.5}
+.f2{fill:var(--icon-secondary-fill,#E7EAFF);stroke:var(--icon-secondary,#7586FF);stroke-width:3.5}
+.ok{fill:var(--icon-ok,#52D273)}
+</style>
+<rect class="f2" x="8" y="28" width="25" height="36" rx="5"/><rect class="f1" x="63" y="23" width="25" height="46" rx="5"/>
+<path class="m" d="M15 38h11M15 46h11M15 54h7M70 34h11M70 43h11M70 52h11"/>
+<path class="p" d="M34 39h24M52 33l6 6-6 6"/><path class="s" d="M62 56H38M44 50l-6 6 6 6"/>
+<circle class="ok" cx="21" cy="71" r="3"/><circle class="ok" cx="75" cy="76" r="3"/><path class="m" d="M42 73h12M46 78h4"/></svg>
