@@ -87,7 +87,7 @@ export function CatalogCard({ item, onOpenDetails, onMockAction }: Props) {
           >
             {catalogActionLabel(t, item.primaryAction)}
           </button>
-        )}
+        ) : null}
         <button
           type="button"
           className="border border-line px-3 py-1.5 text-sm text-ink-muted hover:border-accent hover:text-ink"
