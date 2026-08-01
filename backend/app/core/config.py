@@ -72,6 +72,16 @@ class Settings(BaseSettings):
         default="Password",
         validation_alias=AliasChoices("AX_AUTH_DEFAULT_ADMIN_PASSWORD"),
     )
+    gui_public_url: str = Field(
+        default="http://127.0.0.1",
+        validation_alias=AliasChoices("AX_GUI_PUBLIC_URL", "GUI_PUBLIC_URL"),
+        description="Public GUI origin used after OIDC callback (e.g. http://192.168.50.195).",
+    )
+    auth_public_base_url: str = Field(
+        default="",
+        validation_alias=AliasChoices("AX_AUTH_PUBLIC_BASE_URL", "AUTH_PUBLIC_BASE_URL"),
+        description="Public API base for OIDC redirect_uri. Empty = derive from request.",
+    )
 
 
 @lru_cache

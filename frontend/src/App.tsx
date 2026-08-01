@@ -17,6 +17,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { NetworksPage } from "./pages/NetworksPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { SystemLogsPage } from "./pages/SystemLogsPage";
+import { IdentityPage } from "./pages/IdentityPage";
 import { UsersPage } from "./pages/UsersPage";
 import { VipsPage } from "./pages/VipsPage";
 
@@ -42,6 +43,7 @@ export function App() {
           <Route path="vips" element={<VipsPage />} />
           <Route path="logs" element={<SystemLogsPage />} />
           <Route path="users" element={<UsersPage />} />
+          <Route path="identity" element={<IdentityPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Route>

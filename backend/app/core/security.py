@@ -13,15 +13,20 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import Settings, get_settings
 from app.core.roles import effective_role, normalize_role
+from app.core.upn import local_lookup_username, parse_upn
 from app.db.session import get_db
 from app.models.group import UserGroup
 from app.models.user import User
+from app.services.auth_sources.service import AuthSourceService
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
 PUBLIC_PATH_SUFFIXES = (
     "/system/health",
     "/auth/login",
+    "/auth/login-options",
+    "/auth/oidc/start",
+    "/auth/oidc/callback",
 )
 
 
@@ -80,7 +85,13 @@ def get_user_by_id(db: Session, user_id: str) -> User | None:
 
 
 def authenticate_user(db: Session, username: str, password: str) -> User | None:
-    user = get_user_by_username(db, username)
+    parsed = parse_upn(username)
+    if not parsed.is_local_route:
+        return None
+    lookup = local_lookup_username(parsed)
+    if not lookup:
+        return None
+    user = get_user_by_username(db, lookup)
     if user is None or not user.is_active:
         return None
     if (user.auth_source or "local") != "local":
@@ -93,6 +104,7 @@ def authenticate_user(db: Session, username: str, password: str) -> User | None:
 
 
 def ensure_default_admin(db: Session, settings: Settings) -> User:
+    AuthSourceService(db).ensure_local_source()
     existing = get_user_by_username(db, settings.auth_default_admin_username)
     if existing is not None:
         return existing

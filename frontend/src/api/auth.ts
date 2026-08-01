@@ -26,3 +26,8 @@ export function logout(): Promise<void> {
     setAccessToken(null);
   });
 }
+
+export async function completeOidcLogin(token: string): Promise<User> {
+  setAccessToken(token);
+  return fetchMe();
+}

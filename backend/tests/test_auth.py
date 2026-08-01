@@ -20,7 +20,7 @@ def test_login_and_me(auth_client: TestClient) -> None:
 
     login = auth_client.post(
         "/api/v1/auth/login",
-        json={"username": "Admin", "password": "Password"},
+        json={"username": "Admin@internal", "password": "Password"},
     )
     assert login.status_code == 200, login.text
     body = login.json()

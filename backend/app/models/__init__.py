@@ -13,6 +13,7 @@ from app.models.service_instance import (
 )
 from app.models.service_vip import ServiceVip
 from app.models.service_vip_link import ServiceVipLink
+from app.models.auth_source import AppIdentityProvider, AuthSource, AuthUpnSuffix
 from app.models.group import Group, UserGroup
 from app.models.user import User
 
@@ -20,7 +21,10 @@ __all__ = [
     "AppMeta",
     "AdministrativeState",
     "ActualState",
+    "AppIdentityProvider",
     "AuditEvent",
+    "AuthSource",
+    "AuthUpnSuffix",
     "ConfigRevision",
     "Dashboard",
     "DeploymentStatus",

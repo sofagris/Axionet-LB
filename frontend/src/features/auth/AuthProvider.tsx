@@ -7,7 +7,12 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { fetchMe, login as apiLogin, logout as apiLogout } from "../../api/auth";
+import {
+  completeOidcLogin as apiCompleteOidc,
+  fetchMe,
+  login as apiLogin,
+  logout as apiLogout,
+} from "../../api/auth";
 import { getAccessToken, setAccessToken } from "../../api/client";
 import type { User } from "../../types/auth";
 
@@ -15,6 +20,7 @@ type AuthContextValue = {
   user: User | null;
   loading: boolean;
   login: (username: string, password: string) => Promise<void>;
+  completeOidcLogin: (token: string) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 };
@@ -52,6 +58,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(result.user);
   }, []);
 
+  const completeOidcLogin = useCallback(async (token: string) => {
+    const me = await apiCompleteOidc(token);
+    setUser(me);
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await apiLogout();
@@ -62,8 +73,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, login, logout, refresh }),
-    [user, loading, login, logout, refresh],
+    () => ({ user, loading, login, completeOidcLogin, logout, refresh }),
+    [user, loading, login, completeOidcLogin, logout, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

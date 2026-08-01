@@ -17,6 +17,7 @@ services:
       HOST_SYSFS_ROOT: /host/sys
       HOST_PROC_ROOT: /host/proc
       HOST_NET_NSENTER: "true"
+      AX_GUI_PUBLIC_URL: ${AX_GUI_PUBLIC_URL:-http://192.168.50.195}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /sys:/host/sys:ro

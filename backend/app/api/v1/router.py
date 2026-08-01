@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 
 from app.api.v1 import (
     auth,
+    auth_sources,
     dashboards,
     frr,
     groups,
@@ -19,6 +20,7 @@ from app.core.security import enforce_auth
 
 api_router = APIRouter(dependencies=[Depends(enforce_auth)])
 api_router.include_router(auth.router)
+api_router.include_router(auth_sources.router)
 api_router.include_router(system.router)
 api_router.include_router(interfaces.router)
 api_router.include_router(networks.router)

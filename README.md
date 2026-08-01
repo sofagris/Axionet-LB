@@ -82,9 +82,9 @@ cd backend && pytest
 cd frontend && npm test
 ```
 
-## Lokal auth (Identity fase 1)
+## Identity
 
-Plattform-login bruker lokal brukerdatabase med grupper og roller (`admin` / `operator` / `viewer`). Admin administrerer brukere under **System → Brukere**. Se [docs/LOCAL_AUTH.md](docs/LOCAL_AUTH.md). Keycloak/OIDC kommer som valgfri IdP i fase 2 — lokal break-glass forblir.
+Plattform-login støtter lokal break-glass (`Admin` / `Admin@internal`) og UPN-suffix → OIDC-kilder (f.eks. Entra/Keycloak for AD). Admin: **System → Brukere** og **System → Identity**. Se [docs/IDENTITY.md](docs/IDENTITY.md).
 
 ## Catalog mockup
 

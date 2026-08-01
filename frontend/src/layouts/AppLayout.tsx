@@ -79,7 +79,12 @@ export function AppLayout() {
 
     const systemItems: NavItem[] = [
       { to: "/dashboards", labelKey: "nav.dashboards", icon: IconDashboard },
-      ...(isAdmin ? [{ to: "/users", labelKey: "nav.users", icon: IconUsers } satisfies NavItem] : []),
+      ...(isAdmin
+        ? [
+            { to: "/users", labelKey: "nav.users", icon: IconUsers } satisfies NavItem,
+            { to: "/identity", labelKey: "nav.identity", icon: IconSettings } satisfies NavItem,
+          ]
+        : []),
       { to: "/settings", labelKey: "nav.settings", icon: IconSettings },
     ];
 
