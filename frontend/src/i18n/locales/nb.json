@@ -80,9 +80,10 @@
     "source": "Kilde",
     "selectSource": "Velg kilde",
     "bindSuffix": "Koble suffix",
-    "appIdpHelp": "App-IdPer er for kundetjenester (Catalog Identity & MFA), ikke for plattform-login.",
+    "appIdpHelp": "App-IdPer er for kundetjenester (Catalog Identity & MFA), ikke for plattform-login. Bind dem til en applikasjon under Kunder.",
     "addAppIdp": "Ny app-IdP",
-    "customerId": "Kunde-ID (valgfritt)",
+    "customerId": "Kunde-scope (valgfritt)",
+    "customerNone": "Ingen (plattform-bred)",
     "customerBound": "Kunde {{id}}",
     "platformWide": "Plattform-bred (ikke kunde-bundet)"
   },
@@ -456,6 +457,19 @@
     "catalogLinkHint": "Catalog-mal:",
     "openRelated": "Åpne",
     "noMutations": "Denne siden oppretter ikke instanser, VIP-er eller sertifikater.",
+    "appIdp": {
+      "title": "App Identity & MFA",
+      "help": "Knytt en konfigurert App IdP til denne applikasjonen. Keycloak deployes ikke her — dette er metadata-binding.",
+      "empty": "Ingen App IdP er bundet ennå.",
+      "bind": "Bind IdP",
+      "unbind": "Fjern binding",
+      "selectIdp": "App IdP",
+      "selectPlaceholder": "Velg IdP…",
+      "manageIdps": "Administrer App IdP",
+      "disabled": "IdP er deaktivert",
+      "noEligible": "Ingen IdP er tilgjengelig for denne kunden. Opprett en under System → Identity.",
+      "loadIdpsFailed": "Kunne ikke hente App IdP-er (krever admin)."
+    },
     "status": {
       "active": "Aktiv",
       "trial": "Prøve",

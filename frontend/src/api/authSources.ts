@@ -1,10 +1,12 @@
 import { z } from "zod";
 import { apiFetch } from "./client";
 import {
+  AppIdpBindingSchema,
   AppIdentityProviderSchema,
   AuthSourceSchema,
   LoginOptionsSchema,
   UpnSuffixSchema,
+  type AppIdpBinding,
   type AppIdentityProvider,
   type AuthSource,
   type AuthSourceCreatePayload,
@@ -68,10 +70,46 @@ export function deleteUpnSuffix(id: string): Promise<void> {
   });
 }
 
-export function fetchAppIdentityProviders(): Promise<AppIdentityProvider[]> {
-  return apiFetch("/api/v1/auth-sources/app-identity-providers", (data) =>
+export function fetchAppIdentityProviders(params?: {
+  customer_id?: string;
+}): Promise<AppIdentityProvider[]> {
+  const qs =
+    params?.customer_id != null && params.customer_id !== ""
+      ? `?customer_id=${encodeURIComponent(params.customer_id)}`
+      : "";
+  return apiFetch(`/api/v1/auth-sources/app-identity-providers${qs}`, (data) =>
     z.array(AppIdentityProviderSchema).parse(data),
   );
+}
+
+export function fetchAppIdpBindings(params?: {
+  customer_id?: string;
+  application_id?: string;
+}): Promise<AppIdpBinding[]> {
+  const search = new URLSearchParams();
+  if (params?.customer_id) search.set("customer_id", params.customer_id);
+  if (params?.application_id !== undefined) {
+    search.set("application_id", params.application_id ?? "");
+  }
+  const qs = search.toString() ? `?${search.toString()}` : "";
+  return apiFetch(`/api/v1/app-idp-bindings${qs}`, (data) =>
+    z.array(AppIdpBindingSchema).parse(data),
+  );
+}
+
+export function createAppIdpBinding(payload: {
+  app_identity_provider_id: string;
+  customer_id: string;
+  application_id?: string | null;
+}): Promise<AppIdpBinding> {
+  return apiFetch("/api/v1/app-idp-bindings", (data) => AppIdpBindingSchema.parse(data), {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export function deleteAppIdpBinding(id: string): Promise<void> {
+  return apiFetch(`/api/v1/app-idp-bindings/${id}`, () => undefined, { method: "DELETE" });
 }
 
 export function createAppIdentityProvider(payload: {

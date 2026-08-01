@@ -7,12 +7,14 @@ from app.models.auth_source import (
     LOCAL_AUTH_SOURCE_ID,
     LOCAL_UPN_SUFFIX,
     AppIdentityProvider,
+    AppIdpBinding,
     AuthSource,
     AuthUpnSuffix,
 )
 from app.schemas.auth_sources import (
     AppIdentityProviderCreate,
     AppIdentityProviderUpdate,
+    AppIdpBindingCreate,
     AuthSourceCreate,
     AuthSourceUpdate,
     UpnSuffixCreate,
@@ -197,10 +199,11 @@ class AuthSourceService:
         self.db.delete(row)
         self.db.commit()
 
-    def list_app_idps(self) -> list[AppIdentityProvider]:
-        return list(
-            self.db.scalars(select(AppIdentityProvider).order_by(AppIdentityProvider.name)).all()
-        )
+    def list_app_idps(self, *, customer_id: str | None = None) -> list[AppIdentityProvider]:
+        stmt = select(AppIdentityProvider).order_by(AppIdentityProvider.name)
+        if customer_id:
+            stmt = stmt.where(AppIdentityProvider.customer_id == customer_id)
+        return list(self.db.scalars(stmt).all())
 
     def get_app_idp(self, idp_id: str) -> AppIdentityProvider | None:
         return self.db.get(AppIdentityProvider, idp_id)
@@ -254,5 +257,69 @@ class AuthSourceService:
         return row
 
     def delete_app_idp(self, row: AppIdentityProvider) -> None:
+        self.db.delete(row)
+        self.db.commit()
+
+    def list_bindings(
+        self,
+        *,
+        customer_id: str | None = None,
+        application_id: str | None = None,
+    ) -> list[AppIdpBinding]:
+        stmt = (
+            select(AppIdpBinding)
+            .options(selectinload(AppIdpBinding.provider))
+            .order_by(AppIdpBinding.customer_id, AppIdpBinding.application_id)
+        )
+        if customer_id:
+            stmt = stmt.where(AppIdpBinding.customer_id == customer_id)
+        if application_id is not None:
+            if application_id == "":
+                stmt = stmt.where(AppIdpBinding.application_id.is_(None))
+            else:
+                stmt = stmt.where(AppIdpBinding.application_id == application_id)
+        return list(self.db.scalars(stmt).all())
+
+    def get_binding(self, binding_id: str) -> AppIdpBinding | None:
+        return self.db.scalars(
+            select(AppIdpBinding)
+            .where(AppIdpBinding.id == binding_id)
+            .options(selectinload(AppIdpBinding.provider))
+        ).first()
+
+    def create_binding(self, payload: AppIdpBindingCreate) -> AppIdpBinding:
+        customer_id = payload.customer_id.strip()
+        if not customer_id:
+            raise AuthSourceError("customer_id is required")
+        application_id = (payload.application_id or "").strip() or None
+
+        provider = self.get_app_idp(payload.app_identity_provider_id)
+        if provider is None:
+            raise AuthSourceError("App identity provider not found")
+        if not provider.enabled:
+            raise AuthSourceError("App identity provider is disabled")
+
+        clash_stmt = select(AppIdpBinding).where(AppIdpBinding.customer_id == customer_id)
+        if application_id is None:
+            clash_stmt = clash_stmt.where(AppIdpBinding.application_id.is_(None))
+        else:
+            clash_stmt = clash_stmt.where(AppIdpBinding.application_id == application_id)
+        if self.db.scalars(clash_stmt).first() is not None:
+            raise AuthSourceError("An App IdP is already bound to this customer/application")
+
+        row = AppIdpBinding(
+            app_identity_provider_id=provider.id,
+            customer_id=customer_id,
+            application_id=application_id,
+        )
+        self.db.add(row)
+        self.db.commit()
+        self.db.refresh(row)
+        # reload with provider for response enrichment
+        loaded = self.get_binding(row.id)
+        assert loaded is not None
+        return loaded
+
+    def delete_binding(self, row: AppIdpBinding) -> None:
         self.db.delete(row)
         self.db.commit()

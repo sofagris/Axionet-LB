@@ -90,3 +90,41 @@ class AppIdentityProvider(Base):
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
     )
+
+    bindings: Mapped[list[AppIdpBinding]] = relationship(
+        "AppIdpBinding",
+        back_populates="provider",
+        cascade="all, delete-orphan",
+    )
+
+
+class AppIdpBinding(Base):
+    """Soft link from an App IdP to a customer / application (no customers table yet)."""
+
+    __tablename__ = "app_idp_bindings"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    app_identity_provider_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("app_identity_providers.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    customer_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    application_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+
+    provider: Mapped[AppIdentityProvider] = relationship(
+        "AppIdentityProvider",
+        back_populates="bindings",
+    )

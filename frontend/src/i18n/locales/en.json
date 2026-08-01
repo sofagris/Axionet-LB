@@ -80,9 +80,10 @@
     "source": "Source",
     "selectSource": "Select source",
     "bindSuffix": "Bind suffix",
-    "appIdpHelp": "App IdPs are for customer services (Catalog Identity & MFA), not platform login.",
+    "appIdpHelp": "App IdPs are for customer services (Catalog Identity & MFA), not platform login. Bind them to an application under Customers.",
     "addAppIdp": "New app IdP",
-    "customerId": "Customer ID (optional)",
+    "customerId": "Customer scope (optional)",
+    "customerNone": "None (platform-wide)",
     "customerBound": "Customer {{id}}",
     "platformWide": "Platform-wide (not customer-bound)"
   },
@@ -455,6 +456,19 @@
     "catalogLinkHint": "Catalog template:",
     "openRelated": "Open",
     "noMutations": "This screen does not create instances, VIPs or certificates.",
+    "appIdp": {
+      "title": "App Identity & MFA",
+      "help": "Link a configured App IdP to this application. Keycloak is not deployed here — this is a metadata binding.",
+      "empty": "No App IdP is bound yet.",
+      "bind": "Bind IdP",
+      "unbind": "Unbind",
+      "selectIdp": "App IdP",
+      "selectPlaceholder": "Select IdP…",
+      "manageIdps": "Manage App IdPs",
+      "disabled": "IdP is disabled",
+      "noEligible": "No IdP is available for this customer. Create one under System → Identity.",
+      "loadIdpsFailed": "Could not load App IdPs (admin required)."
+    },
     "status": {
       "active": "Active",
       "trial": "Trial",

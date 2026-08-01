@@ -175,11 +175,12 @@ def delete_suffix(
 
 @router.get("/app-identity-providers", response_model=list[AppIdentityProviderRead])
 def list_app_idps(
+    customer_id: str | None = None,
     service: AuthSourceService = Depends(get_service),
 ) -> list[AppIdentityProviderRead]:
     return [
         AppIdentityProviderRead.model_validate(row, from_attributes=True)
-        for row in service.list_app_idps()
+        for row in service.list_app_idps(customer_id=customer_id)
     ]
 
 

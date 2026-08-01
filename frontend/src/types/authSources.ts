@@ -37,6 +37,18 @@ export const AppIdentityProviderSchema = z.object({
   updated_at: z.string(),
 });
 
+export const AppIdpBindingSchema = z.object({
+  id: z.string(),
+  app_identity_provider_id: z.string(),
+  app_identity_provider_name: z.string(),
+  app_identity_provider_kind: z.string(),
+  app_identity_provider_enabled: z.boolean(),
+  customer_id: z.string(),
+  application_id: z.string().nullable().optional(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
 export const LoginOptionsSchema = z.object({
   local_suffix: z.string(),
   suffixes: z.array(
@@ -53,6 +65,7 @@ export const LoginOptionsSchema = z.object({
 export type AuthSource = z.infer<typeof AuthSourceSchema>;
 export type UpnSuffix = z.infer<typeof UpnSuffixSchema>;
 export type AppIdentityProvider = z.infer<typeof AppIdentityProviderSchema>;
+export type AppIdpBinding = z.infer<typeof AppIdpBindingSchema>;
 export type LoginOptions = z.infer<typeof LoginOptionsSchema>;
 
 export type AuthSourceCreatePayload = {

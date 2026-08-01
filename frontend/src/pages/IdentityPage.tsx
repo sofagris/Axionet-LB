@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from "react";
-import { Navigate } from "react-router-dom";
+import { useMemo, useState, type FormEvent } from "react";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../features/auth/AuthProvider";
+import { listCustomers } from "../features/customers/customerData";
 import {
   useAppIdentityProviders,
   useAuthSources,
@@ -16,13 +17,23 @@ import {
 
 type Tab = "sources" | "suffixes" | "appIdps";
 
+function parseTab(value: string | null): Tab {
+  if (value === "suffixes" || value === "appIdps" || value === "sources") return value;
+  return "sources";
+}
+
 export function IdentityPage() {
   const { t } = useTranslation();
   const { user, loading } = useAuth();
-  const [tab, setTab] = useState<Tab>("sources");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = parseTab(searchParams.get("tab"));
 
   if (loading) return <p className="text-ink-muted">{t("common.loading")}</p>;
   if (!user || user.effective_role !== "admin") return <Navigate to="/" replace />;
+
+  function setTab(next: Tab) {
+    setSearchParams(next === "sources" ? {} : { tab: next }, { replace: true });
+  }
 
   return (
     <div className="space-y-8">
@@ -329,6 +340,7 @@ function AppIdpsPanel() {
   const listQuery = useAppIdentityProviders();
   const createMutation = useCreateAppIdentityProvider();
   const deleteMutation = useDeleteAppIdentityProvider();
+  const customers = useMemo(() => listCustomers(), []);
   const [name, setName] = useState("");
   const [issuer, setIssuer] = useState("");
   const [customerId, setCustomerId] = useState("");
@@ -379,12 +391,18 @@ function AppIdpsPanel() {
         </label>
         <label className="block text-sm">
           <span className="text-ink-muted">{t("identity.customerId")}</span>
-          <input
-            className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+          <select
+            className="mt-1 w-full border border-line bg-paper px-3 py-2 text-sm"
             value={customerId}
             onChange={(e) => setCustomerId(e.target.value)}
-            placeholder="optional"
-          />
+          >
+            <option value="">{t("identity.customerNone")}</option>
+            {customers.map((customer) => (
+              <option key={customer.id} value={customer.id}>
+                {customer.name} ({customer.id})
+              </option>
+            ))}
+          </select>
         </label>
         {error ? <p className="text-sm text-danger">{error}</p> : null}
         <button

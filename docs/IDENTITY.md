@@ -55,7 +55,16 @@ Identity-routere har fortsatt `require_roles("admin")` (inkl. GET). GUI viser le
 
 **App IdP**-definisjoner under Identity er metadata for kundetjenester (Catalog «Identity & MFA»). De deployer **ikke** Keycloak og brukes **ikke** til plattform-login.
 
-Senere kan Catalog/Customers knytte en app-IdP til en kundeapplikasjon.
+### Binding til Customers
+
+Tabell `app_idp_bindings` knytter en App IdP til soft-referanser (`customer_id`, valgfri `application_id`) som matcher mock-IDene under **Kunder** (f.eks. `kunde-a` / `app-web`).
+
+| API | Tilgang |
+|-----|---------|
+| `GET /api/v1/app-idp-bindings` | Alle innloggede |
+| `POST` / `DELETE` | Admin |
+
+GUI: applikasjonsdetalj under Kunder viser binding; Identity → App IdP lar admin sette valgfritt kunde-scope.
 
 ## AD
 

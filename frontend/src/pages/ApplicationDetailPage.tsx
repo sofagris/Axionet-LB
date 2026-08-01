@@ -1,5 +1,6 @@
 import { Link, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { AppIdpBindingSection } from "../features/customers/AppIdpBindingSection";
 import { getApplication } from "../features/customers/customerData";
 import type { AppResourceKind } from "../features/customers/customerTypes";
 
@@ -85,6 +86,8 @@ export function ApplicationDetailPage() {
           </div>
         </section>
       ) : null}
+
+      <AppIdpBindingSection customerId={customer.id} applicationId={application.id} />
 
       <section className="space-y-3">
         <h3 className="font-mono text-[10px] tracking-[0.14em] text-ink-muted uppercase">

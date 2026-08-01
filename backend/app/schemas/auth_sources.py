@@ -102,6 +102,26 @@ class AppIdentityProviderUpdate(BaseModel):
     config: dict[str, Any] | None = None
 
 
+class AppIdpBindingRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    app_identity_provider_id: str
+    app_identity_provider_name: str = ""
+    app_identity_provider_kind: str = ""
+    app_identity_provider_enabled: bool = True
+    customer_id: str
+    application_id: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class AppIdpBindingCreate(BaseModel):
+    app_identity_provider_id: str
+    customer_id: str = Field(min_length=1, max_length=64)
+    application_id: str | None = Field(default=None, max_length=64)
+
+
 class LoginOptionsSuffix(BaseModel):
     suffix: str
     auth_source_id: str
