@@ -13,6 +13,7 @@ from app.models.service_instance import (
 )
 from app.models.service_vip import ServiceVip
 from app.models.service_vip_link import ServiceVipLink
+from app.models.group import Group, UserGroup
 from app.models.user import User
 
 __all__ = [
@@ -24,6 +25,7 @@ __all__ = [
     "Dashboard",
     "DeploymentStatus",
     "DesiredState",
+    "Group",
     "HealthStatus",
     "LinkState",
     "Network",
@@ -34,5 +36,6 @@ __all__ = [
     "ServiceVip",
     "ServiceVipLink",
     "User",
+    "UserGroup",
     "ValidationStatus",
 ]

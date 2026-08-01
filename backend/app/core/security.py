@@ -7,11 +7,14 @@ import bcrypt
 import jwt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from collections.abc import Callable
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import Settings, get_settings
+from app.core.roles import effective_role, normalize_role
 from app.db.session import get_db
+from app.models.group import UserGroup
 from app.models.user import User
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -60,17 +63,29 @@ def is_public_path(path: str) -> bool:
     return any(normalized.endswith(suffix) for suffix in PUBLIC_PATH_SUFFIXES)
 
 
+def _user_load_options():
+    return selectinload(User.group_memberships).selectinload(UserGroup.group)
+
+
 def get_user_by_username(db: Session, username: str) -> User | None:
-    return db.scalars(select(User).where(User.username == username)).first()
+    return db.scalars(
+        select(User).where(User.username == username).options(_user_load_options())
+    ).first()
 
 
 def get_user_by_id(db: Session, user_id: str) -> User | None:
-    return db.get(User, user_id)
+    return db.scalars(
+        select(User).where(User.id == user_id).options(_user_load_options())
+    ).first()
 
 
 def authenticate_user(db: Session, username: str, password: str) -> User | None:
     user = get_user_by_username(db, username)
     if user is None or not user.is_active:
+        return None
+    if (user.auth_source or "local") != "local":
+        return None
+    if not user.password_hash:
         return None
     if not verify_password(password, user.password_hash):
         return None
@@ -85,6 +100,7 @@ def ensure_default_admin(db: Session, settings: Settings) -> User:
         username=settings.auth_default_admin_username,
         password_hash=hash_password(settings.auth_default_admin_password),
         role="admin",
+        auth_source="local",
         is_active=True,
     )
     db.add(user)
@@ -144,3 +160,19 @@ def get_current_user(request: Request) -> User:
             headers={"WWW-Authenticate": "Bearer"},
         )
     return user
+
+
+def require_roles(*allowed: str) -> Callable[..., User]:
+    """Dependency factory: require the current user's effective role to be one of ``allowed``."""
+
+    allowed_normalized = {normalize_role(role) for role in allowed}
+
+    def _dependency(user: User = Depends(get_current_user)) -> User:
+        if effective_role(user) not in allowed_normalized:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient role",
+            )
+        return user
+
+    return _dependency

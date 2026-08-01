@@ -24,6 +24,7 @@
     "instances": "Instances",
     "vips": "VIPs",
     "logs": "Logs",
+    "users": "Users",
     "settings": "Settings",
     "groups": {
       "traffic": "Traffic & LB",
@@ -40,11 +41,52 @@
   "auth": {
     "title": "Sign in",
     "subtitle": "Access the AxioNet LB control plane.",
+    "localBreakGlass": "Local admin login always remains available as break-glass, even when an external IdP is added later.",
     "username": "Username",
     "password": "Password",
     "signIn": "Sign in",
     "signingIn": "Signing in…",
     "signOut": "Sign out"
+  },
+  "users": {
+    "eyebrow": "System",
+    "title": "Users and groups",
+    "subtitle": "Manage local platform users, groups, and roles. Effective role is the highest of the user's own role and their groups.",
+    "tabs": {
+      "users": "Users",
+      "groups": "Groups"
+    },
+    "addUser": "New user",
+    "addGroup": "New group",
+    "createUser": "Create user",
+    "editUser": "Edit user",
+    "createGroup": "Create group",
+    "editGroup": "Edit group",
+    "edit": "Edit",
+    "deactivate": "Deactivate",
+    "activate": "Activate",
+    "inactive": "inactive",
+    "role": "Role",
+    "effectiveRole": "Effective",
+    "displayName": "Display name",
+    "email": "Email",
+    "membership": "Group membership",
+    "newPassword": "New password (optional)",
+    "groupName": "Group name",
+    "groupDescription": "Description",
+    "groupRole": "Group role",
+    "members": "Members",
+    "editMembers": "Members of {{group}}",
+    "memberCount": "{{count}} members",
+    "noDescription": "No description",
+    "loadFailed": "Failed to load users/groups",
+    "confirmDeactivate": "Deactivate user {{user}}?",
+    "confirmDeleteGroup": "Delete group {{group}}?",
+    "roles": {
+      "admin": "Admin",
+      "operator": "Operator",
+      "viewer": "Viewer"
+    }
   },
   "dashboard": {
     "title": "Dashboard",

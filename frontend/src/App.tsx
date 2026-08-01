@@ -17,6 +17,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { NetworksPage } from "./pages/NetworksPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { SystemLogsPage } from "./pages/SystemLogsPage";
+import { UsersPage } from "./pages/UsersPage";
 import { VipsPage } from "./pages/VipsPage";
 
 export function App() {
@@ -40,6 +41,7 @@ export function App() {
           <Route path="instances/:instanceId/frr" element={<FrrDetailPage />} />
           <Route path="vips" element={<VipsPage />} />
           <Route path="logs" element={<SystemLogsPage />} />
+          <Route path="users" element={<UsersPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Route>

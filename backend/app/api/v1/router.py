@@ -4,6 +4,7 @@ from app.api.v1 import (
     auth,
     dashboards,
     frr,
+    groups,
     haproxy,
     instances,
     interfaces,
@@ -11,6 +12,7 @@ from app.api.v1 import (
     revisions,
     service_definitions,
     system,
+    users,
     vips,
 )
 from app.core.security import enforce_auth
@@ -27,3 +29,5 @@ api_router.include_router(haproxy.router)
 api_router.include_router(frr.router)
 api_router.include_router(vips.router)
 api_router.include_router(dashboards.router)
+api_router.include_router(users.router)
+api_router.include_router(groups.router)

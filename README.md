@@ -82,6 +82,10 @@ cd backend && pytest
 cd frontend && npm test
 ```
 
+## Lokal auth (Identity fase 1)
+
+Plattform-login bruker lokal brukerdatabase med grupper og roller (`admin` / `operator` / `viewer`). Admin administrerer brukere under **System → Brukere**. Se [docs/LOCAL_AUTH.md](docs/LOCAL_AUTH.md). Keycloak/OIDC kommer som valgfri IdP i fase 2 — lokal break-glass forblir.
+
 ## Catalog mockup
 
 GUI-katalogen (`/catalog`) inkluderer blueprints, stacks og providers som **designmockup**. Bare HAProxy og FRR oppretter reelle instanser. Se [docs/CATALOG_MOCKUP.md](docs/CATALOG_MOCKUP.md). Frontpanel/LCD-mockup ligger under Settings.

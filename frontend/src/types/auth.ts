@@ -1,12 +1,7 @@
 import { z } from "zod";
+import { IdentityUserSchema } from "./identity";
 
-export const UserSchema = z.object({
-  id: z.string(),
-  username: z.string(),
-  role: z.string(),
-  is_active: z.boolean(),
-  created_at: z.string(),
-});
+export const UserSchema = IdentityUserSchema;
 
 export const TokenResponseSchema = z.object({
   access_token: z.string(),

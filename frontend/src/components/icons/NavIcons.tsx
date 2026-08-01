@@ -103,6 +103,15 @@ export function IconCustomers(props: IconProps) {
   );
 }
 
+export function IconUsers(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5 19c0-3.3 3.1-6 7-6s7 2.7 7 6" />
+    </svg>
+  );
+}
+
 export function IconHealth(props: IconProps) {
   return (
     <svg {...base(props)}>

@@ -24,6 +24,7 @@
     "instances": "Instances",
     "vips": "VIPs",
     "logs": "Logs",
+    "users": "Brukere",
     "settings": "Settings",
     "groups": {
       "traffic": "Trafikk & LB",
@@ -40,11 +41,52 @@
   "auth": {
     "title": "Logg inn",
     "subtitle": "Tilgang til AxioNet LB kontrollplan.",
+    "localBreakGlass": "Lokal admin-innlogging er alltid tilgjengelig som break-glass, også når ekstern IdP brukes senere.",
     "username": "Brukernavn",
     "password": "Passord",
     "signIn": "Logg inn",
     "signingIn": "Logger inn…",
     "signOut": "Logg ut"
+  },
+  "users": {
+    "eyebrow": "System",
+    "title": "Brukere og grupper",
+    "subtitle": "Administrer lokale plattformbrukere, grupper og roller. Effektiv rolle er høyeste blant brukerens egen rolle og gruppene.",
+    "tabs": {
+      "users": "Brukere",
+      "groups": "Grupper"
+    },
+    "addUser": "Ny bruker",
+    "addGroup": "Ny gruppe",
+    "createUser": "Opprett bruker",
+    "editUser": "Rediger bruker",
+    "createGroup": "Opprett gruppe",
+    "editGroup": "Rediger gruppe",
+    "edit": "Rediger",
+    "deactivate": "Deaktiver",
+    "activate": "Aktiver",
+    "inactive": "inaktiv",
+    "role": "Rolle",
+    "effectiveRole": "Effektiv",
+    "displayName": "Visningsnavn",
+    "email": "E-post",
+    "membership": "Gruppemedlemskap",
+    "newPassword": "Nytt passord (valgfritt)",
+    "groupName": "Gruppenavn",
+    "groupDescription": "Beskrivelse",
+    "groupRole": "Grupperolle",
+    "members": "Medlemmer",
+    "editMembers": "Medlemmer i {{group}}",
+    "memberCount": "{{count}} medlemmer",
+    "noDescription": "Ingen beskrivelse",
+    "loadFailed": "Kunne ikke laste brukere/grupper",
+    "confirmDeactivate": "Deaktivere bruker {{user}}?",
+    "confirmDeleteGroup": "Slette gruppe {{group}}?",
+    "roles": {
+      "admin": "Admin",
+      "operator": "Operator",
+      "viewer": "Viewer"
+    }
   },
   "dashboard": {
     "title": "Dashboard",

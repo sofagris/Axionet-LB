@@ -35,6 +35,8 @@ def test_login_and_me(auth_client: TestClient) -> None:
     assert me.status_code == 200
     assert me.json()["username"] == "Admin"
     assert me.json()["role"] == "admin"
+    assert me.json()["effective_role"] == "admin"
+    assert me.json()["groups"] == []
 
     info = auth_client.get(
         "/api/v1/system",

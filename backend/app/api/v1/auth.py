@@ -7,6 +7,7 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import LoginRequest, TokenResponse, UserRead
 from app.services.audit.service import AuditService
+from app.services.identity.service import to_user_read
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -44,7 +45,7 @@ def login(
     )
     return TokenResponse(
         access_token=token,
-        user=UserRead.model_validate(user, from_attributes=True),
+        user=UserRead.model_validate(to_user_read(user)),
     )
 
 
@@ -66,4 +67,4 @@ def logout(
 
 @router.get("/me", response_model=UserRead)
 def me(user: User = Depends(get_current_user)) -> UserRead:
-    return UserRead.model_validate(user, from_attributes=True)
+    return UserRead.model_validate(to_user_read(user))

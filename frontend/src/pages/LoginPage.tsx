@@ -39,6 +39,7 @@ export function LoginPage() {
         </p>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ink">{t("auth.title")}</h1>
         <p className="mt-2 text-sm text-ink-muted">{t("auth.subtitle")}</p>
+        <p className="mt-2 text-xs text-ink-muted">{t("auth.localBreakGlass")}</p>
 
         <form className="mt-8 space-y-4" onSubmit={(event) => void onSubmit(event)}>
           <label className="block text-sm">

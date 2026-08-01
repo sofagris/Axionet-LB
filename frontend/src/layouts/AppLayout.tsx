@@ -10,6 +10,7 @@ import {
   IconLogs,
   IconNetworks,
   IconSettings,
+  IconUsers,
   IconVips,
 } from "../components/icons/NavIcons";
 import { useAuth } from "../features/auth/AuthProvider";
@@ -63,6 +64,8 @@ export function AppLayout() {
   const locale = (i18n.language === "en" ? "en" : "nb") as AppLocale;
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const isAdmin = user?.effective_role === "admin";
+
   const navGroups = useMemo((): NavGroup[] => {
     const tenancyLabel = tenancyNavLabelKey(mode);
     const trafficItems: NavItem[] = [
@@ -72,6 +75,12 @@ export function AppLayout() {
         : []),
       { to: "/instances", labelKey: "nav.instances", icon: IconInstances },
       { to: "/vips", labelKey: "nav.vips", icon: IconVips },
+    ];
+
+    const systemItems: NavItem[] = [
+      { to: "/dashboards", labelKey: "nav.dashboards", icon: IconDashboard },
+      ...(isAdmin ? [{ to: "/users", labelKey: "nav.users", icon: IconUsers } satisfies NavItem] : []),
+      { to: "/settings", labelKey: "nav.settings", icon: IconSettings },
     ];
 
     return [
@@ -105,13 +114,10 @@ export function AppLayout() {
         id: "system",
         labelKey: "nav.groups.system",
         domain: "system",
-        items: [
-          { to: "/dashboards", labelKey: "nav.dashboards", icon: IconDashboard },
-          { to: "/settings", labelKey: "nav.settings", icon: IconSettings },
-        ],
+        items: systemItems,
       },
     ];
-  }, [mode]);
+  }, [mode, isAdmin]);
 
   useEffect(() => {
     setMobileOpen(false);
