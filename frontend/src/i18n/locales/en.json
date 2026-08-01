@@ -19,6 +19,8 @@
     "interfaces": "Interfaces",
     "networks": "Networks",
     "catalog": "Catalog",
+    "customers": "Customers",
+    "serviceAreas": "Service areas",
     "instances": "Instances",
     "vips": "VIPs",
     "logs": "Logs",
@@ -352,6 +354,72 @@
     "eepromBody": "Startup screen and EEPROM access have not been positively identified. Do not expose write controls until the controller protocol is verified.",
     "readCapability": "Read capability",
     "eepromNotImplemented": "Not implemented"
+  },
+  "customers": {
+    "title": "Customers",
+    "titleInternal": "Service areas",
+    "subtitle": "Tenants that own applications. Applications group VIP, load balancers, certificates and related resources.",
+    "subtitleInternal": "Internal cost centres or domains that own applications for usage allocation.",
+    "mockupHint": "Design preview only — no tenant API or provisioning in this phase.",
+    "designPreview": "Design preview",
+    "appCount": "{{count}} applications",
+    "applications": "Applications",
+    "sites": "Sites",
+    "siteCount": "{{count}} sites",
+    "resources": "Resources",
+    "resourceCount": "{{count}} resources",
+    "notes": "Notes",
+    "notFound": "Customer not found.",
+    "appNotFound": "Application not found.",
+    "backToList": "Back to customers",
+    "catalogLinkHint": "Catalog template:",
+    "openRelated": "Open",
+    "noMutations": "This screen does not create instances, VIPs or certificates.",
+    "status": {
+      "active": "Active",
+      "trial": "Trial",
+      "archived": "Archived"
+    },
+    "appStatus": {
+      "design": "Design",
+      "ready": "Ready",
+      "degraded": "Degraded"
+    },
+    "catalogKind": {
+      "blueprint": "blueprint",
+      "integration": "integration",
+      "stack": "stack"
+    },
+    "resourceKinds": {
+      "vip": "VIP",
+      "instance": "Instance",
+      "certificate": "Certificate",
+      "dns": "DNS",
+      "pool": "Pool",
+      "note": "Note"
+    }
+  },
+  "tenancy": {
+    "title": "Tenancy",
+    "subtitle": "Choose whether AxioNet organises applications under customers or internal service areas. This is a design preview stored in the browser only.",
+    "designPreview": "Design preview",
+    "current": "Current mode: {{mode}}",
+    "disabledHint": "Tenancy is turned off. Applications are not grouped under customers or service areas in the navigation.",
+    "openSettings": "Open tenancy settings",
+    "modes": {
+      "off": {
+        "label": "Off (single organisation)",
+        "hint": "Use AxioNet for your own services. Hide Customers / Service areas from the menu."
+      },
+      "internal": {
+        "label": "Internal service areas",
+        "hint": "Group applications by cost centre, department or environment for allocation — not external customers."
+      },
+      "customers": {
+        "label": "Customers (MSP)",
+        "hint": "Multi-tenant service provider model: each customer owns one or more applications."
+      }
+    }
   },
   "wizard": {
     "title": "Create service instance",

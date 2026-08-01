@@ -33,8 +33,13 @@ Under **Settings → Front panel / LCD** (`/settings?section=front-panel`):
 - Keypad mapping and mock key test
 - **Startup / EEPROM** is marked **experimental / not implemented** with **read capability only** — no EEPROM write controls
 
+## Customers / applications
+
+Catalog blueprints and integrations are intended to land in a higher layer: **Customer → Application → Resources**. See [CUSTOMERS_MOCKUP.md](CUSTOMERS_MOCKUP.md).
+
 ## Related source
 
 - `frontend/src/features/catalog/`
 - `frontend/src/features/settings/front-panel/`
+- `frontend/src/features/customers/`
 - Spec: `CURSOR_CATALOG_BLUEPRINTS_LCD_MOCKUP.md`

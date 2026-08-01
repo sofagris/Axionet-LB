@@ -92,6 +92,17 @@ export function IconSettings(props: IconProps) {
   );
 }
 
+export function IconCustomers(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="9" cy="8" r="3" />
+      <path d="M3 19c0-2.8 2.7-5 6-5s6 2.2 6 5" />
+      <circle cx="17" cy="9" r="2.5" />
+      <path d="M21 19c0-2.2-1.8-4-4.5-4" />
+    </svg>
+  );
+}
+
 export function IconHealth(props: IconProps) {
   return (
     <svg {...base(props)}>

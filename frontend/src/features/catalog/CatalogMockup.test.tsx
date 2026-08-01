@@ -5,6 +5,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { App } from "../../App";
 import { AuthProvider } from "../auth/AuthProvider";
 import { ThemeProvider } from "../theme/ThemeProvider";
+import { TenancyProvider } from "../tenancy/TenancyProvider";
 import { CATALOG_ITEMS } from "./catalogData";
 import "../../i18n";
 
@@ -139,11 +140,13 @@ function renderAt(path: string) {
   return render(
     <QueryClientProvider client={client}>
       <ThemeProvider>
-        <MemoryRouter initialEntries={[path]}>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </MemoryRouter>
+        <TenancyProvider>
+          <MemoryRouter initialEntries={[path]}>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </MemoryRouter>
+        </TenancyProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   );

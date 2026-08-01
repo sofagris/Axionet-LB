@@ -86,6 +86,8 @@ cd frontend && npm test
 
 GUI-katalogen (`/catalog`) inkluderer blueprints, stacks og providers som **designmockup**. Bare HAProxy og FRR oppretter reelle instanser. Se [docs/CATALOG_MOCKUP.md](docs/CATALOG_MOCKUP.md). Frontpanel/LCD-mockup ligger under Settings.
 
+Kunder/applikasjoner (`/customers`) er en designpreview av laget **Kunde → Applikasjon → Ressurser**. Se [docs/CUSTOMERS_MOCKUP.md](docs/CUSTOMERS_MOCKUP.md).
+
 ## Repo
 
 https://github.com/Sofagris/axionet-lb

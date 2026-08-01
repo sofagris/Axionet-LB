@@ -9,6 +9,7 @@ import {
   useSystemInfo,
 } from "../features/system/hooks";
 import { FrontPanelSettings } from "../features/settings/front-panel/FrontPanelSettings";
+import { TenancySettings } from "../features/settings/TenancySettings";
 import type { ComponentHealth, OrphanReport } from "../types/system";
 
 function statusTone(status: string): string {
@@ -31,8 +32,9 @@ export function SettingsPage() {
   const [selectedNetworks, setSelectedNetworks] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (searchParams.get("section") !== "front-panel") return;
-    const el = document.getElementById("front-panel");
+    const section = searchParams.get("section");
+    if (section !== "front-panel" && section !== "tenancy") return;
+    const el = document.getElementById(section);
     if (el && typeof el.scrollIntoView === "function") {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
     }
@@ -315,6 +317,8 @@ export function SettingsPage() {
           </div>
         ) : null}
       </section>
+
+      <TenancySettings />
 
       <FrontPanelSettings />
     </div>

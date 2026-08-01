@@ -5,6 +5,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { App } from "../App";
 import { AuthProvider } from "../features/auth/AuthProvider";
 import { ThemeProvider } from "../features/theme/ThemeProvider";
+import { TenancyProvider } from "../features/tenancy/TenancyProvider";
 import "../i18n";
 
 vi.mock("../api/system", () => ({
@@ -168,11 +169,13 @@ function renderApp() {
   return render(
     <QueryClientProvider client={client}>
       <ThemeProvider>
-        <MemoryRouter>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </MemoryRouter>
+        <TenancyProvider>
+          <MemoryRouter>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </MemoryRouter>
+        </TenancyProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   );

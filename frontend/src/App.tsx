@@ -2,7 +2,10 @@ import { Route, Routes } from "react-router-dom";
 import { RequireAuth } from "./components/RequireAuth";
 import { AppLayout } from "./layouts/AppLayout";
 import { CatalogPage } from "./pages/CatalogPage";
+import { ApplicationDetailPage } from "./pages/ApplicationDetailPage";
 import { CreateInstanceWizardPage } from "./pages/CreateInstanceWizardPage";
+import { CustomerDetailPage } from "./pages/CustomerDetailPage";
+import { CustomersPage } from "./pages/CustomersPage";
 import { CustomDashboardPage } from "./pages/CustomDashboardPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { DashboardsPage } from "./pages/DashboardsPage";
@@ -28,6 +31,9 @@ export function App() {
           <Route path="interfaces" element={<InterfacesPage />} />
           <Route path="networks" element={<NetworksPage />} />
           <Route path="catalog" element={<CatalogPage />} />
+          <Route path="customers" element={<CustomersPage />} />
+          <Route path="customers/:customerId" element={<CustomerDetailPage />} />
+          <Route path="customers/:customerId/apps/:appId" element={<ApplicationDetailPage />} />
           <Route path="instances" element={<InstancesPage />} />
           <Route path="instances/new" element={<CreateInstanceWizardPage />} />
           <Route path="instances/:instanceId/haproxy" element={<HaproxyDetailPage />} />

@@ -19,6 +19,8 @@
     "interfaces": "Interfaces",
     "networks": "Networks",
     "catalog": "Catalog",
+    "customers": "Kunder",
+    "serviceAreas": "Tjenesteområder",
     "instances": "Instances",
     "vips": "VIPs",
     "logs": "Logs",
@@ -353,6 +355,72 @@
     "eepromBody": "Oppstartsskjerm og EEPROM-tilgang er ikke positivt identifisert. Ikke eksponer skrivekontroller før kontrollerprotokollen er verifisert.",
     "readCapability": "Les capability",
     "eepromNotImplemented": "Ikke implementert"
+  },
+  "customers": {
+    "title": "Kunder",
+    "titleInternal": "Tjenesteområder",
+    "subtitle": "Tenants som eier applikasjoner. Applikasjoner grupperer VIP, lastbalansere, sertifikater og relaterte ressurser.",
+    "subtitleInternal": "Interne kostnadssteder eller områder som eier applikasjoner for kostnadsallokering.",
+    "mockupHint": "Kun designpreview — ingen tenant-API eller provisjonering i denne fasen.",
+    "designPreview": "Design preview",
+    "appCount": "{{count}} applikasjoner",
+    "applications": "Applikasjoner",
+    "sites": "Lokasjoner",
+    "siteCount": "{{count}} lokasjoner",
+    "resources": "Ressurser",
+    "resourceCount": "{{count}} ressurser",
+    "notes": "Merknader",
+    "notFound": "Kunde ikke funnet.",
+    "appNotFound": "Applikasjon ikke funnet.",
+    "backToList": "Tilbake til kunder",
+    "catalogLinkHint": "Catalog-mal:",
+    "openRelated": "Åpne",
+    "noMutations": "Denne siden oppretter ikke instanser, VIP-er eller sertifikater.",
+    "status": {
+      "active": "Aktiv",
+      "trial": "Prøve",
+      "archived": "Arkivert"
+    },
+    "appStatus": {
+      "design": "Design",
+      "ready": "Klar",
+      "degraded": "Degradert"
+    },
+    "catalogKind": {
+      "blueprint": "blueprint",
+      "integration": "integrasjon",
+      "stack": "stack"
+    },
+    "resourceKinds": {
+      "vip": "VIP",
+      "instance": "Instans",
+      "certificate": "Sertifikat",
+      "dns": "DNS",
+      "pool": "Pool",
+      "note": "Merknad"
+    }
+  },
+  "tenancy": {
+    "title": "Tenancy",
+    "subtitle": "Velg om AxioNet organiserer applikasjoner under kunder eller interne tjenesteområder. Dette er en designpreview lagret kun i nettleseren.",
+    "designPreview": "Design preview",
+    "current": "Gjeldende modus: {{mode}}",
+    "disabledHint": "Tenancy er slått av. Applikasjoner grupperes ikke under kunder eller tjenesteområder i menyen.",
+    "openSettings": "Åpne tenancy-innstillinger",
+    "modes": {
+      "off": {
+        "label": "Av (én organisasjon)",
+        "hint": "Bruk AxioNet til egne tjenester. Skjul Kunder / Tjenesteområder fra menyen."
+      },
+      "internal": {
+        "label": "Interne tjenesteområder",
+        "hint": "Grupper applikasjoner etter kostnadssted, avdeling eller miljø — ikke eksterne kunder."
+      },
+      "customers": {
+        "label": "Kunder (MSP)",
+        "hint": "Multi-tenant tjenestetilbyder: hver kunde eier én eller flere applikasjoner."
+      }
+    }
   },
   "wizard": {
     "title": "Opprett serviceinstans",

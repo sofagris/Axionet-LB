@@ -1,8 +1,9 @@
-import { useEffect, useState, type ComponentType, type SVGProps } from "react";
+import { useEffect, useMemo, useState, type ComponentType, type SVGProps } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   IconCatalog,
+  IconCustomers,
   IconDashboard,
   IconInstances,
   IconInterfaces,
@@ -12,6 +13,7 @@ import {
   IconVips,
 } from "../components/icons/NavIcons";
 import { useAuth } from "../features/auth/AuthProvider";
+import { tenancyNavLabelKey, useTenancy } from "../features/tenancy/TenancyProvider";
 import { useTheme } from "../features/theme/ThemeProvider";
 import { setAppLocale, type AppLocale } from "../i18n";
 import {
@@ -37,48 +39,6 @@ type NavGroup = {
   items: NavItem[];
 };
 
-const NAV_GROUPS: NavGroup[] = [
-  {
-    id: "dashboard",
-    domain: "system",
-    items: [{ to: "/", labelKey: "nav.dashboard", end: true, icon: IconDashboard }],
-  },
-  {
-    id: "traffic",
-    labelKey: "nav.groups.traffic",
-    domain: "traffic",
-    items: [
-      { to: "/catalog", labelKey: "nav.catalog", icon: IconCatalog },
-      { to: "/instances", labelKey: "nav.instances", icon: IconInstances },
-      { to: "/vips", labelKey: "nav.vips", icon: IconVips },
-    ],
-  },
-  {
-    id: "interfaces",
-    labelKey: "nav.groups.interfaces",
-    domain: "interfaces",
-    items: [
-      { to: "/interfaces", labelKey: "nav.interfaces", icon: IconInterfaces },
-      { to: "/networks", labelKey: "nav.networks", icon: IconNetworks },
-    ],
-  },
-  {
-    id: "observe",
-    labelKey: "nav.groups.observe",
-    domain: "observe",
-    items: [{ to: "/logs", labelKey: "nav.logs", icon: IconLogs }],
-  },
-  {
-    id: "system",
-    labelKey: "nav.groups.system",
-    domain: "system",
-    items: [
-      { to: "/dashboards", labelKey: "nav.dashboards", icon: IconDashboard },
-      { to: "/settings", labelKey: "nav.settings", icon: IconSettings },
-    ],
-  },
-];
-
 function sideNavClass(domain: UiDomain, { isActive }: { isActive: boolean }): string {
   if (isActive) {
     return [
@@ -96,11 +56,62 @@ function sideNavClass(domain: UiDomain, { isActive }: { isActive: boolean }): st
 export function AppLayout() {
   const { t, i18n } = useTranslation();
   const { theme, toggleTheme } = useTheme();
+  const { mode } = useTenancy();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const locale = (i18n.language === "en" ? "en" : "nb") as AppLocale;
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const navGroups = useMemo((): NavGroup[] => {
+    const tenancyLabel = tenancyNavLabelKey(mode);
+    const trafficItems: NavItem[] = [
+      { to: "/catalog", labelKey: "nav.catalog", icon: IconCatalog },
+      ...(tenancyLabel
+        ? [{ to: "/customers", labelKey: tenancyLabel, icon: IconCustomers } satisfies NavItem]
+        : []),
+      { to: "/instances", labelKey: "nav.instances", icon: IconInstances },
+      { to: "/vips", labelKey: "nav.vips", icon: IconVips },
+    ];
+
+    return [
+      {
+        id: "dashboard",
+        domain: "system",
+        items: [{ to: "/", labelKey: "nav.dashboard", end: true, icon: IconDashboard }],
+      },
+      {
+        id: "traffic",
+        labelKey: "nav.groups.traffic",
+        domain: "traffic",
+        items: trafficItems,
+      },
+      {
+        id: "interfaces",
+        labelKey: "nav.groups.interfaces",
+        domain: "interfaces",
+        items: [
+          { to: "/interfaces", labelKey: "nav.interfaces", icon: IconInterfaces },
+          { to: "/networks", labelKey: "nav.networks", icon: IconNetworks },
+        ],
+      },
+      {
+        id: "observe",
+        labelKey: "nav.groups.observe",
+        domain: "observe",
+        items: [{ to: "/logs", labelKey: "nav.logs", icon: IconLogs }],
+      },
+      {
+        id: "system",
+        labelKey: "nav.groups.system",
+        domain: "system",
+        items: [
+          { to: "/dashboards", labelKey: "nav.dashboards", icon: IconDashboard },
+          { to: "/settings", labelKey: "nav.settings", icon: IconSettings },
+        ],
+      },
+    ];
+  }, [mode]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -124,7 +135,7 @@ export function AppLayout() {
         <p className="mt-1 text-sm font-semibold tracking-tight text-ink">{t("common.product")}</p>
       </div>
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4" aria-label={t("nav.main")}>
-        {NAV_GROUPS.map((group) => (
+        {navGroups.map((group) => (
           <div key={group.id}>
             {group.labelKey ? (
               <p
