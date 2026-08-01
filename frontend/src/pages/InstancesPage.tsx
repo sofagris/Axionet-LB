@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { usePermissions } from "../features/auth/usePermissions";
 import {
   type InstanceAction,
   useInstanceAction,
@@ -27,6 +28,7 @@ function formatAttachments(instance: Instance): string {
 
 export function InstancesPage() {
   const { t } = useTranslation();
+  const { canMutate } = usePermissions();
   const instancesQuery = useInstances();
   const actionMutation = useInstanceAction();
   const validateMutation = useValidateExistingInstance();
@@ -47,12 +49,14 @@ export function InstancesPage() {
           <h2 className="text-xl font-semibold tracking-tight text-ink">{t("instances.title")}</h2>
           <p className="mt-1 max-w-2xl text-ink-muted">{t("instances.subtitle")}</p>
         </div>
-        <Link
-          to="/catalog"
-          className="border border-accent bg-accent px-4 py-2 text-sm font-medium text-white"
-        >
-          {t("instances.newFromCatalog")}
-        </Link>
+        {canMutate ? (
+          <Link
+            to="/catalog"
+            className="border border-accent bg-accent px-4 py-2 text-sm font-medium text-white"
+          >
+            {t("instances.newFromCatalog")}
+          </Link>
+        ) : null}
       </section>
 
       {instancesQuery.data ? (
@@ -60,9 +64,11 @@ export function InstancesPage() {
           {instancesQuery.data.length === 0 ? (
             <p className="text-ink-muted">
               {t("instances.empty")}{" "}
-              <Link to="/catalog" className="text-accent hover:underline">
-                {t("catalog.title")}
-              </Link>
+              {canMutate ? (
+                <Link to="/catalog" className="text-accent hover:underline">
+                  {t("catalog.title")}
+                </Link>
+              ) : null}
             </p>
           ) : (
             <table className="w-full min-w-[860px] text-left text-sm">
@@ -84,6 +90,7 @@ export function InstancesPage() {
                     instance={instance}
                     selected={selectedId === instance.id}
                     busy={actionMutation.isPending || validateMutation.isPending}
+                    canMutate={canMutate}
                     onSelect={() => {
                       setSelectedId(instance.id);
                       setValidation(null);
@@ -143,6 +150,7 @@ function InstanceRow({
   instance,
   selected,
   busy,
+  canMutate,
   onSelect,
   onAction,
   onValidate,
@@ -150,11 +158,13 @@ function InstanceRow({
   instance: Instance;
   selected: boolean;
   busy: boolean;
+  canMutate: boolean;
   onSelect: () => void;
   onAction: (action: InstanceAction) => void;
   onValidate: () => void;
 }) {
   const { t } = useTranslation();
+  const actionsDisabled = busy || !canMutate;
   return (
     <tr className={`border-t border-line align-top ${selected ? "bg-accent-soft/40" : ""}`}>
       <td className="py-3 pr-4">
@@ -187,64 +197,68 @@ function InstanceRow({
         {instance.container_name ?? "—"}
       </td>
       <td className="py-3">
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={busy}
-            className="text-xs text-accent hover:underline"
-            onClick={() => onAction("start")}
-          >
-            {t("instances.start")}
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            className="text-xs text-ink-muted hover:underline"
-            onClick={() => onAction("stop")}
-          >
-            {t("instances.stop")}
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            className="text-xs text-ink-muted hover:underline"
-            onClick={() => onAction("restart")}
-          >
-            {t("instances.restart")}
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            className="text-xs text-ink-muted hover:underline"
-            onClick={() => onAction("reload")}
-          >
-            {t("instances.reload")}
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            className="text-xs text-ink-muted hover:underline"
-            onClick={() => onAction("reconcile")}
-          >
-            {t("instances.reconcile")}
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            className="text-xs text-ink-muted hover:underline"
-            onClick={onValidate}
-          >
-            {t("instances.validate")}
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            className="text-xs text-danger hover:underline"
-            onClick={() => onAction("delete")}
-          >
-            {t("instances.delete")}
-          </button>
-        </div>
+        {canMutate ? (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={actionsDisabled}
+              className="text-xs text-accent hover:underline"
+              onClick={() => onAction("start")}
+            >
+              {t("instances.start")}
+            </button>
+            <button
+              type="button"
+              disabled={actionsDisabled}
+              className="text-xs text-ink-muted hover:underline"
+              onClick={() => onAction("stop")}
+            >
+              {t("instances.stop")}
+            </button>
+            <button
+              type="button"
+              disabled={actionsDisabled}
+              className="text-xs text-ink-muted hover:underline"
+              onClick={() => onAction("restart")}
+            >
+              {t("instances.restart")}
+            </button>
+            <button
+              type="button"
+              disabled={actionsDisabled}
+              className="text-xs text-ink-muted hover:underline"
+              onClick={() => onAction("reload")}
+            >
+              {t("instances.reload")}
+            </button>
+            <button
+              type="button"
+              disabled={actionsDisabled}
+              className="text-xs text-ink-muted hover:underline"
+              onClick={() => onAction("reconcile")}
+            >
+              {t("instances.reconcile")}
+            </button>
+            <button
+              type="button"
+              disabled={actionsDisabled}
+              className="text-xs text-ink-muted hover:underline"
+              onClick={onValidate}
+            >
+              {t("instances.validate")}
+            </button>
+            <button
+              type="button"
+              disabled={actionsDisabled}
+              className="text-xs text-danger hover:underline"
+              onClick={() => onAction("delete")}
+            >
+              {t("instances.delete")}
+            </button>
+          </div>
+        ) : (
+          <span className="font-mono text-xs text-ink-muted">—</span>
+        )}
       </td>
     </tr>
   );

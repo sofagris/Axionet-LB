@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { usePermissions } from "../features/auth/usePermissions";
 import {
   useCapabilities,
   useOrphans,
@@ -21,6 +22,7 @@ function statusTone(status: string): string {
 
 export function SettingsPage() {
   const { t } = useTranslation();
+  const { isAdmin } = usePermissions();
   const [searchParams] = useSearchParams();
   const infoQuery = useSystemInfo();
   const healthQuery = useSystemHealth();
@@ -176,7 +178,7 @@ export function SettingsPage() {
             >
               {t("settings.orphansRefresh")}
             </button>
-            {orphans && orphanCount > 0 ? (
+            {isAdmin && orphans && orphanCount > 0 ? (
               <button
                 type="button"
                 className="border border-line px-3 py-1.5 text-sm text-ink hover:bg-paper"
@@ -185,17 +187,19 @@ export function SettingsPage() {
                 {t("settings.orphansSelectAll")}
               </button>
             ) : null}
-            <button
-              type="button"
-              className="border border-danger/40 bg-danger/10 px-3 py-1.5 text-sm text-danger disabled:opacity-40"
-              onClick={() => void handlePrune()}
-              disabled={
-                pruneMutation.isPending ||
-                (selectedContainers.size === 0 && selectedNetworks.size === 0)
-              }
-            >
-              {pruneMutation.isPending ? t("settings.orphansPruning") : t("settings.orphansPrune")}
-            </button>
+            {isAdmin ? (
+              <button
+                type="button"
+                className="border border-danger/40 bg-danger/10 px-3 py-1.5 text-sm text-danger disabled:opacity-40"
+                onClick={() => void handlePrune()}
+                disabled={
+                  pruneMutation.isPending ||
+                  (selectedContainers.size === 0 && selectedNetworks.size === 0)
+                }
+              >
+                {pruneMutation.isPending ? t("settings.orphansPruning") : t("settings.orphansPrune")}
+              </button>
+            ) : null}
           </div>
         </div>
 

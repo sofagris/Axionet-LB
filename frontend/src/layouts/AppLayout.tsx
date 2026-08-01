@@ -13,7 +13,9 @@ import {
   IconUsers,
   IconVips,
 } from "../components/icons/NavIcons";
+import { ReadOnlyBanner } from "../components/ReadOnlyBanner";
 import { useAuth } from "../features/auth/AuthProvider";
+import { usePermissions } from "../features/auth/usePermissions";
 import { tenancyNavLabelKey, useTenancy } from "../features/tenancy/TenancyProvider";
 import { useTheme } from "../features/theme/ThemeProvider";
 import { setAppLocale, type AppLocale } from "../i18n";
@@ -59,12 +61,11 @@ export function AppLayout() {
   const { theme, toggleTheme } = useTheme();
   const { mode } = useTenancy();
   const { user, logout } = useAuth();
+  const { isAdmin } = usePermissions();
   const navigate = useNavigate();
   const location = useLocation();
   const locale = (i18n.language === "en" ? "en" : "nb") as AppLocale;
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  const isAdmin = user?.effective_role === "admin";
 
   const navGroups = useMemo((): NavGroup[] => {
     const tenancyLabel = tenancyNavLabelKey(mode);
@@ -269,6 +270,7 @@ export function AppLayout() {
             </div>
           </div>
         </header>
+        <ReadOnlyBanner />
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
           <Outlet />
         </main>

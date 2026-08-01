@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { usePermissions } from "../features/auth/usePermissions";
 import { useServiceDefinitions } from "../features/catalog/hooks";
 import { useCreateInstance, useValidateInstanceConfig } from "../features/instances/hooks";
 import { useNetworks } from "../features/networks/hooks";
@@ -100,6 +101,7 @@ function buildFrrConfig(input: {
 
 export function CreateInstanceWizardPage() {
   const { t } = useTranslation();
+  const { canMutate } = usePermissions();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const catalogQuery = useServiceDefinitions();
@@ -225,6 +227,10 @@ export function CreateInstanceWizardPage() {
       networks: networksPayload,
     });
     navigate(instanceDetailPath(created.id, created.service_type));
+  }
+
+  if (!canMutate) {
+    return <Navigate to="/instances" replace />;
   }
 
   return (

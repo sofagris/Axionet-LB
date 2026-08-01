@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { MutationGate } from "../components/MutationGate";
 import { DiffView } from "../features/revisions/DiffView";
 import { useFrrBgp, useFrrConfig, useUpdateFrrConfig } from "../features/frr/hooks";
 import {
@@ -138,6 +139,7 @@ export function FrrDetailPage() {
             {instance?.actual_state ?? "…"} · {instance?.image}
           </p>
         </div>
+        <MutationGate hide>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -177,6 +179,7 @@ export function FrrDetailPage() {
             {t("wizard.validate")}
           </button>
         </div>
+        </MutationGate>
       </section>
 
       <div className="flex flex-wrap gap-2 border-b border-line pb-2">

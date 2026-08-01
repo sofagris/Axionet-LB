@@ -12,6 +12,7 @@ import {
   useHaproxyMutations,
   useHaproxyStatus,
 } from "../features/haproxy/hooks";
+import { usePermissions } from "../features/auth/usePermissions";
 import { DiffView } from "../features/revisions/DiffView";
 import {
   useInstanceLogs,
@@ -59,6 +60,7 @@ function parseTab(value: string | null): Tab | null {
 
 export function HaproxyDetailPage() {
   const { t } = useTranslation();
+  const { canMutate } = usePermissions();
   const { instanceId = "" } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const instancesQuery = useInstances();
@@ -428,42 +430,44 @@ export function HaproxyDetailPage() {
               <h3 className="text-sm font-semibold text-ink">{t("haproxyDetail.overviewTitle")}</h3>
               <p className="mt-0.5 text-sm text-ink-muted">{t("haproxyDetail.overviewSubtitle")}</p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={actionMutation.isPending}
-                className="border border-line px-3 py-1.5 text-sm hover:border-domain-traffic disabled:opacity-60"
-                onClick={() => actionMutation.mutate({ id: instanceId, action: "reload" })}
-              >
-                {t("haproxyDetail.actions.softReload")}
-              </button>
-              <button
-                type="button"
-                disabled={actionMutation.isPending}
-                className="border border-line px-3 py-1.5 text-sm hover:border-domain-traffic disabled:opacity-60"
-                onClick={() => actionMutation.mutate({ id: instanceId, action: "reconcile" })}
-              >
-                {t("haproxyDetail.actions.reconcile")}
-              </button>
-              <button
-                type="button"
-                disabled={validateMutation.isPending}
-                className="border border-line px-3 py-1.5 text-sm hover:border-domain-traffic disabled:opacity-60"
-                onClick={() => {
-                  void validateMutation.mutateAsync(instanceId).then(setOverviewValidation);
-                }}
-              >
-                {t("haproxyDetail.actions.validate")}
-              </button>
-              <button
-                type="button"
-                disabled={actionMutation.isPending}
-                className="border border-line px-3 py-1.5 text-sm hover:border-domain-traffic disabled:opacity-60"
-                onClick={() => actionMutation.mutate({ id: instanceId, action: "restart" })}
-              >
-                {t("haproxyDetail.actions.restart")}
-              </button>
-            </div>
+            {canMutate ? (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={actionMutation.isPending}
+                  className="border border-line px-3 py-1.5 text-sm hover:border-domain-traffic disabled:opacity-60"
+                  onClick={() => actionMutation.mutate({ id: instanceId, action: "reload" })}
+                >
+                  {t("haproxyDetail.actions.softReload")}
+                </button>
+                <button
+                  type="button"
+                  disabled={actionMutation.isPending}
+                  className="border border-line px-3 py-1.5 text-sm hover:border-domain-traffic disabled:opacity-60"
+                  onClick={() => actionMutation.mutate({ id: instanceId, action: "reconcile" })}
+                >
+                  {t("haproxyDetail.actions.reconcile")}
+                </button>
+                <button
+                  type="button"
+                  disabled={validateMutation.isPending}
+                  className="border border-line px-3 py-1.5 text-sm hover:border-domain-traffic disabled:opacity-60"
+                  onClick={() => {
+                    void validateMutation.mutateAsync(instanceId).then(setOverviewValidation);
+                  }}
+                >
+                  {t("haproxyDetail.actions.validate")}
+                </button>
+                <button
+                  type="button"
+                  disabled={actionMutation.isPending}
+                  className="border border-line px-3 py-1.5 text-sm hover:border-domain-traffic disabled:opacity-60"
+                  onClick={() => actionMutation.mutate({ id: instanceId, action: "restart" })}
+                >
+                  {t("haproxyDetail.actions.restart")}
+                </button>
+              </div>
+            ) : null}
           </div>
           {actionMutation.isError ? (
             <p className="text-sm text-danger">

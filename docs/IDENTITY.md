@@ -37,7 +37,19 @@ Miljøvariabler:
 
 ### Roller
 
-Uendret fra fase 1: `admin` | `operator` | `viewer`. Effektiv rolle = max(egen, grupper).
+`admin` | `operator` | `viewer`. Effektiv rolle = max(egen, grupper).
+
+### Mutasjons-RBAC
+
+Håndheves sentralt for alle ikke-GET kall under `/api/v1` (etter autentisering):
+
+| Rolle | Tillat |
+|-------|--------|
+| **viewer** | Kun lesing (GET) + `POST /auth/logout` |
+| **operator** | Dataplane-mutasjoner (instances, VIPs, networks, interfaces, HAProxy, FRR, dashboards, revisions restore, …) |
+| **admin** | Alt over + identity (`/users`, `/groups`, `/auth-sources`) + destruktivt system (`POST /system/orphans/prune`, `…/promote-management`) |
+
+Identity-routere har fortsatt `require_roles("admin")` (inkl. GET). GUI viser lese-banner for viewer og skjuler/deaktiverer mutasjonskontroller.
 
 ## App Identity & MFA (kunde)
 

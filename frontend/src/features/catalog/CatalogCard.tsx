@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { usePermissions } from "../auth/usePermissions";
 import { accentBar } from "./catalogAccents";
 import { catalogActionLabel } from "./catalogActions";
 import { CapabilityChips } from "./CapabilityChips";
@@ -17,6 +18,7 @@ type Props = {
 
 export function CatalogCard({ item, onOpenDetails, onMockAction }: Props) {
   const { t } = useTranslation();
+  const { canMutate } = usePermissions();
   const realPath = createInstancePath(item);
   const componentCount = item.components?.length;
 
@@ -66,7 +68,7 @@ export function CatalogCard({ item, onOpenDetails, onMockAction }: Props) {
       </div>
 
       <div className="mt-auto flex flex-wrap gap-2 pt-4 pl-1">
-        {realPath && isRealCreateAction(item) ? (
+        {canMutate && realPath && isRealCreateAction(item) ? (
           <Link
             to={realPath}
             onClick={(event) => event.stopPropagation()}
@@ -74,7 +76,7 @@ export function CatalogCard({ item, onOpenDetails, onMockAction }: Props) {
           >
             {catalogActionLabel(t, item.primaryAction)}
           </Link>
-        ) : (
+        ) : canMutate ? (
           <button
             type="button"
             className="border border-line px-3 py-1.5 text-sm text-ink hover:border-accent"

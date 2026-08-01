@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { usePermissions } from "../auth/usePermissions";
 import { BlueprintFlowPreview } from "./BlueprintFlowPreview";
 import { CapabilityChips } from "./CapabilityChips";
 import { catalogActionLabel } from "./catalogActions";
@@ -21,6 +22,7 @@ type Props = {
 
 export function CatalogDetailDrawer({ item, onClose, onMockAction }: Props) {
   const { t } = useTranslation();
+  const { canMutate } = usePermissions();
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
   const [tab, setTab] = useState<TabId>("overview");
@@ -240,14 +242,14 @@ export function CatalogDetailDrawer({ item, onClose, onMockAction }: Props) {
         </div>
 
         <footer className="flex flex-wrap gap-2 border-t border-line p-4">
-          {realPath && isRealCreateAction(item) ? (
+          {canMutate && realPath && isRealCreateAction(item) ? (
             <Link
               to={realPath}
               className="border border-accent bg-accent px-3 py-1.5 text-sm font-medium text-white"
             >
               {catalogActionLabel(t, item.primaryAction)}
             </Link>
-          ) : (
+          ) : canMutate ? (
             <button
               type="button"
               className="border border-line px-3 py-1.5 text-sm text-ink hover:border-accent"
@@ -255,7 +257,7 @@ export function CatalogDetailDrawer({ item, onClose, onMockAction }: Props) {
             >
               {catalogActionLabel(t, item.primaryAction)}
             </button>
-          )}
+          ) : null}
           <button
             type="button"
             className="border border-line px-3 py-1.5 text-sm text-ink-muted hover:text-ink"

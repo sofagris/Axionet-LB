@@ -52,7 +52,8 @@
     "continueSso": "Continue with SSO",
     "continuingSso": "Opening IdP…",
     "ssoRequired": "This UPN suffix requires SSO — password login is not used.",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "readOnlyBanner": "You are signed in as a viewer (read-only). Changes require an operator or admin role."
   },
   "identity": {
     "eyebrow": "System",

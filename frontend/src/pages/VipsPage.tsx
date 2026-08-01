@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { MutationGate } from "../components/MutationGate";
 import { useInstances } from "../features/instances/hooks";
 import { useNetworks } from "../features/networks/hooks";
 import {
@@ -112,6 +113,7 @@ export function VipsPage() {
         <p className="mt-1 max-w-2xl text-ink-muted">{t("vips.subtitle")}</p>
       </section>
 
+      <MutationGate>
       <section className="border border-line bg-paper-elevated p-4 shadow-sm">
         <h3 className="text-sm font-medium tracking-wide text-ink uppercase">
           {t("vips.createTitle")}
@@ -530,6 +532,7 @@ export function VipsPage() {
           </table>
         )}
       </section>
+      </MutationGate>
     </div>
   );
 }

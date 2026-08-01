@@ -52,7 +52,8 @@
     "continueSso": "Fortsett med SSO",
     "continuingSso": "Åpner IdP…",
     "ssoRequired": "Denne UPN-suffixen krever SSO — passord brukes ikke.",
-    "signOut": "Logg ut"
+    "signOut": "Logg ut",
+    "readOnlyBanner": "Du er innlogget som viewer (kun lesing). Endringer krever operator- eller admin-rolle."
   },
   "identity": {
     "eyebrow": "System",

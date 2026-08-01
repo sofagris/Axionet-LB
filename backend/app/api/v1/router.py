@@ -16,9 +16,10 @@ from app.api.v1 import (
     users,
     vips,
 )
+from app.core.rbac import enforce_mutation_rbac
 from app.core.security import enforce_auth
 
-api_router = APIRouter(dependencies=[Depends(enforce_auth)])
+api_router = APIRouter(dependencies=[Depends(enforce_auth), Depends(enforce_mutation_rbac)])
 api_router.include_router(auth.router)
 api_router.include_router(auth_sources.router)
 api_router.include_router(system.router)

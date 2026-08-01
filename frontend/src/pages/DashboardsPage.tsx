@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { MutationGate } from "../components/MutationGate";
 import { useCreateDashboard, useDashboards, useDeleteDashboard } from "../features/dashboards/hooks";
 
 export function DashboardsPage() {
@@ -39,15 +40,18 @@ export function DashboardsPage() {
           <h1 className="mt-1 text-2xl font-semibold text-ink">{t("dashboards.title")}</h1>
           <p className="mt-1 max-w-2xl text-sm text-ink-muted">{t("dashboards.subtitle")}</p>
         </div>
-        <button
-          type="button"
-          className="border border-domain-system bg-domain-system-soft px-3 py-2 text-sm text-domain-system"
-          onClick={() => setShowCreate((v) => !v)}
-        >
-          {t("dashboards.add")}
-        </button>
+        <MutationGate hide>
+          <button
+            type="button"
+            className="border border-domain-system bg-domain-system-soft px-3 py-2 text-sm text-domain-system"
+            onClick={() => setShowCreate((v) => !v)}
+          >
+            {t("dashboards.add")}
+          </button>
+        </MutationGate>
       </header>
 
+      <MutationGate>
       {showCreate ? (
         <form
           onSubmit={onCreate}
@@ -146,6 +150,7 @@ export function DashboardsPage() {
           </li>
         ))}
       </ul>
+      </MutationGate>
     </div>
   );
 }

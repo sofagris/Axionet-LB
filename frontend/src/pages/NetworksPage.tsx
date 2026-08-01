@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
+import { MutationGate } from "../components/MutationGate";
 import { useInterfaces } from "../features/interfaces/hooks";
 import { useCreateNetwork, useDeleteNetwork, useNetworks } from "../features/networks/hooks";
 import type { Network, NetworkType } from "../types/networks";
@@ -59,6 +60,7 @@ export function NetworksPage() {
         </p>
       </section>
 
+      <MutationGate>
       <form
         onSubmit={onSubmit}
         className="grid gap-4 rounded-lg border border-line bg-paper-elevated p-5 shadow-sm md:grid-cols-2"
@@ -218,6 +220,7 @@ export function NetworksPage() {
           )}
         </div>
       ) : null}
+      </MutationGate>
     </div>
   );
 }

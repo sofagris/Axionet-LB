@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { MutationGate } from "../components/MutationGate";
 import { useSystemInfo } from "../features/system/hooks";
 import {
   useConfirmInterfaceChange,
@@ -454,28 +455,30 @@ export function InterfacesPage() {
             </p>
           ) : null}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => updateLldp.mutate(!(lldp?.active ?? false))}
-            disabled={updateLldp.isPending || lldpQuery.isLoading || lldp?.installed === false}
-            className="border border-line px-4 py-2 text-sm font-medium text-ink transition hover:opacity-90 disabled:opacity-60"
-          >
-            {updateLldp.isPending
-              ? t("interfaces.lldpUpdating")
-              : lldp?.active
-                ? t("interfaces.lldpDisable")
-                : t("interfaces.lldpEnable")}
-          </button>
-          <button
-            type="button"
-            onClick={() => rescan.mutate()}
-            disabled={rescan.isPending}
-            className="border border-accent bg-accent px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
-          >
-            {rescan.isPending ? t("interfaces.scanning") : t("interfaces.rescan")}
-          </button>
-        </div>
+        <MutationGate hide>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => updateLldp.mutate(!(lldp?.active ?? false))}
+              disabled={updateLldp.isPending || lldpQuery.isLoading || lldp?.installed === false}
+              className="border border-line px-4 py-2 text-sm font-medium text-ink transition hover:opacity-90 disabled:opacity-60"
+            >
+              {updateLldp.isPending
+                ? t("interfaces.lldpUpdating")
+                : lldp?.active
+                  ? t("interfaces.lldpDisable")
+                  : t("interfaces.lldpEnable")}
+            </button>
+            <button
+              type="button"
+              onClick={() => rescan.mutate()}
+              disabled={rescan.isPending}
+              className="border border-accent bg-accent px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+            >
+              {rescan.isPending ? t("interfaces.scanning") : t("interfaces.rescan")}
+            </button>
+          </div>
+        </MutationGate>
       </section>
 
       {updateLldp.isError ? (
