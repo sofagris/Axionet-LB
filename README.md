@@ -86,6 +86,15 @@ cd frontend && npm test
 
 Plattform-login støtter lokal break-glass (`Admin` / `Admin@internal`) og UPN-suffix → OIDC-kilder (f.eks. Entra/Keycloak for AD). Admin: **System → Brukere** og **System → Identity**. Se [docs/IDENTITY.md](docs/IDENTITY.md).
 
+### Lab Keycloak (valgfri profil)
+
+```bash
+docker compose --profile keycloak up -d
+bash scripts/seed-lab-keycloak-oidc.sh
+```
+
+Deretter login i GUI med `labuser@lab.local` / `LabPass1!`. Detaljer i [docs/IDENTITY.md](docs/IDENTITY.md).
+
 ## Catalog mockup
 
 GUI-katalogen (`/catalog`) inkluderer blueprints, stacks og providers som **designmockup**. Bare HAProxy og FRR oppretter reelle instanser. Se [docs/CATALOG_MOCKUP.md](docs/CATALOG_MOCKUP.md). Frontpanel/LCD-mockup ligger under Settings.

@@ -66,13 +66,49 @@ Tabell `app_idp_bindings` knytter en App IdP til soft-referanser (`customer_id`,
 
 GUI: applikasjonsdetalj under Kunder viser binding; Identity → App IdP lar admin sette valgfritt kunde-scope.
 
+## Keycloak (lab)
+
+Valgfri compose-profil for lokal IdP-smoke (ikke produksjons-HA).
+
+```bash
+# Start Keycloak (port 8080) ved siden av api/gui
+docker compose --profile keycloak up -d
+
+# Koble AxioNet Identity (OIDC-kilde + UPN lab.local + App IdP-metadata)
+bash scripts/seed-lab-keycloak-oidc.sh
+```
+
+| | |
+|--|--|
+| Admin console | `http://<mgmt-ip>:8080/` — `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` (default `admin`/`admin`) |
+| Realm | `axionet` (importert fra `deploy/keycloak/axionet-realm.json`) |
+| Issuer | `http://<mgmt-ip>:8080/realms/axionet` |
+| GUI client | `axionet-gui` / secret `axionet-gui-lab-secret` |
+| App client | `axionet-app` (metadata for Customers App IdP) |
+| Testbruker | `labuser@lab.local` / `LabPass1!` |
+| Break-glass | fortsatt `Admin@internal` |
+
+Hostname/port styres av `KEYCLOAK_HOSTNAME` + `KEYCLOAK_HOSTNAME_PORT` (må være nåbar fra **nettleser** og **api-container**).
+
+Realm-JSON skal **ikke** sette `defaultClientScopes` / egen `clientScopes`-liste som erstatter Keycloaks innebygde `profile`/`email` — det gir `invalid_scope` i OIDC authorize. Groups mappes via `protocolMappers` på clienten.
+
+Ved behov for ren reimport:
+
+```bash
+docker compose --profile keycloak stop keycloak
+docker compose --profile keycloak rm -f keycloak
+docker volume rm -f axionet-lb_keycloak-data
+docker compose --profile keycloak up -d keycloak
+bash scripts/seed-lab-keycloak-oidc.sh
+```
+
 ## AD
 
 Bruk OIDC mot IdP som snakker med AD (Entra ID, eller Keycloak med AD federation). Ren LDAP-bind er ikke i scope ennå; samme UPN-routing kan senere peke på en `ldap`-kilde.
 
 ## Ikke i scope
 
-- Keycloak-container deploy
 - MFA/TOTP for lokal login
 - Full SAML SP
 - Session revocation / refresh tokens
+- Keycloak Postgres/HA / AD-federation (lab bruker `start-dev`)

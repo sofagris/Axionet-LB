@@ -1,0 +1,91 @@
+{
+  "realm": "axionet",
+  "enabled": true,
+  "displayName": "AxioNet Lab",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "sslRequired": "none",
+  "groups": [
+    {
+      "name": "operators",
+      "path": "/operators"
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "axionet-gui",
+      "name": "AxioNet LB management GUI",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "axionet-gui-lab-secret",
+      "clientAuthenticatorType": "client-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://192.168.50.195/api/v1/auth/oidc/callback",
+        "http://127.0.0.1/api/v1/auth/oidc/callback",
+        "http://localhost/api/v1/auth/oidc/callback"
+      ],
+      "webOrigins": [
+        "http://192.168.50.195",
+        "http://127.0.0.1",
+        "http://localhost",
+        "+"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "+"
+      },
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "full.path": "false",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "groups",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "axionet-app",
+      "name": "AxioNet App IdP (customer services metadata)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "axionet-app-lab-secret",
+      "clientAuthenticatorType": "client-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["*"],
+      "webOrigins": ["*"]
+    }
+  ],
+  "users": [
+    {
+      "username": "labuser",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Lab",
+      "lastName": "User",
+      "email": "labuser@lab.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "LabPass1!",
+          "temporary": false
+        }
+      ],
+      "groups": ["/operators"]
+    }
+  ]
+}

@@ -18,6 +18,11 @@ services:
       HOST_PROC_ROOT: /host/proc
       HOST_NET_NSENTER: "true"
       AX_GUI_PUBLIC_URL: ${AX_GUI_PUBLIC_URL:-http://192.168.50.195}
+      AX_AUTH_SECRET_KEY: ${AX_AUTH_SECRET_KEY:-axionet-lb-dev-secret-change-me}
+      AX_AUTH_TOKEN_EXPIRE_HOURS: ${AX_AUTH_TOKEN_EXPIRE_HOURS:-12}
+      AX_AUTH_DEFAULT_ADMIN_USERNAME: ${AX_AUTH_DEFAULT_ADMIN_USERNAME:-Admin}
+      AX_AUTH_DEFAULT_ADMIN_PASSWORD: ${AX_AUTH_DEFAULT_ADMIN_PASSWORD:-Password}
+      AX_AUTH_PUBLIC_BASE_URL: ${AX_AUTH_PUBLIC_BASE_URL:-}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /sys:/host/sys:ro
@@ -56,7 +61,43 @@ services:
     profiles:
       - tools
 
+  # Lab IdP for management OIDC smoke (+ App IdP metadata target).
+  # Start: docker compose --profile keycloak up -d
+  # Admin console: http://<mgmt-ip>:8080/  (KEYCLOAK_ADMIN / KEYCLOAK_ADMIN_PASSWORD)
+  # See docs/IDENTITY.md § Keycloak (lab).
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.2.4
+    container_name: ax-keycloak
+    profiles:
+      - keycloak
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-192.168.50.195}
+      KC_HOSTNAME_PORT: ${KEYCLOAK_HOSTNAME_PORT:-8080}
+      KC_HOSTNAME_STRICT: "false"
+      KC_HEALTH_ENABLED: "true"
+      KC_HTTP_PORT: "8080"
+    ports:
+      - "${MGMT_BIND_IP:-0.0.0.0}:8080:8080"
+    volumes:
+      - keycloak-data:/opt/keycloak/data
+      - ./deploy/keycloak:/opt/keycloak/data/import:ro
+    networks:
+      - control
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 90s
+
 networks:
   control:
     driver: bridge
     name: ax-control
+
+volumes:
+  keycloak-data:
