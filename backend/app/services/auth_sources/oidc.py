@@ -11,7 +11,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import Settings
-from app.core.roles import normalize_role
 from app.core.security import create_access_token
 from app.core.upn import ParsedUpn, local_lookup_username, parse_upn
 from app.models.auth_source import AuthSource
@@ -216,8 +215,14 @@ def upsert_oidc_user(
     elif isinstance(raw_groups, str) and raw_groups:
         group_names = [raw_groups]
 
-    if group_names:
-        groups = list(db.scalars(select(Group).where(Group.name.in_(group_names))).all())
+    # Sync memberships from IdP group claim (case-insensitive name match → local groups).
+    # Empty claim list clears memberships. Effective role = max(user.role, group.roles).
+    if groups_claim in claims:
+        groups: list[Group] = []
+        if group_names:
+            wanted = {n.casefold() for n in group_names}
+            candidates = list(db.scalars(select(Group)).all())
+            groups = [g for g in candidates if g.name.casefold() in wanted]
         existing = list(
             db.scalars(select(UserGroup).where(UserGroup.user_id == user.id)).all()
         )
@@ -226,16 +231,6 @@ def upsert_oidc_user(
         db.flush()
         for group in groups:
             db.add(UserGroup(user_id=user.id, group_id=group.id))
-        # If any matched group has a higher role, bump user's base role only when still viewer
-        if groups and normalize_role(user.role) == "viewer":
-            best = "viewer"
-            for group in groups:
-                role = normalize_role(group.role)
-                if role == "admin":
-                    best = "admin"
-                elif role == "operator" and best != "admin":
-                    best = "operator"
-            user.role = best
 
     db.commit()
     loaded = db.scalars(

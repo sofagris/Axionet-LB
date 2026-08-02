@@ -106,8 +106,56 @@ else
   echo "App IdP already exists"
 fi
 
+# Local group for Keycloak claim "operators" (case-insensitive name match in OIDC upsert).
+# Prefer existing GUI seed "Operators"; create lowercase "operators" only if none match.
+# Note: do not name the shell var GROUPS — bash treats GROUPS as a readonly array of GIDs.
+GROUP_ROWS=$(curl -fsS "${API_BASE}/api/v1/groups" -H "$AUTH")
+HAS_OPS=$(printf '%s' "$GROUP_ROWS" | python3 -c '
+import json, sys
+rows = json.load(sys.stdin)
+print("yes" if any(r["name"].casefold() == "operators" for r in rows) else "no")
+')
+if [ "$HAS_OPS" = "no" ]; then
+  echo "Creating local group operators (role=operator)"
+  curl -fsS -X POST "${API_BASE}/api/v1/groups" \
+    -H "$AUTH" -H 'content-type: application/json' \
+    -d '{"name":"operators","description":"Mapped from Keycloak group operators","role":"operator"}' >/dev/null
+else
+  echo "Local Operators/operators group already exists (OIDC maps case-insensitively)"
+fi
+
+# Optional: require TOTP enrollment on next Keycloak login for labuser.
+# ENABLE_LAB_OTP=1 bash scripts/seed-lab-keycloak-oidc.sh
+if [ "${ENABLE_LAB_OTP:-0}" = "1" ]; then
+  echo "Enabling CONFIGURE_TOTP required action for labuser"
+  KC_TOKEN=$(curl -fsS -X POST "http://${KC_HOST}:${KC_PORT}/realms/master/protocol/openid-connect/token" \
+    -d "grant_type=password" -d "client_id=admin-cli" \
+    -d "username=${KEYCLOAK_ADMIN:-admin}" -d "password=${KEYCLOAK_ADMIN_PASSWORD:-admin}" \
+    | python3 -c 'import sys,json; print(json.load(sys.stdin)["access_token"])')
+  USER_JSON=$(curl -fsS -H "Authorization: Bearer ${KC_TOKEN}" \
+    "http://${KC_HOST}:${KC_PORT}/admin/realms/axionet/users?username=labuser&exact=true")
+  USER_ID=$(python3 -c 'import json,sys; rows=json.load(sys.stdin); print(rows[0]["id"] if rows else "")' <<<"$USER_JSON")
+  if [ -n "$USER_ID" ]; then
+    ACTIONS=$(python3 -c '
+import json,sys
+u=json.load(sys.stdin)[0]
+print(json.dumps(sorted({*(u.get("requiredActions") or []), "CONFIGURE_TOTP"})))
+' <<<"$USER_JSON")
+    curl -fsS -X PUT -H "Authorization: Bearer ${KC_TOKEN}" -H 'content-type: application/json' \
+      "http://${KC_HOST}:${KC_PORT}/admin/realms/axionet/users/${USER_ID}" \
+      -d "{\"requiredActions\":${ACTIONS}}" >/dev/null
+    echo "labuser will be prompted to enroll OTP on next login"
+  else
+    echo "WARNING: could not find Keycloak user labuser" >&2
+  fi
+fi
+
 echo
 echo "Seed OK."
 echo "  Issuer:  ${ISSUER}"
 echo "  Login:   labuser@${UPN_SUFFIX}  (password LabPass1!)"
+echo "  Groups:  Keycloak 'operators' → local Operators (case-insensitive; effective_role operator after SSO)"
 echo "  Break-glass: ${ADMIN_USER}@internal"
+if [ "${ENABLE_LAB_OTP:-0}" = "1" ]; then
+  echo "  OTP:     CONFIGURE_TOTP enabled for labuser"
+fi

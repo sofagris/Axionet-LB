@@ -87,10 +87,21 @@ bash scripts/seed-lab-keycloak-oidc.sh
 | App client | `axionet-app` (metadata for Customers App IdP) |
 | Testbruker | `labuser@lab.local` / `LabPass1!` |
 | Break-glass | fortsatt `Admin@internal` |
+| Gruppe-mapping | Keycloak `operators` → lokal gruppe `Operators`/`operators` (case-insensitive; rolle `operator`) |
 
 Hostname/port styres av `KEYCLOAK_HOSTNAME` + `KEYCLOAK_HOSTNAME_PORT` (må være nåbar fra **nettleser** og **api-container**).
 
 Realm-JSON skal **ikke** sette `defaultClientScopes` / egen `clientScopes`-liste som erstatter Keycloaks innebygde `profile`/`email` — det gir `invalid_scope` i OIDC authorize. Groups mappes via `protocolMappers` på clienten.
+
+Seed-scriptet sørger for at en lokal Operators-gruppe finnes. OIDC matcher gruppenavn **case-insensitive**. Etter SSO er `effective_role` = `operator` via medlemskap (brukerens egen `role` forblir typisk `viewer`).
+
+### Valgfri lab-OTP (Keycloak)
+
+```bash
+ENABLE_LAB_OTP=1 bash scripts/seed-lab-keycloak-oidc.sh
+```
+
+Da får `labuser` required action `CONFIGURE_TOTP` og må enrollere authenticator ved neste login. (Gjelder Keycloak-login, ikke lokal `Admin@internal`.)
 
 Ved behov for ren reimport:
 
@@ -108,7 +119,7 @@ Bruk OIDC mot IdP som snakker med AD (Entra ID, eller Keycloak med AD federation
 
 ## Ikke i scope
 
-- MFA/TOTP for lokal login
+- MFA/TOTP for lokal break-glass-login
 - Full SAML SP
 - Session revocation / refresh tokens
 - Keycloak Postgres/HA / AD-federation (lab bruker `start-dev`)
