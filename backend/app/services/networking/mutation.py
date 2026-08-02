@@ -136,6 +136,8 @@ class InterfaceMutationService:
                 "and run: docker compose up -d gui"
             ),
             requires_compose_recreate=True,
+            management_network_id=None,
+            management_network_name=None,
         )
 
     def bootstrap_management_if_needed(self) -> PhysicalInterface | None:

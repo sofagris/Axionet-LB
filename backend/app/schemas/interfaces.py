@@ -52,6 +52,8 @@ class PromoteManagementResult(BaseModel):
     management_bind_ip: str
     compose_hint: str
     requires_compose_recreate: bool = True
+    management_network_id: str | None = None
+    management_network_name: str | None = None
 
 
 class PendingChangeRead(BaseModel):

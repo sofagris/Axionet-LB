@@ -71,7 +71,27 @@ def bootstrap_interface_discovery() -> None:
             pending=pending,
             data_dir=settings.data_dir,
         )
-        mutation.bootstrap_management_if_needed()
+        mgmt = mutation.bootstrap_management_if_needed()
+        if mgmt is not None:
+            try:
+                from app.services.networking.networks import NetworkService
+
+                host_net = HostNetworkAdapter(use_host_nsenter=settings.host_net_nsenter)
+                net_svc = NetworkService(
+                    db=db,
+                    docker=create_docker_adapter(settings),
+                    host_net=host_net,
+                )
+                ensured = net_svc.ensure_management_network(mgmt)
+                if ensured is not None:
+                    logger.info(
+                        "Management network ready: name=%s subnet=%s parent=%s",
+                        ensured.name,
+                        ensured.subnet,
+                        mgmt.name,
+                    )
+            except Exception:
+                logger.exception("Failed to ensure management network for %s", mgmt.name)
     except Exception:
         logger.exception("Interface discovery bootstrap failed")
     finally:

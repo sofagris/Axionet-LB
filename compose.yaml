@@ -61,9 +61,8 @@ services:
     profiles:
       - tools
 
-  # Temporary lab fallback IdP (prefer Catalog keycloak-mgmt on a management network).
-  # Start: docker compose --profile keycloak up -d
-  # Admin console: http://<mgmt-ip>:8080/  (KEYCLOAK_ADMIN / KEYCLOAK_ADMIN_PASSWORD)
+  # DEPRECATED lab fallback — prefer Catalog keycloak-mgmt on management macvlan.
+  # Stop when Catalog IdP is in use: docker compose --profile keycloak stop keycloak
   # See docs/IDENTITY.md.
   keycloak:
     image: quay.io/keycloak/keycloak:26.2.4

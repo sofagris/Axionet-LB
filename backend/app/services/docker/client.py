@@ -99,7 +99,15 @@ class DockerClientAdapter:
             if not parent_device:
                 raise DockerException("macvlan network requires parent_device")
             options["parent"] = parent_device
-        elif network_type in {NetworkType.BRIDGE, NetworkType.MANAGEMENT}:
+        elif network_type == NetworkType.MANAGEMENT:
+            # With a parent NIC: L2 presence on the management LAN (macvlan).
+            # Without parent: isolated Docker bridge (legacy / lab-only).
+            if parent_device:
+                driver = "macvlan"
+                options["parent"] = parent_device
+            else:
+                driver = "bridge"
+        elif network_type == NetworkType.BRIDGE:
             driver = "bridge"
 
         try:

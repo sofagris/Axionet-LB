@@ -18,11 +18,26 @@ AxioNet GUI/API   ←OIDC─ Keycloak (mgmt)      Keycloak (apps) ─OIDC→ kun
 | `keycloak-mgmt` | Keycloak (Management) | **Kun** `management` | Plattform-SSO, admin console |
 | `keycloak-apps` | Keycloak (Apps) | Bridge / ipvlan / macvlan osv. | Kundetjenester, App IdP-issuer |
 
-- **Realms** gir logisk isolasjon (brukere/klienter), **ikke** nettverksisolasjon.
-- Management-IdP skal **ikke** eksponeres mot internett; hold den på management-VIP/nett.
-- Deploy via **Catalog → Create instance** (samme lifecycle som HAProxy/FRR). Etter deploy: Instances → Keycloak-detalj → **Wire platform OIDC** (admin).
+### Management-interface → management-nettverk
 
-Compose-profilen `keycloak` er **midlertidig lab-fallback** (control-plane sidecar). Foretrekk Catalog-instans på management-nett når det er tilgjengelig.
+- **Interfaces:** én NIC markeres MGMT (`eno1`, bind-IP).
+- Ved **promote** / API-bootstrap opprettes (eller gjenbrukes) Docker-nettverket `management` (type `management`, **macvlan** på MGMT-NIC, subnet fra NIC-CIDR).
+- Keycloak-mgmt attaches til dette nettverket med egen LAN-IP (ikke hostens bind-IP).
+
+- **Realms** gir logisk isolasjon (brukere/klienter), **ikke** nettverksisolasjon.
+- Management-IdP skal **ikke** eksponeres mot internett; hold den på management-LAN.
+- Deploy via **Catalog → Create instance**. Etter deploy: Instances → Keycloak-detalj → **Wire platform OIDC** (admin).
+
+### Compose-profil `keycloak` (utfases)
+
+Compose-sidecar `ax-keycloak` (port 8080 på host) er **lab-fallback**. Når Catalog `keycloak-mgmt` kjører på management-macvlan:
+
+```bash
+docker compose --profile keycloak stop keycloak
+docker compose --profile keycloak rm -f keycloak
+```
+
+Ikke kjør begge samtidig hvis du fortsatt publiserer host `:8080`.
 
 ## Plattform-login
 

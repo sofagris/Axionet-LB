@@ -233,6 +233,7 @@ def promote_management(
     mutation: InterfaceMutationService = Depends(get_mutation_service),
     host_net: HostNetworkAdapter = Depends(get_host_net),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> PromoteManagementResult:
     interface = service.get_interface(interface_id)
     if interface is None:
@@ -253,6 +254,29 @@ def promote_management(
     )
     db.commit()
     db.refresh(interface)
+
+    # Ensure macvlan management network on this NIC for Catalog services (Keycloak, …).
+    try:
+        from app.services.docker.client import create_docker_adapter
+        from app.services.networking.networks import NetworkService
+
+        net_svc = NetworkService(
+            db=db,
+            docker=create_docker_adapter(settings),
+            host_net=host_net,
+        )
+        mgmt_net = net_svc.ensure_management_network(interface)
+        if mgmt_net is not None:
+            result.management_network_id = mgmt_net.id
+            result.management_network_name = mgmt_net.name
+    except Exception:  # noqa: BLE001 — promote must succeed even if network ensure fails
+        import logging
+
+        logging.getLogger(__name__).exception(
+            "Failed to ensure management network after promote of %s",
+            interface.name,
+        )
+
     port_modes = host_net.get_lldp_port_modes()
     result.interface = _enrich_interface(
         PhysicalInterfaceRead.model_validate(interface),

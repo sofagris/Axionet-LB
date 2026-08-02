@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ipaddress
 import logging
 import re
 from datetime import UTC, datetime
@@ -153,7 +154,12 @@ class NetworkService:
 
         if payload.network_type == NetworkType.UNTAGGED_ACCESS or (
             payload.network_type
-            in {NetworkType.IPVLAN_L2, NetworkType.IPVLAN_L3, NetworkType.MACVLAN}
+            in {
+                NetworkType.IPVLAN_L2,
+                NetworkType.IPVLAN_L3,
+                NetworkType.MACVLAN,
+                NetworkType.MANAGEMENT,
+            }
             and payload.vlan_id is None
         ):
             if payload.network_type in {
@@ -161,6 +167,7 @@ class NetworkService:
                 NetworkType.IPVLAN_L3,
                 NetworkType.MACVLAN,
                 NetworkType.UNTAGGED_ACCESS,
+                NetworkType.MANAGEMENT,
             }:
                 self._host_net.set_promiscuous(parent.name, enabled=True)
             return parent.name
@@ -171,8 +178,88 @@ class NetworkService:
                 NetworkType.IPVLAN_L2,
                 NetworkType.IPVLAN_L3,
                 NetworkType.MACVLAN,
+                NetworkType.MANAGEMENT,
             }:
                 self._host_net.set_promiscuous(parent.name, enabled=True)
             return ensured.device_name
 
         return parent.name
+
+    def ensure_management_network(self, interface: PhysicalInterface) -> Network | None:
+        """Ensure a management LAN Docker network (macvlan) on the management NIC.
+
+        Returns the network, or None if the interface has no usable IPv4 CIDR.
+        """
+        if not interface.is_management:
+            raise ValueError("Interface is not designated as management")
+
+        existing = list(
+            self._db.scalars(
+                select(Network).where(
+                    Network.network_type == NetworkType.MANAGEMENT.value,
+                    Network.parent_interface_id == interface.id,
+                    Network.enabled.is_(True),
+                )
+            )
+        )
+        if existing:
+            network = existing[0]
+            if network.docker_network_id and self._docker.network_exists(network.docker_network_id):
+                return network
+            # Recreate missing Docker network using stored fields
+            try:
+                parent_device = interface.name
+                self._host_net.set_promiscuous(parent_device, enabled=True)
+                docker_name = network.docker_network_name or f"ax-net-{network.id}"
+                network.docker_network_name = docker_name
+                docker_id = self._docker.create_managed_network(
+                    name=docker_name,
+                    network_type=NetworkType.MANAGEMENT,
+                    network_id=network.id,
+                    parent_device=parent_device,
+                    subnet=network.subnet,
+                    gateway=network.gateway,
+                    ip_range=network.ip_range,
+                    mtu=network.mtu,
+                )
+                network.docker_network_id = docker_id
+                network.parent_device = parent_device
+                network.last_error = None
+                network.updated_at = datetime.now(UTC)
+                self._db.commit()
+                self._db.refresh(network)
+                return network
+            except (DockerException, HostNetworkError, ValueError) as exc:
+                network.last_error = str(exc)
+                self._db.commit()
+                logger.exception("Failed to recreate management network %s", network.name)
+                raise RuntimeError(str(exc)) from exc
+
+        cidrs = self._host_net.list_ipv4_cidrs(interface.name)
+        if not cidrs:
+            logger.warning(
+                "Cannot ensure management network: no IPv4 CIDR on %s",
+                interface.name,
+            )
+            return None
+
+        iface = ipaddress.ip_interface(cidrs[0])
+        subnet = str(iface.network)
+        # Conventional first host as gateway; override manually if needed.
+        gateway = str(next(iface.network.hosts()))
+
+        name = "management"
+        if self._db.scalars(select(Network).where(Network.name == name)).first() is not None:
+            name = f"management-{interface.name}"
+
+        return self.create_network(
+            NetworkCreate(
+                name=name,
+                network_type=NetworkType.MANAGEMENT,
+                parent_interface_id=interface.id,
+                vlan_id=None,
+                subnet=subnet,
+                gateway=gateway,
+                enabled=True,
+            )
+        )

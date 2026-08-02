@@ -10,6 +10,7 @@ from typing import Any, Literal
 logger = logging.getLogger(__name__)
 
 IPV4_RE = re.compile(r"inet\s+(\d+\.\d+\.\d+\.\d+)(?:/\d+)?")
+IPV4_CIDR_RE = re.compile(r"inet\s+(\d+\.\d+\.\d+\.\d+/\d+)")
 
 LldpMode = Literal["rx-and-tx", "rx-only", "tx-only", "disabled", "unknown"]
 LLDP_MODES: frozenset[str] = frozenset({"rx-and-tx", "rx-only", "tx-only", "disabled"})
@@ -117,6 +118,19 @@ class HostNetworkAdapter:
             if match:
                 addresses.append(match.group(1))
         return addresses
+
+    def list_ipv4_cidrs(self, name: str) -> list[str]:
+        """Return IPv4 CIDRs on the device (e.g. ``192.168.50.195/24``)."""
+        self._require_name(name)
+        result = self._run(["ip", "-4", "-o", "addr", "show", "dev", name], check=False)
+        if result.returncode != 0:
+            return []
+        cidrs: list[str] = []
+        for line in result.stdout.splitlines():
+            match = IPV4_CIDR_RE.search(line)
+            if match:
+                cidrs.append(match.group(1))
+        return cidrs
 
     def default_route_interface(self) -> str | None:
         result = self._run(["ip", "route", "show", "default"], check=False)

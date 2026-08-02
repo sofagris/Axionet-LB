@@ -81,3 +81,51 @@ def test_validate_bridge_ok() -> None:
         parent=None,
     )
     assert result.valid is True
+
+
+def test_validate_management_lan_requires_mgmt_parent_and_subnet() -> None:
+    validator = NetworkValidator()
+    non_mgmt = PhysicalInterface(id="ifc-1", name="eno2", is_management=False)
+    result = validator.validate_create(
+        NetworkCreate(
+            name="management",
+            network_type=NetworkType.MANAGEMENT,
+            parent_interface_id="ifc-1",
+            subnet="192.168.50.0/24",
+            gateway="192.168.50.1",
+        ),
+        existing_networks=[],
+        parent=non_mgmt,
+    )
+    assert result.valid is False
+    assert any(issue.code == "management_parent_required" for issue in result.issues)
+
+    mgmt = PhysicalInterface(id="ifc-2", name="eno1", is_management=True)
+    ok = validator.validate_create(
+        NetworkCreate(
+            name="management",
+            network_type=NetworkType.MANAGEMENT,
+            parent_interface_id="ifc-2",
+            subnet="192.168.50.0/24",
+            gateway="192.168.50.1",
+        ),
+        existing_networks=[],
+        parent=mgmt,
+    )
+    assert ok.valid is True
+
+
+def test_validate_management_without_parent_still_ok() -> None:
+    """Legacy isolated bridge management network (no LAN parent)."""
+    validator = NetworkValidator()
+    result = validator.validate_create(
+        NetworkCreate(
+            name="mgmt-bridge",
+            network_type=NetworkType.MANAGEMENT,
+            subnet="172.30.60.0/24",
+            gateway="172.30.60.1",
+        ),
+        existing_networks=[],
+        parent=None,
+    )
+    assert result.valid is True

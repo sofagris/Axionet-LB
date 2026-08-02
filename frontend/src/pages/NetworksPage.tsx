@@ -34,8 +34,15 @@ export function NetworksPage() {
   const [gateway, setGateway] = useState("10.100.0.1");
 
   const parents = useMemo(() => interfacesQuery.data ?? [], [interfacesQuery.data]);
-  const needsParent = ["ipvlan-l2", "ipvlan-l3", "macvlan", "untagged-access"].includes(networkType);
+  const mgmtParents = useMemo(
+    () => parents.filter((item) => item.is_management),
+    [parents],
+  );
+  const needsParent = ["ipvlan-l2", "ipvlan-l3", "macvlan", "untagged-access", "management"].includes(
+    networkType,
+  );
   const needsVlan = networkType === "ipvlan-l2" || networkType === "ipvlan-l3" || networkType === "macvlan";
+  const parentOptions = networkType === "management" ? mgmtParents : parents;
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -57,6 +64,8 @@ export function NetworksPage() {
         <h2 className="text-xl font-semibold tracking-tight text-ink">Networks / VLAN</h2>
         <p className="mt-1 max-w-2xl text-ink-muted">
           Opprett logiske nettverk. Standard for tjenester er ipvlan-l2 med VLAN på valgt parent-NIC.
+          Type <span className="font-mono">management</span> med MGMT-parent blir macvlan på
+          management-LAN (opprettes også automatisk ved promote av management-interface).
         </p>
       </section>
 
@@ -91,20 +100,30 @@ export function NetworksPage() {
         </label>
         {needsParent ? (
           <label className="block text-sm">
-            <span className="text-ink-muted">Parent interface</span>
+            <span className="text-ink-muted">
+              {networkType === "management" ? "Management parent (MGMT NIC)" : "Parent interface"}
+            </span>
             <select
-              required
+              required={networkType !== "management" || parentOptions.length > 0}
               value={parentId}
               onChange={(e) => setParentId(e.target.value)}
               className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
             >
-              <option value="">Velg NIC…</option>
-              {parents.map((iface) => (
+              <option value="">
+                {networkType === "management" ? "Velg MGMT-NIC…" : "Velg NIC…"}
+              </option>
+              {parentOptions.map((iface) => (
                 <option key={iface.id} value={iface.id}>
-                  {iface.name} ({iface.link_state})
+                  {iface.name}
+                  {iface.is_management ? " (MGMT)" : ""} ({iface.link_state})
                 </option>
               ))}
             </select>
+            {networkType === "management" && mgmtParents.length === 0 ? (
+              <p className="mt-1 text-xs text-danger">
+                Ingen management-interface. Sett MGMT under Interfaces først.
+              </p>
+            ) : null}
           </label>
         ) : null}
         {needsVlan ? (

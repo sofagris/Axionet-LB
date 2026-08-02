@@ -39,6 +39,9 @@ class NetworkValidator:
             NetworkType.MACVLAN,
             NetworkType.UNTAGGED_ACCESS,
         }
+        # management + parent = macvlan on MGMT NIC (preferred); parent optional for legacy bridge
+        if payload.network_type == NetworkType.MANAGEMENT and payload.parent_interface_id:
+            needs_parent = True
         if needs_parent and not payload.parent_interface_id:
             issues.append(
                 NetworkValidationIssue(
@@ -53,6 +56,28 @@ class NetworkValidator:
                     message="Parent physical interface was not found",
                 )
             )
+
+        if (
+            payload.network_type == NetworkType.MANAGEMENT
+            and payload.parent_interface_id
+            and parent is not None
+            and not parent.is_management
+        ):
+            issues.append(
+                NetworkValidationIssue(
+                    code="management_parent_required",
+                    message="Management network parent must be the designated management interface",
+                )
+            )
+
+        if payload.network_type == NetworkType.MANAGEMENT and payload.parent_interface_id:
+            if not payload.subnet:
+                issues.append(
+                    NetworkValidationIssue(
+                        code="subnet_required",
+                        message="Management LAN network (with parent) requires a subnet",
+                    )
+                )
 
         if payload.network_type == NetworkType.UNTAGGED_ACCESS and payload.vlan_id is not None:
             issues.append(
