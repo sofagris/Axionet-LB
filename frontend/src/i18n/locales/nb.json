@@ -820,6 +820,37 @@
     "clearCountersResult": "clear counters: {{output}} (ephemeral)"
   },
 
+  "keycloak": {
+    "tabs": {
+      "overview": "Oversikt",
+      "networks": "Nettverk",
+      "logs": "Logger"
+    },
+    "mgmtLabel": "Keycloak (Management)",
+    "appsLabel": "Keycloak (Apps)",
+    "mgmtNetworksHint": "Management-Keycloak kan kun knyttes til nettverk av typen management.",
+    "noMgmtNetworks": "Ingen management-nettverk tilgjengelig. Opprett ett under Nettverk først.",
+    "realm": "Realm",
+    "publicBaseUrl": "GUI offentlig base-URL (redirect URIs)",
+    "adminUsername": "Bootstrap admin-brukernavn",
+    "adminPassword": "Bootstrap admin-passord",
+    "guiClientSecret": "GUI OIDC client secret",
+    "configHint": "Hostname hentes fra første attachment-IP. Realm-JSON importeres ved første start (dev-modus).",
+    "endpointsTitle": "Endepunkter",
+    "issuer": "Issuer-URL",
+    "adminConsole": "Admin-konsoll",
+    "attachmentIps": "Attachment-IP-er",
+    "exposureHint": "Hold management-Keycloak kun på management-nett — ikke publiser den mot internett.",
+    "wireTitle": "Koble plattform-OIDC",
+    "wireHint": "Opprett eller oppdater Auth Source og UPN-suffix slik at AxioNet-GUI kan bruke denne instansen.",
+    "sourceName": "Auth source-navn",
+    "upnSuffix": "UPN-suffix",
+    "wireAction": "Koble plattform-OIDC",
+    "wireOk": "Koblet {{name}} → {{issuer}} (suffix {{suffix}}).",
+    "appsMetaTitle": "App IdP-issuer",
+    "appsMetaHint": "Pek App IdP-metadata mot denne issuer. Foretrekk egne realms per tenant."
+  },
+
   "revisions": {
     "restore": "Gjenopprett",
     "pick": "Velg en revision"

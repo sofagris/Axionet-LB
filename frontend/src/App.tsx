@@ -12,6 +12,7 @@ import { DashboardsPage } from "./pages/DashboardsPage";
 import { FrrDetailPage } from "./pages/FrrDetailPage";
 import { HaproxyDetailPage } from "./pages/HaproxyDetailPage";
 import { InstancesPage } from "./pages/InstancesPage";
+import { KeycloakDetailPage } from "./pages/KeycloakDetailPage";
 import { InterfacesPage } from "./pages/InterfacesPage";
 import { LoginPage } from "./pages/LoginPage";
 import { NetworksPage } from "./pages/NetworksPage";
@@ -40,6 +41,8 @@ export function App() {
           <Route path="instances/new" element={<CreateInstanceWizardPage />} />
           <Route path="instances/:instanceId/haproxy" element={<HaproxyDetailPage />} />
           <Route path="instances/:instanceId/frr" element={<FrrDetailPage />} />
+          <Route path="instances/:instanceId/keycloak-mgmt" element={<KeycloakDetailPage />} />
+          <Route path="instances/:instanceId/keycloak-apps" element={<KeycloakDetailPage />} />
           <Route path="vips" element={<VipsPage />} />
           <Route path="logs" element={<SystemLogsPage />} />
           <Route path="users" element={<UsersPage />} />

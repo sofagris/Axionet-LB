@@ -61,10 +61,10 @@ services:
     profiles:
       - tools
 
-  # Lab IdP for management OIDC smoke (+ App IdP metadata target).
+  # Temporary lab fallback IdP (prefer Catalog keycloak-mgmt on a management network).
   # Start: docker compose --profile keycloak up -d
   # Admin console: http://<mgmt-ip>:8080/  (KEYCLOAK_ADMIN / KEYCLOAK_ADMIN_PASSWORD)
-  # See docs/IDENTITY.md § Keycloak (lab).
+  # See docs/IDENTITY.md.
   keycloak:
     image: quay.io/keycloak/keycloak:26.2.4
     container_name: ax-keycloak

@@ -18,7 +18,8 @@ Categories: Traffic, Core services, Security, Observability, Blueprints, Provide
 ## Deployability in this phase
 
 - **HAProxy** and **FRR** keep the real create flow (`/instances/new?type=…`) when the API marks them enabled.
-- All other catalog items are **design previews** only: drawers, architecture sketches, and mock action dialogs. No containers are created and no secrets are stored.
+- **Keycloak (Management)** and **Keycloak (Apps)** are real deployables (`keycloak-mgmt` / `keycloak-apps`) via the instance wizard, same lifecycle as HAProxy/FRR. Management Keycloak may only attach to `management` networks.
+- Other catalog items (unless noted) are **design previews** only: drawers, architecture sketches, and mock action dialogs.
 - **PowerDNS** is the DNS direction (Authoritative, Recursor, Platform stack). There is **no BIND** catalog entry. PowerDNS Views are labelled experimental in the mockup.
 - **Cloudflare** is a **provider** (external account/API), not a local container.
 - **Apache Guacamole** is a multi-component **blueprint**.

@@ -77,4 +77,13 @@ describe("filterCatalogItems", () => {
   it("excludes BIND", () => {
     expect(CATALOG_ITEMS.some((i) => /bind/i.test(i.name))).toBe(false);
   });
+
+  it("exposes Keycloak mgmt and apps as deployables", () => {
+    const mgmt = CATALOG_ITEMS.find((i) => i.id === "keycloak-mgmt");
+    const apps = CATALOG_ITEMS.find((i) => i.id === "keycloak-apps");
+    expect(mgmt?.deployableServiceType).toBe("keycloak-mgmt");
+    expect(apps?.deployableServiceType).toBe("keycloak-apps");
+    expect(createInstancePath(mgmt!)).toBe("/instances/new?type=keycloak-mgmt");
+    expect(createInstancePath(apps!)).toBe("/instances/new?type=keycloak-apps");
+  });
 });

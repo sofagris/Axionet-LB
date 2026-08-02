@@ -41,7 +41,8 @@ class HaproxyPlugin:
             map_files=map_files or None,
         )
 
-    def container_spec(self) -> ContainerSpec:
+    def container_spec(self, configuration: dict | None = None) -> ContainerSpec:
+        _ = configuration
         return ContainerSpec(
             config_bind="/usr/local/etc/haproxy",
             volume_mode="ro",

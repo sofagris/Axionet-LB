@@ -22,6 +22,7 @@ class ContainerSpec:
     entrypoint: list[str] | None = None
     cap_add: list[str] = field(default_factory=list)
     sysctls: dict[str, str] = field(default_factory=dict)
+    environment: dict[str, str] = field(default_factory=dict)
 
 
 class ServicePlugin(Protocol):
@@ -42,7 +43,7 @@ class ServicePlugin(Protocol):
         extra_files: dict[str, str] | None = None,
     ) -> ValidationResult: ...
 
-    def container_spec(self) -> ContainerSpec: ...
+    def container_spec(self, configuration: dict | None = None) -> ContainerSpec: ...
 
     def reload_signal(self) -> str | None:
         """Unix signal for soft reload, or None to restart the container."""

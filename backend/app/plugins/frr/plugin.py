@@ -30,7 +30,8 @@ class FrrPlugin:
         _ = extra_files
         return FrrConfigValidator(docker, image=image).validate_config_dict(configuration)
 
-    def container_spec(self) -> ContainerSpec:
+    def container_spec(self, configuration: dict | None = None) -> ContainerSpec:
+        _ = configuration
         return ContainerSpec(
             config_bind="/etc/frr",
             volume_mode="rw",

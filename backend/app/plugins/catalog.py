@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from app.plugins.frr.definition import FRR_SERVICE
 from app.plugins.haproxy.definition import HAPROXY_SERVICE
+from app.plugins.keycloak.definition import KEYCLOAK_APPS_SERVICE, KEYCLOAK_MGMT_SERVICE
 
 STUB_SERVICES: list[dict] = [
     {
@@ -46,7 +47,13 @@ STUB_SERVICES: list[dict] = [
 
 
 def list_service_definitions() -> list[dict]:
-    return [HAPROXY_SERVICE, FRR_SERVICE, *STUB_SERVICES]
+    return [
+        HAPROXY_SERVICE,
+        FRR_SERVICE,
+        KEYCLOAK_MGMT_SERVICE,
+        KEYCLOAK_APPS_SERVICE,
+        *STUB_SERVICES,
+    ]
 
 
 def get_service_definition(service_type: str) -> dict | None:

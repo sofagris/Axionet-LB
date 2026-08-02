@@ -105,7 +105,8 @@ class InstanceService:
             )
             for item in existing
         ] + [payload]
-        self._resolve_networks(proposed, exclude_instance_id=instance.id)
+        networks = self._resolve_networks(proposed, exclude_instance_id=instance.id)
+        self._validate_service_networks(instance.service_type, networks, proposed)
 
         order = payload.attachment_order
         if order == 0 and existing:
@@ -188,7 +189,8 @@ class InstanceService:
             )
             for item in self.list_attachments(instance.id)
         ]
-        self._resolve_networks(proposed, exclude_instance_id=instance.id)
+        networks = self._resolve_networks(proposed, exclude_instance_id=instance.id)
+        self._validate_service_networks(instance.service_type, networks, proposed)
 
         try:
             self._sync_container_networks(instance)
@@ -267,7 +269,12 @@ class InstanceService:
             raise ValueError("Instance name already exists")
 
         networks = self._resolve_networks(payload.networks)
+        self._validate_service_networks(payload.service_type, networks, payload.networks)
         config = plugin.normalize_configuration(payload.configuration)
+        hint_ips = [item.ip_address for item in payload.networks if item.ip_address]
+        apply_hints = getattr(plugin, "apply_network_hints", None)
+        if callable(apply_hints):
+            config = apply_hints(config, hint_ips)
         image_name = definition["container_image"]
         image = f"{image_name}:{payload.image_version}"
 
@@ -727,6 +734,16 @@ class InstanceService:
         )
         return networks
 
+    @staticmethod
+    def _validate_service_networks(
+        service_type: str,
+        networks: list[Network],
+        attachments: list[NetworkAttachmentCreate],
+    ) -> None:
+        from app.plugins.keycloak.networks import validate_keycloak_networks
+
+        validate_keycloak_networks(service_type, networks, attachments)
+
     def _networks_for_instance(self, instance_id: str) -> list[Network]:
         attachments = self.list_attachments(instance_id)
         return self._resolve_networks(
@@ -884,7 +901,13 @@ class InstanceService:
                     "ipv4_address": attachment.ip_address,
                 }
             )
-        spec = get_plugin(instance.service_type).container_spec()
+        plugin = get_plugin(instance.service_type)
+        apply_hints = getattr(plugin, "apply_network_hints", None)
+        if callable(apply_hints):
+            hint_ips = [str(item.ip_address) for item in attachments if item.ip_address]
+            instance.configuration = apply_hints(dict(instance.configuration or {}), hint_ips)
+            self._write_config(instance)
+        spec = plugin.container_spec(instance.configuration)
         container_id = self._docker.create_managed_container(
             name=instance.container_name or f"ax-{instance.service_type}-{instance.id[:8]}",
             image=instance.image,
@@ -900,6 +923,7 @@ class InstanceService:
             entrypoint=spec.entrypoint,
             cap_add=list(spec.cap_add) or None,
             sysctls=dict(spec.sysctls) or None,
+            environment=dict(spec.environment) or None,
         )
         instance.container_id = container_id
 

@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from app.plugins.haproxy.plugin import HaproxyPlugin
 from app.plugins.frr.plugin import FrrPlugin
+from app.plugins.keycloak.plugin import KeycloakAppsPlugin, KeycloakMgmtPlugin
 from app.plugins.base import ServicePlugin
 
 _PLUGINS: dict[str, ServicePlugin] = {
     HaproxyPlugin.service_type: HaproxyPlugin(),
     FrrPlugin.service_type: FrrPlugin(),
+    KeycloakMgmtPlugin.service_type: KeycloakMgmtPlugin(),
+    KeycloakAppsPlugin.service_type: KeycloakAppsPlugin(),
 }
 
 

@@ -1,6 +1,28 @@
-# Identity (fase 1 + 2)
+# Identity
 
-AxioNet LB skiller **plattform-login** (management-GUI) fra **app-/kunde-IdP** (Catalog Identity & MFA).
+AxioNet LB skiller **plattform-login** (management-GUI) fra **app-/kunde-IdP**.
+
+## Målarkitektur: Keycloak mgmt vs apps
+
+```
+Management-nett          App / dataplane-nett
+─────────────────        ────────────────────
+AxioNet GUI/API   ←OIDC─ Keycloak (mgmt)      Keycloak (apps) ─OIDC→ kundeapper
+     ↑                         │                     │
+ break-glass              kun management        egne realms
+ Admin@internal           (ikke internett)      per tenant
+```
+
+| Instans | Catalog | Nettverk | Bruk |
+|---------|---------|----------|------|
+| `keycloak-mgmt` | Keycloak (Management) | **Kun** `management` | Plattform-SSO, admin console |
+| `keycloak-apps` | Keycloak (Apps) | Bridge / ipvlan / macvlan osv. | Kundetjenester, App IdP-issuer |
+
+- **Realms** gir logisk isolasjon (brukere/klienter), **ikke** nettverksisolasjon.
+- Management-IdP skal **ikke** eksponeres mot internett; hold den på management-VIP/nett.
+- Deploy via **Catalog → Create instance** (samme lifecycle som HAProxy/FRR). Etter deploy: Instances → Keycloak-detalj → **Wire platform OIDC** (admin).
+
+Compose-profilen `keycloak` er **midlertidig lab-fallback** (control-plane sidecar). Foretrekk Catalog-instans på management-nett når det er tilgjengelig.
 
 ## Plattform-login
 
@@ -21,13 +43,13 @@ Admin konfigurerer under **System → Identity**:
 
 1. **Kilder** — innebygd `Local` + valgfrie OIDC-kilder (issuer, client id/secret)
 2. **UPN-suffixer** — bind f.eks. `contoso.com` → OIDC-kilde
-3. **App IdP** — se under (ikke GUI-login)
+3. **App IdP** — metadata for kundetjenester (ikke GUI-login)
 
 SSO-flyt:
 
 1. `GET /api/v1/auth/oidc/start?upn=...` (public)
 2. IdP authorize → `GET /api/v1/auth/oidc/callback`
-3. Upsert lokal user på `(auth_source_id, oidc_sub)`, map IdP-grupper (navnematch) → lokale groups
+3. Upsert lokal user på `(auth_source_id, oidc_sub)`, map IdP-grupper (case-insensitive navnematch) → lokale groups
 4. Redirect til GUI med `?oidc_token=...`
 
 Miljøvariabler:
@@ -46,14 +68,12 @@ Håndheves sentralt for alle ikke-GET kall under `/api/v1` (etter autentisering)
 | Rolle | Tillat |
 |-------|--------|
 | **viewer** | Kun lesing (GET) + `POST /auth/logout` |
-| **operator** | Dataplane-mutasjoner (instances, VIPs, networks, interfaces, HAProxy, FRR, dashboards, revisions restore, …) |
-| **admin** | Alt over + identity (`/users`, `/groups`, `/auth-sources`) + destruktivt system (`POST /system/orphans/prune`, `…/promote-management`) |
+| **operator** | Dataplane-mutasjoner (instances inkl. Keycloak, VIPs, networks, interfaces, HAProxy, FRR, …) |
+| **admin** | Alt over + identity (`/users`, `/groups`, `/auth-sources`, Keycloak **wire-platform-oidc**) + destruktivt system |
 
-Identity-routere har fortsatt `require_roles("admin")` (inkl. GET). GUI viser lese-banner for viewer og skjuler/deaktiverer mutasjonskontroller.
+## App Identity (kunde)
 
-## App Identity & MFA (kunde)
-
-**App IdP**-definisjoner under Identity er metadata for kundetjenester (Catalog «Identity & MFA»). De deployer **ikke** Keycloak og brukes **ikke** til plattform-login.
+**App IdP**-definisjoner under Identity er metadata for kundetjenester. De brukes **ikke** til plattform-login. Når `keycloak-apps` er deployet, pek issuer mot den instansens realm-URL.
 
 ### Binding til Customers
 
@@ -64,62 +84,39 @@ Tabell `app_idp_bindings` knytter en App IdP til soft-referanser (`customer_id`,
 | `GET /api/v1/app-idp-bindings` | Alle innloggede |
 | `POST` / `DELETE` | Admin |
 
-GUI: applikasjonsdetalj under Kunder viser binding; Identity → App IdP lar admin sette valgfritt kunde-scope.
+## Keycloak instance API
 
-## Keycloak (lab)
+| Metode | Sti | Merknad |
+|--------|-----|---------|
+| GET | `/api/v1/instances/{id}/keycloak/overview` | Issuer, admin console, attachment-IP |
+| POST | `/api/v1/instances/{id}/keycloak/wire-platform-oidc` | Admin; kun `keycloak-mgmt` |
 
-Valgfri compose-profil for lokal IdP-smoke (ikke produksjons-HA).
+## Keycloak (lab compose — fallback)
+
+Valgfri compose-profil for rask IdP-smoke uten Catalog-deploy.
 
 ```bash
-# Start Keycloak (port 8080) ved siden av api/gui
 docker compose --profile keycloak up -d
-
-# Koble AxioNet Identity (OIDC-kilde + UPN lab.local + App IdP-metadata)
 bash scripts/seed-lab-keycloak-oidc.sh
 ```
 
 | | |
 |--|--|
-| Admin console | `http://<mgmt-ip>:8080/` — `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` (default `admin`/`admin`) |
-| Realm | `axionet` (importert fra `deploy/keycloak/axionet-realm.json`) |
-| Issuer | `http://<mgmt-ip>:8080/realms/axionet` |
-| GUI client | `axionet-gui` / secret `axionet-gui-lab-secret` |
-| App client | `axionet-app` (metadata for Customers App IdP) |
+| Admin console | `http://<mgmt-ip>:8080/` — default `admin`/`admin` |
+| Realm | `axionet` |
 | Testbruker | `labuser@lab.local` / `LabPass1!` |
-| Break-glass | fortsatt `Admin@internal` |
-| Gruppe-mapping | Keycloak `operators` → lokal gruppe `Operators`/`operators` (case-insensitive; rolle `operator`) |
+| Break-glass | `Admin@internal` |
+| Gruppe-mapping | Keycloak `operators` → lokal `Operators` (case-insensitive) |
 
-Hostname/port styres av `KEYCLOAK_HOSTNAME` + `KEYCLOAK_HOSTNAME_PORT` (må være nåbar fra **nettleser** og **api-container**).
-
-Realm-JSON skal **ikke** sette `defaultClientScopes` / egen `clientScopes`-liste som erstatter Keycloaks innebygde `profile`/`email` — det gir `invalid_scope` i OIDC authorize. Groups mappes via `protocolMappers` på clienten.
-
-Seed-scriptet sørger for at en lokal Operators-gruppe finnes. OIDC matcher gruppenavn **case-insensitive**. Etter SSO er `effective_role` = `operator` via medlemskap (brukerens egen `role` forblir typisk `viewer`).
-
-### Valgfri lab-OTP (Keycloak)
-
-```bash
-ENABLE_LAB_OTP=1 bash scripts/seed-lab-keycloak-oidc.sh
-```
-
-Da får `labuser` required action `CONFIGURE_TOTP` og må enrollere authenticator ved neste login. (Gjelder Keycloak-login, ikke lokal `Admin@internal`.)
-
-Ved behov for ren reimport:
-
-```bash
-docker compose --profile keycloak stop keycloak
-docker compose --profile keycloak rm -f keycloak
-docker volume rm -f axionet-lb_keycloak-data
-docker compose --profile keycloak up -d keycloak
-bash scripts/seed-lab-keycloak-oidc.sh
-```
+Valgfri OTP: `ENABLE_LAB_OTP=1 bash scripts/seed-lab-keycloak-oidc.sh`
 
 ## AD
 
-Bruk OIDC mot IdP som snakker med AD (Entra ID, eller Keycloak med AD federation). Ren LDAP-bind er ikke i scope ennå; samme UPN-routing kan senere peke på en `ldap`-kilde.
+Bruk OIDC mot IdP som snakker med AD (Entra ID, eller Keycloak med AD federation). Ren LDAP-bind er ikke i scope ennå.
 
 ## Ikke i scope
 
 - MFA/TOTP for lokal break-glass-login
 - Full SAML SP
 - Session revocation / refresh tokens
-- Keycloak Postgres/HA / AD-federation (lab bruker `start-dev`)
+- Keycloak Postgres/HA (instanser bruker `start-dev` i denne fasen)

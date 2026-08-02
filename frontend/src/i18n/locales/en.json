@@ -819,6 +819,37 @@
     "clearCountersResult": "clear counters: {{output}} (ephemeral)"
   },
 
+  "keycloak": {
+    "tabs": {
+      "overview": "Overview",
+      "networks": "Networks",
+      "logs": "Logs"
+    },
+    "mgmtLabel": "Keycloak (Management)",
+    "appsLabel": "Keycloak (Apps)",
+    "mgmtNetworksHint": "Management Keycloak may only attach to networks of type management.",
+    "noMgmtNetworks": "No management networks available. Create one under Networks first.",
+    "realm": "Realm",
+    "publicBaseUrl": "GUI public base URL (redirect URIs)",
+    "adminUsername": "Bootstrap admin username",
+    "adminPassword": "Bootstrap admin password",
+    "guiClientSecret": "GUI OIDC client secret",
+    "configHint": "Hostname is taken from the first attachment IP. Realm JSON is imported on first start (dev mode).",
+    "endpointsTitle": "Endpoints",
+    "issuer": "Issuer URL",
+    "adminConsole": "Admin console",
+    "attachmentIps": "Attachment IPs",
+    "exposureHint": "Keep management Keycloak on the management network only — do not publish it to the internet.",
+    "wireTitle": "Wire platform OIDC",
+    "wireHint": "Create or update an Auth Source and UPN suffix so AxioNet GUI login can use this instance.",
+    "sourceName": "Auth source name",
+    "upnSuffix": "UPN suffix",
+    "wireAction": "Wire platform OIDC",
+    "wireOk": "Wired {{name}} → {{issuer}} (suffix {{suffix}}).",
+    "appsMetaTitle": "App IdP issuer",
+    "appsMetaHint": "Point customer App IdP metadata at this issuer. Prefer separate realms per tenant."
+  },
+
   "revisions": {
     "restore": "Restore",
     "pick": "Pick a revision"

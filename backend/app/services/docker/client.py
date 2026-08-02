@@ -212,6 +212,7 @@ class DockerClientAdapter:
         entrypoint: list[str] | None = None,
         cap_add: list[str] | None = None,
         sysctls: dict[str, str] | None = None,
+        environment: dict[str, str] | None = None,
     ) -> str:
         """Create a managed dataplane container.
 
@@ -248,6 +249,8 @@ class DockerClientAdapter:
             kwargs["cap_add"] = list(cap_add)
         if sysctls:
             kwargs["sysctls"] = dict(sysctls)
+        if environment:
+            kwargs["environment"] = dict(environment)
         if endpoints:
             first_net = endpoints[0].get("network_id")
             if not first_net:

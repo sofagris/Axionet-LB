@@ -66,6 +66,33 @@ function buildHaproxyConfig(input: {
   };
 }
 
+function isKeycloakService(serviceType: string): boolean {
+  return serviceType === "keycloak-mgmt" || serviceType === "keycloak-apps";
+}
+
+function buildKeycloakConfig(input: {
+  realm: string;
+  adminUsername: string;
+  adminPassword: string;
+  publicBaseUrl: string;
+  guiClientSecret: string;
+}) {
+  return {
+    realm: input.realm || "axionet",
+    http_port: 8080,
+    admin_username: input.adminUsername || "admin",
+    admin_password: input.adminPassword || "admin",
+    gui_client_id: "axionet-gui",
+    gui_client_secret: input.guiClientSecret || "axionet-gui-lab-secret",
+    app_client_id: "axionet-app",
+    app_client_secret: "axionet-app-lab-secret",
+    import_realm: true,
+    start_mode: "dev",
+    public_base_url: input.publicBaseUrl.trim() || null,
+    hostname_strict: false,
+  };
+}
+
 function buildFrrConfig(input: {
   hostname: string;
   routerId: string;
@@ -133,12 +160,23 @@ export function CreateInstanceWizardPage() {
   const [frrRemoteAs, setFrrRemoteAs] = useState(65000);
   const [frrPassword, setFrrPassword] = useState("");
   const [frrNetworks, setFrrNetworks] = useState("203.0.113.0/24");
+  const [kcRealm, setKcRealm] = useState("axionet");
+  const [kcAdminUser, setKcAdminUser] = useState("admin");
+  const [kcAdminPass, setKcAdminPass] = useState("admin");
+  const [kcPublicBaseUrl, setKcPublicBaseUrl] = useState("http://192.168.50.195");
+  const [kcGuiSecret, setKcGuiSecret] = useState("axionet-gui-lab-secret");
   const [validation, setValidation] = useState<InstanceValidateResult | null>(null);
   const [desiredRunning, setDesiredRunning] = useState(false);
 
   const selectedDef = (catalogQuery.data ?? []).find((item) => item.service_type === serviceType);
   const version = imageVersion || selectedDef?.default_version || "3.2.6";
-  const networks = networksQuery.data ?? [];
+  const networks = useMemo(() => {
+    const all = networksQuery.data ?? [];
+    if (serviceType === "keycloak-mgmt") {
+      return all.filter((item) => item.network_type === "management");
+    }
+    return all;
+  }, [networksQuery.data, serviceType]);
 
   const configuration = useMemo(() => {
     if (serviceType === "frr") {
@@ -158,6 +196,15 @@ export function CreateInstanceWizardPage() {
         networks: frrNetworks,
       });
     }
+    if (isKeycloakService(serviceType)) {
+      return buildKeycloakConfig({
+        realm: kcRealm,
+        adminUsername: kcAdminUser,
+        adminPassword: kcAdminPass,
+        publicBaseUrl: kcPublicBaseUrl,
+        guiClientSecret: kcGuiSecret,
+      });
+    }
     return buildHaproxyConfig({
       mode,
       bindPort,
@@ -175,6 +222,11 @@ export function CreateInstanceWizardPage() {
     frrRemoteAs,
     frrPassword,
     frrNetworks,
+    kcRealm,
+    kcAdminUser,
+    kcAdminPass,
+    kcPublicBaseUrl,
+    kcGuiSecret,
     mode,
     bindPort,
     serverAddress,
@@ -184,8 +236,16 @@ export function CreateInstanceWizardPage() {
   function canNext(): boolean {
     if (step === 1) return Boolean(selectedDef?.enabled);
     if (step === 2) return name.trim().length > 0;
-    if (step === 3) return true;
+    if (step === 3) {
+      if (isKeycloakService(serviceType)) {
+        return attachments.some((item) => item.network_id);
+      }
+      return true;
+    }
     if (step === 4) {
+      if (isKeycloakService(serviceType)) {
+        return attachments.some((item) => item.network_id && item.ip_address.trim());
+      }
       return attachments.every(
         (item) => !item.network_id || item.network_id.length > 0,
       );
@@ -194,6 +254,9 @@ export function CreateInstanceWizardPage() {
       if (serviceType === "frr") {
         const hasIp = attachments.some((item) => item.ip_address.trim());
         return frrLocalAs > 0 && (Boolean(frrRouterId.trim()) || hasIp);
+      }
+      if (isKeycloakService(serviceType)) {
+        return Boolean(kcRealm.trim() && kcAdminUser.trim() && kcAdminPass.trim());
       }
       return bindPort > 0 && serverPort > 0;
     }
@@ -314,7 +377,14 @@ export function CreateInstanceWizardPage() {
 
         {step === 3 ? (
           <div className="space-y-3">
-            <p className="text-sm text-ink-muted">{t("wizard.networksHint")}</p>
+            <p className="text-sm text-ink-muted">
+              {serviceType === "keycloak-mgmt"
+                ? t("keycloak.mgmtNetworksHint")
+                : t("wizard.networksHint")}
+            </p>
+            {serviceType === "keycloak-mgmt" && networks.length === 0 ? (
+              <p className="text-sm text-danger">{t("keycloak.noMgmtNetworks")}</p>
+            ) : null}
             {attachments.map((attachment, index) => (
               <div key={index} className="grid gap-3 md:grid-cols-[1fr_auto]">
                 <label className="block text-sm">
@@ -399,7 +469,55 @@ export function CreateInstanceWizardPage() {
         ) : null}
 
         {step === 5 ? (
-          serviceType === "frr" ? (
+          isKeycloakService(serviceType) ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block text-sm">
+                <span className="text-ink-muted">{t("keycloak.realm")}</span>
+                <input
+                  value={kcRealm}
+                  onChange={(e) => setKcRealm(e.target.value)}
+                  className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="text-ink-muted">{t("keycloak.publicBaseUrl")}</span>
+                <input
+                  value={kcPublicBaseUrl}
+                  onChange={(e) => setKcPublicBaseUrl(e.target.value)}
+                  className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                  placeholder="http://192.168.50.195"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="text-ink-muted">{t("keycloak.adminUsername")}</span>
+                <input
+                  value={kcAdminUser}
+                  onChange={(e) => setKcAdminUser(e.target.value)}
+                  className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="text-ink-muted">{t("keycloak.adminPassword")}</span>
+                <input
+                  type="password"
+                  value={kcAdminPass}
+                  onChange={(e) => setKcAdminPass(e.target.value)}
+                  className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                />
+              </label>
+              {serviceType === "keycloak-mgmt" ? (
+                <label className="block text-sm md:col-span-2">
+                  <span className="text-ink-muted">{t("keycloak.guiClientSecret")}</span>
+                  <input
+                    value={kcGuiSecret}
+                    onChange={(e) => setKcGuiSecret(e.target.value)}
+                    className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                  />
+                </label>
+              ) : null}
+              <p className="text-sm text-ink-muted md:col-span-2">{t("keycloak.configHint")}</p>
+            </div>
+          ) : serviceType === "frr" ? (
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block text-sm">
                 <span className="text-ink-muted">{t("frr.hostname")}</span>
@@ -562,7 +680,18 @@ export function CreateInstanceWizardPage() {
                   {selectedDef?.container_image ?? serviceType}:{version}
                 </dd>
               </div>
-              {serviceType === "frr" ? (
+              {isKeycloakService(serviceType) ? (
+                <>
+                  <div>
+                    <dt className="text-ink-muted">{t("keycloak.realm")}</dt>
+                    <dd className="font-mono">{kcRealm}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-muted">{t("keycloak.publicBaseUrl")}</dt>
+                    <dd className="font-mono">{kcPublicBaseUrl || "—"}</dd>
+                  </div>
+                </>
+              ) : serviceType === "frr" ? (
                 <>
                   <div>
                     <dt className="text-ink-muted">{t("frr.localAs")}</dt>
