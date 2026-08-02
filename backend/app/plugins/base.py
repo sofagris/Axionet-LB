@@ -23,6 +23,9 @@ class ContainerSpec:
     cap_add: list[str] = field(default_factory=list)
     sysctls: dict[str, str] = field(default_factory=dict)
     environment: dict[str, str] = field(default_factory=dict)
+    # Host bind ownership for processes that drop privileges (e.g. Keycloak uid 1000).
+    config_uid: int | None = None
+    config_gid: int | None = None
 
 
 class ServicePlugin(Protocol):

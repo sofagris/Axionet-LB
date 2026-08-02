@@ -60,3 +60,13 @@ def test_apply_network_hints_sets_hostname() -> None:
     plugin = KeycloakMgmtPlugin()
     cfg = plugin.apply_network_hints({}, ["192.168.50.40"])
     assert KeycloakConfig.from_dict(cfg).hostname == "192.168.50.40"
+
+
+def test_keycloak_container_spec_owns_data_dir() -> None:
+    from app.plugins.keycloak.plugin import KeycloakMgmtPlugin
+
+    spec = KeycloakMgmtPlugin().container_spec({})
+    assert spec.config_bind == "/opt/keycloak/data"
+    assert spec.volume_mode == "rw"
+    assert spec.config_uid == 1000
+    assert spec.config_gid == 0

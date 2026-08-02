@@ -84,6 +84,9 @@ class KeycloakPluginBase:
             volume_mode="rw",
             command=command,
             environment=env,
+            # Official Keycloak image runs as uid 1000; H2 needs write under data/.
+            config_uid=1000,
+            config_gid=0,
         )
 
     def reload_signal(self) -> str | None:

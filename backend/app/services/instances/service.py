@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import re
 import shutil
 from datetime import UTC, datetime
@@ -782,7 +783,22 @@ class InstanceService:
             path.write_text(content, encoding="utf-8")
             if relative.startswith("certs/"):
                 path.chmod(0o600)
+        spec = plugin.container_spec(instance.configuration)
+        if spec.config_uid is not None:
+            gid = spec.config_gid if spec.config_gid is not None else spec.config_uid
+            self._chown_tree(config_dir, spec.config_uid, gid)
         return config_dir
+
+    @staticmethod
+    def _chown_tree(root: Path, uid: int, gid: int) -> None:
+        """Best-effort ownership for bind mounts used by non-root containers."""
+        if os.name != "posix":
+            return
+        for path in [root, *root.rglob("*")]:
+            try:
+                os.chown(path, uid, gid)
+            except OSError as exc:
+                logger.warning("chown %s -> %s:%s failed: %s", path, uid, gid, exc)
 
     def _validate_instance_config(self, instance: ServiceInstance):
         plugin = get_plugin(instance.service_type)
