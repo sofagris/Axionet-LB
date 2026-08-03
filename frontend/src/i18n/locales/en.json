@@ -300,7 +300,20 @@
       "layoutGroup": "Auto-layout applied to the selected group.",
       "layoutCanvas": "Auto-layout applied to the canvas.",
       "layoutFailed": "Auto-layout failed.",
-      "layoutNeedSelection": "Select nodes before using “Selected nodes only”."
+      "layoutNeedSelection": "Select nodes before using “Selected nodes only”.",
+      "laneAdded": "Lane “{{name}}” added."
+    },
+    "placement": {
+      "addSiteLane": "Site lane",
+      "addSiteLaneHint": "Add an empty Site lane without re-laying out groups",
+      "addSharedLane": "Shared lane",
+      "addSharedLaneHint": "Add a Shared Services lane without re-laying out groups",
+      "kindSite": "Site",
+      "kindShared": "Shared",
+      "defaultSite": "Site {{n}}",
+      "defaultShared": "Shared Services",
+      "siteDescription": "Site placement: {{name}}",
+      "sharedDescription": "Shared platform services"
     },
     "layout": {
       "auto": "Auto layout",
@@ -407,6 +420,14 @@
       "refreshingFromInstance": "Refreshing…",
       "placementDomain": "Placement domain",
       "placementDomainHint": "Site A, Shared Services, …",
+      "noPlacementDomain": "None",
+      "createDomain": "Create domain…",
+      "createDomainPrompt": "Name for the new Placement Domain",
+      "placementName": "Name",
+      "placementKind": "Kind",
+      "placementDescription": "Description",
+      "instanceSiteHint": "Linked LB Site: {{site}}",
+      "instanceSiteMismatch": "differs from selected domain",
       "pinnedHint": "Position is pinned — auto-layout will not move it.",
       "openVips": "Open VIPs"
     },
@@ -1003,6 +1024,13 @@
     "selectNetwork": "Select network…",
     "ipOptional": "IP (optional)",
     "dhcpPlaceholder": "DHCP if empty",
+    "placement": {
+      "help": "Placement Site is used by Designer on drop (suggest domain). Stored in configuration.site — not in haproxy.cfg. Ready for later multi-site deploy.",
+      "site": "Site",
+      "sitePlaceholder": "e.g. Oslo",
+      "save": "Save Site",
+      "saveFailed": "Could not save Site"
+    },
     "statusUnavailable": "Status unavailable",
     "runtimeActionFailed": "Runtime action failed",
     "clearCountersResult": "clear counters: {{output}} (ephemeral)"

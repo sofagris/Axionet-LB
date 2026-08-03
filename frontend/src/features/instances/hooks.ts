@@ -15,6 +15,7 @@ import {
   updateInstanceNetwork,
   validateInstance,
   validateInstanceConfig,
+  updateInstance,
 } from "../../api/instances";
 import type {
   InstanceCreatePayload,
@@ -130,6 +131,23 @@ export function useInstanceNetworkMutations() {
       onSuccess: invalidate,
     }),
   };
+}
+
+export function useUpdateInstance() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      configuration,
+    }: {
+      id: string;
+      configuration: Record<string, unknown>;
+    }) => updateInstance(id, { configuration }),
+    onSuccess: async (_data, vars) => {
+      await queryClient.invalidateQueries({ queryKey: ["instances"] });
+      await queryClient.invalidateQueries({ queryKey: ["haproxy", vars.id] });
+    },
+  });
 }
 
 export type { InstanceValidateResult };

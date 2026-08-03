@@ -3,11 +3,13 @@ import { useTranslation } from "react-i18next";
 import type { Instance } from "../../types/instances";
 import type { Vip } from "../../types/vips";
 import { componentPropFields } from "./componentProps";
+import { createPlacementDomain } from "./placementDomains";
 import {
   createWizardPath,
   instanceDetailPath,
   type DesignerEdge,
   type DesignerNode,
+  type PlacementDomain,
 } from "./types";
 
 type Props = {
@@ -15,11 +17,14 @@ type Props = {
   selectedEdge: DesignerEdge | null;
   instances: Instance[];
   vips: Vip[];
+  placementDomains: PlacementDomain[];
   onUpdateNode: (nodeId: string, patch: Partial<DesignerNode["data"]>) => void;
   onUpdateEdge: (edgeId: string, patch: Partial<DesignerEdge["data"]> & { label?: string }) => void;
   onDeleteSelection: () => void;
   /** Re-hydrate linked HAProxy group from live instance config. */
   onRefreshFromInstance?: () => void;
+  onUpsertPlacementDomain: (domain: PlacementDomain) => void;
+  onAssignPlacementDomain: (nodeId: string, domainId: string | undefined) => void;
 };
 
 export function DesignerPropertiesPanel({
@@ -27,10 +32,13 @@ export function DesignerPropertiesPanel({
   selectedEdge,
   instances,
   vips,
+  placementDomains,
   onUpdateNode,
   onUpdateEdge,
   onDeleteSelection,
   onRefreshFromInstance,
+  onUpsertPlacementDomain,
+  onAssignPlacementDomain,
 }: Props) {
   const { t } = useTranslation();
 
@@ -149,26 +157,132 @@ export function DesignerPropertiesPanel({
           </p>
         ) : null}
 
+        {data.kind === "placement.lane" ? (
+          <div className="space-y-2 border-t border-line pt-3">
+            <label className="block">
+              <span className="text-ink-muted">{t("designer.properties.placementName")}</span>
+              <input
+                className="mt-1 w-full border border-line bg-paper px-2 py-1.5 text-ink"
+                value={data.label}
+                onChange={(e) => {
+                  const name = e.target.value;
+                  onUpdateNode(node.id, { label: name, placementDomain: name });
+                  if (data.placementDomainId) {
+                    onUpsertPlacementDomain({
+                      id: data.placementDomainId,
+                      name,
+                      kind: data.placementKind ?? "site",
+                      description: data.placementDescription,
+                      icon: data.placementIcon,
+                    });
+                  }
+                }}
+              />
+            </label>
+            <label className="block">
+              <span className="text-ink-muted">{t("designer.properties.placementKind")}</span>
+              <select
+                className="mt-1 w-full border border-line bg-paper px-2 py-1.5 text-ink"
+                value={data.placementKind ?? "site"}
+                onChange={(e) => {
+                  const kind = e.target.value as "site" | "shared";
+                  onUpdateNode(node.id, { placementKind: kind });
+                  if (data.placementDomainId) {
+                    onUpsertPlacementDomain({
+                      id: data.placementDomainId,
+                      name: data.label,
+                      kind,
+                      description: data.placementDescription,
+                      icon: kind === "shared" ? "shared" : "site",
+                    });
+                  }
+                }}
+              >
+                <option value="site">{t("designer.placement.kindSite")}</option>
+                <option value="shared">{t("designer.placement.kindShared")}</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-ink-muted">{t("designer.properties.placementDescription")}</span>
+              <textarea
+                className="mt-1 w-full border border-line bg-paper px-2 py-1.5 text-ink"
+                rows={3}
+                value={data.placementDescription ?? ""}
+                onChange={(e) => {
+                  const description = e.target.value;
+                  onUpdateNode(node.id, { placementDescription: description || undefined });
+                  if (data.placementDomainId) {
+                    onUpsertPlacementDomain({
+                      id: data.placementDomainId,
+                      name: data.label,
+                      kind: data.placementKind ?? "site",
+                      description: description || undefined,
+                      icon: data.placementIcon,
+                    });
+                  }
+                }}
+              />
+            </label>
+          </div>
+        ) : null}
+
         {data.kind === "group.frame" ? (
-          <label className="block">
-            <span className="text-ink-muted">{t("designer.properties.placementDomain")}</span>
-            <input
-              className="mt-1 w-full border border-line bg-paper px-2 py-1.5 text-ink"
-              list="designer-placement-domains"
-              value={data.placementDomain ?? ""}
-              placeholder={t("designer.properties.placementDomainHint")}
-              onChange={(e) =>
-                onUpdateNode(node.id, {
-                  placementDomain: e.target.value.trim() || undefined,
-                })
-              }
-            />
-            <datalist id="designer-placement-domains">
-              <option value="Site A" />
-              <option value="Site B" />
-              <option value="Shared Services" />
-            </datalist>
-          </label>
+          <div className="space-y-2">
+            <label className="block">
+              <span className="text-ink-muted">{t("designer.properties.placementDomain")}</span>
+              <select
+                className="mt-1 w-full border border-line bg-paper px-2 py-1.5 text-ink"
+                value={data.placementDomainId ?? ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "__create__") {
+                    const name = window.prompt(t("designer.properties.createDomainPrompt"));
+                    if (!name?.trim()) return;
+                    const domain = createPlacementDomain({
+                      name: name.trim(),
+                      kind: /shared/i.test(name) ? "shared" : "site",
+                    });
+                    onUpsertPlacementDomain(domain);
+                    onUpdateNode(node.id, {
+                      placementDomainId: domain.id,
+                      placementDomain: domain.name,
+                    });
+                    return;
+                  }
+                  onAssignPlacementDomain(node.id, value || undefined);
+                }}
+              >
+                <option value="">{t("designer.properties.noPlacementDomain")}</option>
+                {placementDomains.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} ({d.kind})
+                  </option>
+                ))}
+                <option value="__create__">{t("designer.properties.createDomain")}</option>
+              </select>
+            </label>
+            {(() => {
+              const linked = instances.find((i) => i.id === data.serviceId);
+              const site =
+                linked && typeof linked.configuration?.site === "string"
+                  ? linked.configuration.site.trim()
+                  : "";
+              if (!site) return null;
+              const match = placementDomains.find(
+                (d) => d.name.toLowerCase() === site.toLowerCase(),
+              );
+              const diverges =
+                Boolean(data.placementDomainId) &&
+                match &&
+                match.id !== data.placementDomainId;
+              return (
+                <p className="text-[11px] text-ink-muted">
+                  {t("designer.properties.instanceSiteHint", { site })}
+                  {diverges ? ` — ${t("designer.properties.instanceSiteMismatch")}` : null}
+                </p>
+              );
+            })()}
+          </div>
         ) : null}
 
         {data.pinned ? (

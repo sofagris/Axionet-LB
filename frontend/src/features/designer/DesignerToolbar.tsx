@@ -179,6 +179,8 @@ type Props = {
   onUngroup: () => void;
   onApply: () => void;
   onDelete: () => void;
+  onAddSiteLane?: () => void;
+  onAddSharedLane?: () => void;
 };
 
 export function DesignerToolbar({
@@ -196,6 +198,8 @@ export function DesignerToolbar({
   onUngroup,
   onApply,
   onDelete,
+  onAddSiteLane,
+  onAddSharedLane,
 }: Props) {
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -250,6 +254,32 @@ export function DesignerToolbar({
       >
         <IconUngroup />
       </ToolBtn>
+      {onAddSiteLane ? (
+        <ToolBtn
+          label={t("designer.placement.addSiteLane")}
+          title={t("designer.placement.addSiteLaneHint")}
+          onClick={onAddSiteLane}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+            <path d="M4 20V9l8-5 8 5v11" />
+            <path d="M9 20v-6h6v6" />
+            <path d="M12 11v4M10 13h4" />
+          </svg>
+        </ToolBtn>
+      ) : null}
+      {onAddSharedLane ? (
+        <ToolBtn
+          label={t("designer.placement.addSharedLane")}
+          title={t("designer.placement.addSharedLaneHint")}
+          onClick={onAddSharedLane}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+            <circle cx="8" cy="10" r="3" />
+            <circle cx="16" cy="10" r="3" />
+            <path d="M4 18c0-2 2-4 4-4M16 14c2 0 4 2 4 4M12 11v5M10 13h4" />
+          </svg>
+        </ToolBtn>
+      ) : null}
       <Divider />
       <div className="relative flex items-center gap-0.5" ref={menuRef}>
         <ToolBtn

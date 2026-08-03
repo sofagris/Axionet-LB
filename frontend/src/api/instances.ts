@@ -90,6 +90,16 @@ export function deleteInstance(id: string): Promise<void> {
   return apiFetch(`/api/v1/instances/${id}`, () => undefined, { method: "DELETE" });
 }
 
+export function updateInstance(
+  id: string,
+  payload: { configuration?: Record<string, unknown>; restart_policy?: string },
+): Promise<Instance> {
+  return apiFetch(`/api/v1/instances/${id}`, (data) => InstanceSchema.parse(data), {
+    method: "PATCH",
+    body: payload,
+  });
+}
+
 export function fetchInstanceLogs(
   id: string,
   tail = 200,

@@ -301,7 +301,20 @@
       "layoutGroup": "Auto-layout brukt på valgt gruppe.",
       "layoutCanvas": "Auto-layout brukt på canvas.",
       "layoutFailed": "Auto-layout feilet.",
-      "layoutNeedSelection": "Velg noder før «Selected nodes only»."
+      "layoutNeedSelection": "Velg noder før «Selected nodes only».",
+      "laneAdded": "Lane «{{name}}» lagt til."
+    },
+    "placement": {
+      "addSiteLane": "Site-lane",
+      "addSiteLaneHint": "Legg til tom Site-lane uten å re-layout grupper",
+      "addSharedLane": "Shared-lane",
+      "addSharedLaneHint": "Legg til Shared Services-lane uten å re-layout grupper",
+      "kindSite": "Site",
+      "kindShared": "Shared",
+      "defaultSite": "Site {{n}}",
+      "defaultShared": "Shared Services",
+      "siteDescription": "Site-plassering: {{name}}",
+      "sharedDescription": "Delte plattformtjenester"
     },
     "layout": {
       "auto": "Auto layout",
@@ -408,6 +421,14 @@
       "refreshingFromInstance": "Oppdaterer…",
       "placementDomain": "Placement domain",
       "placementDomainHint": "Site A, Shared Services, …",
+      "noPlacementDomain": "Ingen",
+      "createDomain": "Opprett domain…",
+      "createDomainPrompt": "Navn på nytt Placement Domain",
+      "placementName": "Navn",
+      "placementKind": "Type",
+      "placementDescription": "Beskrivelse",
+      "instanceSiteHint": "Koblet LB har Site: {{site}}",
+      "instanceSiteMismatch": "avviker fra valgt domain",
       "pinnedHint": "Posisjon er pinnnet — auto-layout flytter den ikke.",
       "openVips": "Åpne VIPs"
     },
@@ -1005,6 +1026,13 @@
     "selectNetwork": "Velg nettverk…",
     "ipOptional": "IP (valgfritt)",
     "dhcpPlaceholder": "DHCP hvis tom",
+    "placement": {
+      "help": "Placement Site brukes av Designer ved drop (foreslå domain). Lagres i configuration.site — ikke i haproxy.cfg. Klar for senere multi-site deploy.",
+      "site": "Site",
+      "sitePlaceholder": "f.eks. Oslo",
+      "save": "Lagre Site",
+      "saveFailed": "Kunne ikke lagre Site"
+    },
     "statusUnavailable": "Status utilgjengelig",
     "runtimeActionFailed": "Runtime-handling feilet",
     "clearCountersResult": "clear counters: {{output}} (ephemeral)"

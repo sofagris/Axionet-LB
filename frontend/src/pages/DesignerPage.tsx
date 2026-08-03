@@ -39,7 +39,15 @@ import {
   type DesignerLayoutPrefs,
   type ElkLayoutKind,
 } from "../features/designer/layoutPrefs";
-import type { HaproxyConfigSnapshot } from "../features/designer/haproxyConfigFingerprint";
+import {
+  createLaneNode,
+  createPlacementDomain,
+  ensureSiteDomain,
+  migratePlacementDomains,
+  syncNodesToDomain,
+  updateDomainInRegistry,
+} from "../features/designer/placementDomains";
+import type { PlacementDomain } from "../features/designer/types";
 import {
   applySnapshotToGroup,
   fetchHaproxyConfigSnapshot,
@@ -140,6 +148,7 @@ export function DesignerPage() {
   const [layoutPrefs, setLayoutPrefs] = useState<DesignerLayoutPrefs>(readDesignerLayoutPrefs);
   const [layoutBusy, setLayoutBusy] = useState(false);
   const [fitViewNonce, setFitViewNonce] = useState(0);
+  const [placementDomains, setPlacementDomains] = useState<PlacementDomain[]>([]);
   const loadedStampRef = useRef<string | null>(null);
   const fingerprintsRef = useRef(new Map<string, string>());
   const inFlightRef = useRef(new Set<string>());
@@ -192,10 +201,12 @@ export function DesignerPage() {
     fingerprintsRef.current.clear();
     inFlightRef.current.clear();
     const doc = parseGraphDocument(flowQuery.data.graph_json);
+    const migrated = migratePlacementDomains(doc.nodes, doc.placementDomains ?? []);
     setName(flowQuery.data.name);
-    setNodes(doc.nodes);
+    setNodes(migrated.nodes);
     setEdges(doc.edges);
     setViewport(doc.viewport);
+    setPlacementDomains(migrated.placementDomains);
     setSelectedNode(null);
     setSelectedNodes([]);
     setSelectedEdge(null);
@@ -281,6 +292,7 @@ export function DesignerPage() {
           hubId,
           scopeIds,
           scopeGroupId,
+          placementDomains,
         });
 
         if (layoutPrefs.animate && before.length > 0) {
@@ -317,7 +329,37 @@ export function DesignerPage() {
         setLayoutBusy(false);
       }
     },
-    [edges, layoutPrefs, nodes, selectedNode, selectedNodes, t],
+    [edges, layoutPrefs, nodes, placementDomains, selectedNode, selectedNodes, t],
+  );
+
+  const onAddLane = useCallback(
+    (kind: "site" | "shared") => {
+      const name =
+        kind === "shared"
+          ? t("designer.placement.defaultShared")
+          : t("designer.placement.defaultSite", {
+              n: placementDomains.filter((d) => d.kind === "site").length + 1,
+            });
+      const domain = createPlacementDomain({
+        name,
+        kind,
+        description:
+          kind === "shared"
+            ? t("designer.placement.sharedDescription")
+            : t("designer.placement.siteDescription", { name }),
+      });
+      const y =
+        nodes
+          .filter((n) => n.data.kind === "placement.lane")
+          .reduce((max, n) => {
+            const h = typeof n.style?.height === "number" ? n.style.height : 220;
+            return Math.max(max, n.position.y + h + 40);
+          }, 0) || 40;
+      setPlacementDomains((ds) => [...ds, domain]);
+      setNodes((nds) => [...nds, createLaneNode(domain, { x: 24, y })]);
+      setMessage(t("designer.messages.laneAdded", { name: domain.name }));
+    },
+    [nodes, placementDomains, t],
   );
 
   const graphRef = useRef({ nodes, edges });
@@ -377,11 +419,40 @@ export function DesignerPage() {
     [t],
   );
 
+  const applySiteFromInstance = useCallback(
+    (groupId: string, serviceId: string) => {
+      const inst = instances.find((i) => i.id === serviceId);
+      const siteRaw = inst?.configuration?.site;
+      const site = typeof siteRaw === "string" ? siteRaw.trim() : "";
+      if (!site) return;
+      setPlacementDomains((domains) => {
+        const { domains: nextDomains, domain } = ensureSiteDomain(domains, site);
+        setNodes((nds) =>
+          nds.map((n) =>
+            n.id === groupId
+              ? {
+                  ...n,
+                  data: {
+                    ...n.data,
+                    placementDomainId: domain.id,
+                    placementDomain: domain.name,
+                  },
+                }
+              : n,
+          ),
+        );
+        return nextDomains;
+      });
+    },
+    [instances],
+  );
+
   const onHaproxyInstanceDropped = useCallback(
     (info: LinkedHaproxyGroup) => {
+      applySiteFromInstance(info.groupId, info.serviceId);
       void rehydrateHaproxyGroup(info, { waitRaf: true });
     },
-    [rehydrateHaproxyGroup],
+    [applySiteFromInstance, rehydrateHaproxyGroup],
   );
 
   const onRefreshFromInstance = useCallback(() => {
@@ -519,7 +590,7 @@ export function DesignerPage() {
     try {
       const updated = await updateMutation.mutateAsync({
         name: name.trim() || undefined,
-        graph_json: serializeGraphDocument({ nodes, edges, viewport }),
+        graph_json: serializeGraphDocument({ nodes, edges, viewport, placementDomains }),
       });
       loadedStampRef.current = `${updated.id}:${updated.updated_at}`;
       setMessage(t("designer.messages.saved"));
@@ -572,7 +643,7 @@ export function DesignerPage() {
       try {
         const updated = await updateMutation.mutateAsync({
           name: name.trim() || undefined,
-          graph_json: serializeGraphDocument({ nodes, edges, viewport }),
+          graph_json: serializeGraphDocument({ nodes, edges, viewport, placementDomains }),
         });
         loadedStampRef.current = `${updated.id}:${updated.updated_at}`;
       } catch (err) {
@@ -747,6 +818,8 @@ export function DesignerPage() {
                   onUngroup={onUngroup}
                   onApply={() => void onApply()}
                   onDelete={() => void onDelete()}
+                  onAddSiteLane={() => onAddLane("site")}
+                  onAddSharedLane={() => onAddLane("shared")}
                 />
               </MutationGate>
               <div className="min-h-0 flex-1">
@@ -771,7 +844,64 @@ export function DesignerPage() {
               selectedEdge={selectedEdge}
               instances={instances}
               vips={vips}
+              placementDomains={placementDomains}
               onRefreshFromInstance={onRefreshFromInstance}
+              onUpsertPlacementDomain={(domain) => {
+                setPlacementDomains((ds) => {
+                  const exists = ds.some((d) => d.id === domain.id);
+                  return exists
+                    ? updateDomainInRegistry(ds, domain.id, domain)
+                    : [...ds, domain];
+                });
+                setNodes((nds) => syncNodesToDomain(nds, domain));
+                setSelectedNode((prev) =>
+                  prev && prev.data.placementDomainId === domain.id
+                    ? {
+                        ...prev,
+                        data: {
+                          ...prev.data,
+                          label:
+                            prev.data.kind === "placement.lane" ? domain.name : prev.data.label,
+                          placementDomain: domain.name,
+                          placementKind: domain.kind,
+                          placementDescription: domain.description,
+                          placementIcon: domain.icon,
+                        },
+                      }
+                    : prev,
+                );
+              }}
+              onAssignPlacementDomain={(nodeId, domainId) => {
+                const domain = domainId
+                  ? placementDomains.find((d) => d.id === domainId)
+                  : undefined;
+                setNodes((nds) =>
+                  nds.map((n) =>
+                    n.id === nodeId
+                      ? {
+                          ...n,
+                          data: {
+                            ...n.data,
+                            placementDomainId: domainId,
+                            placementDomain: domain?.name,
+                          },
+                        }
+                      : n,
+                  ),
+                );
+                setSelectedNode((prev) =>
+                  prev && prev.id === nodeId
+                    ? {
+                        ...prev,
+                        data: {
+                          ...prev.data,
+                          placementDomainId: domainId,
+                          placementDomain: domain?.name,
+                        },
+                      }
+                    : prev,
+                );
+              }}
               onUpdateNode={(nodeId, patch) => {
                 setNodes((nds) => patchNodeData(nds, nodeId, patch));
                 setSelectedNode((prev) =>

@@ -32,10 +32,16 @@ export type DesignerNodeData = {
   /** Pin position — auto-layout will not move this node when preservePinned is on */
   pinned?: boolean;
   /**
-   * Placement domain for Multi-site / Swimlanes (e.g. "Site A", "Shared Services").
-   * Stored on the graph for a future deployable multi-site model.
+   * Legacy free-text placement label (kept in sync with registry name).
+   * Prefer placementDomainId.
    */
   placementDomain?: string;
+  /** Stable id into design document placementDomains registry */
+  placementDomainId?: string;
+  /** Lane-only: site vs shared */
+  placementKind?: "site" | "shared";
+  placementDescription?: string;
+  placementIcon?: "site" | "shared" | "building";
 };
 
 export type DesignerEdgeData = {
@@ -46,10 +52,22 @@ export type DesignerEdgeData = {
 export type DesignerNode = Node<DesignerNodeData, "designer" | "designerGroup" | "designerLane">;
 export type DesignerEdge = Edge<DesignerEdgeData>;
 
+export type PlacementDomainKind = "site" | "shared";
+export type PlacementDomainIcon = "site" | "shared" | "building";
+
+export type PlacementDomain = {
+  id: string;
+  name: string;
+  kind: PlacementDomainKind;
+  description?: string;
+  icon?: PlacementDomainIcon;
+};
+
 export type DesignerGraphDocument = {
   nodes: DesignerNode[];
   edges: DesignerEdge[];
   viewport: Viewport;
+  placementDomains?: PlacementDomain[];
 };
 
 export type PaletteDragPayload =
@@ -111,15 +129,23 @@ export function emptyDesignerGraph(): DesignerGraphDocument {
     nodes: [],
     edges: [],
     viewport: { x: 0, y: 0, zoom: 1 },
+    placementDomains: [],
   };
 }
 
 export function parseGraphDocument(raw: unknown): DesignerGraphDocument {
   const doc = (raw ?? {}) as Partial<DesignerGraphDocument>;
+  const nodes = Array.isArray(doc.nodes) ? (doc.nodes as DesignerNode[]) : [];
+  const edges = Array.isArray(doc.edges) ? (doc.edges as DesignerEdge[]) : [];
+  const existing = Array.isArray(doc.placementDomains)
+    ? (doc.placementDomains as PlacementDomain[])
+    : [];
+  // Lazy migrate is done by callers with migratePlacementDomains for full sync.
   return {
-    nodes: Array.isArray(doc.nodes) ? (doc.nodes as DesignerNode[]) : [],
-    edges: Array.isArray(doc.edges) ? (doc.edges as DesignerEdge[]) : [],
+    nodes,
+    edges,
     viewport: doc.viewport ?? { x: 0, y: 0, zoom: 1 },
+    placementDomains: existing,
   };
 }
 
@@ -136,6 +162,8 @@ export function serializeGraphDocument(doc: DesignerGraphDocument): DesignerGrap
       width: node.width,
       height: node.height,
       zIndex: node.zIndex,
+      selectable: node.selectable,
+      draggable: node.draggable,
     })),
     edges: doc.edges.map((edge) => ({
       id: edge.id,
@@ -146,6 +174,7 @@ export function serializeGraphDocument(doc: DesignerGraphDocument): DesignerGrap
       zIndex: edge.zIndex,
     })),
     viewport: doc.viewport,
+    placementDomains: doc.placementDomains ?? [],
   };
 }
 

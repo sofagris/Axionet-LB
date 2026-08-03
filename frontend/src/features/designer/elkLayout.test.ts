@@ -32,6 +32,21 @@ describe("placementDomain helpers", () => {
     expect(placementDomainOf(group("g2", "b", "  Site A  "))).toBe("Site A");
   });
 
+  it("prefers placementDomainId over free-text label", () => {
+    const withId: DesignerNode = {
+      id: "g",
+      type: "designerGroup",
+      position: { x: 0, y: 0 },
+      data: {
+        kind: "group.frame",
+        label: "lb",
+        placementDomain: "Oslo",
+        placementDomainId: "pd_abc",
+      },
+    };
+    expect(placementDomainOf(withId)).toBe("pd_abc");
+  });
+
   it("buckets top-level nodes by placement domain", () => {
     const nodes = [
       group("a", "horizon-a", "Site A"),

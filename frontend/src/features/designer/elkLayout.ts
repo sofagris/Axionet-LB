@@ -19,9 +19,10 @@ import { resizeGroupToChildren } from "./autoLayout";
 const elk = new ELK();
 
 const LANE_PAD_X = 32;
-const LANE_PAD_Y = 48;
+const LANE_PAD_Y = 24;
 const LANE_GAP = 40;
-const LANE_HEADER = 36;
+const LANE_RAIL_W = 184;
+const LANE_HEADER = 16;
 
 export type RunElkLayoutInput = {
   nodes: DesignerNode[];
@@ -33,6 +34,8 @@ export type RunElkLayoutInput = {
   /** When kind is selected, or when scoping to a group. */
   scopeIds?: string[] | null;
   scopeGroupId?: string | null;
+  /** When set, swimlanes include empty domains and reuse stable lane ids. */
+  placementDomains?: Array<{ id: string; name: string; kind?: string; description?: string; icon?: string }>;
 };
 
 function nodeSize(node: DesignerNode): { w: number; h: number } {
@@ -202,11 +205,19 @@ function radialStar(
 }
 
 export function placementDomainOf(node: DesignerNode): string {
+  if (node.data.placementDomainId) {
+    return node.data.placementDomainId;
+  }
   const raw = node.data.placementDomain?.trim();
   return raw && raw.length > 0 ? raw : UNASSIGNED_DOMAIN;
 }
 
-/** Sort lanes: Shared Services in the middle when present; else alphabetical. */
+export function placementDomainLabel(node: DesignerNode): string {
+  const raw = node.data.placementDomain?.trim();
+  return raw && raw.length > 0 ? raw : UNASSIGNED_DOMAIN;
+}
+
+/** Sort lanes: Shared Services in the middle when present; else alphabetical by label. */
 export function sortPlacementDomains(domains: string[]): string[] {
   const unique = [...new Set(domains)];
   const shared = unique.filter((d) => /shared/i.test(d));
@@ -290,7 +301,7 @@ export async function runElkLayout(input: RunElkLayoutInput): Promise<DesignerNo
   }
 
   if (kind === "swimlanes") {
-    return layoutSwimlanes(nodes, edges, prefs);
+    return layoutSwimlanes(nodes, edges, prefs, input.placementDomains);
   }
 
   const topLevel = nodes.filter((n) => !n.parentId);
@@ -336,27 +347,91 @@ async function layoutSwimlanes(
   nodes: DesignerNode[],
   edges: DesignerEdge[],
   prefs: DesignerLayoutPrefs,
+  registry?: RunElkLayoutInput["placementDomains"],
 ): Promise<DesignerNode[]> {
-  const topLevel = nodes.filter((n) => !n.parentId);
+  const withoutLanes = nodes.filter((n) => !isLane(n));
+  const existingLanes = nodes.filter((n) => isLane(n));
+  const topLevel = withoutLanes.filter((n) => !n.parentId);
   const buckets = bucketByPlacementDomain(topLevel);
-  const domains = sortPlacementDomains([...buckets.keys()]);
+
+  // Prefer registry order; include empty domains; fall back to discovered buckets.
+  type LaneKey = { key: string; label: string; kind: string; description?: string; icon?: string; id?: string };
+  const keys: LaneKey[] = [];
+  if (registry && registry.length > 0) {
+    for (const d of registry) {
+      keys.push({
+        key: d.id,
+        label: d.name,
+        kind: d.kind ?? "site",
+        description: d.description,
+        icon: d.icon,
+        id: d.id,
+      });
+    }
+    // Orphans not in registry (by id or name)
+    for (const [key, members] of buckets) {
+      if (keys.some((k) => k.key === key || k.label === key)) continue;
+      const sample = members[0];
+      keys.push({
+        key,
+        label: placementDomainLabel(sample!),
+        kind: /shared/i.test(placementDomainLabel(sample!)) ? "shared" : "site",
+      });
+    }
+  } else {
+    const labels = sortPlacementDomains(
+      [...buckets.keys()].map((k) => {
+        const m = buckets.get(k)?.[0];
+        return m ? placementDomainLabel(m) : k;
+      }),
+    );
+    for (const label of labels) {
+      const entry = [...buckets.entries()].find(([, ms]) =>
+        ms.some((m) => placementDomainLabel(m) === label),
+      );
+      keys.push({
+        key: entry?.[0] ?? label,
+        label,
+        kind: /shared/i.test(label) ? "shared" : "site",
+      });
+    }
+  }
+
+  // Shared kinds toward middle
+  const shared = keys.filter((k) => k.kind === "shared" || /shared/i.test(k.label));
+  const rest = keys.filter((k) => !shared.includes(k));
+  const ordered =
+    shared.length === 0
+      ? keys
+      : [
+          ...rest.slice(0, Math.floor(rest.length / 2)),
+          ...shared,
+          ...rest.slice(Math.floor(rest.length / 2)),
+        ];
 
   const laneNodes: DesignerNode[] = [];
   const positions = new Map<string, XYPosition>();
   let yOffset = 0;
+  const contentOriginX = LANE_RAIL_W + LANE_PAD_X;
 
-  for (const domain of domains) {
-    const members = buckets.get(domain) ?? [];
-    if (members.length === 0) continue;
+  for (const laneKey of ordered) {
+    const members =
+      buckets.get(laneKey.key) ??
+      buckets.get(laneKey.label) ??
+      [];
 
-    const memberPositions = await layoutFlat(members, edges, "traffic", prefs);
-    let maxX = 0;
-    let maxY = 0;
+    const memberPositions =
+      members.length > 0
+        ? await layoutFlat(members, edges, "traffic", prefs)
+        : new Map<string, XYPosition>();
+
+    let maxX = 200;
+    let maxY = 80;
     for (const m of members) {
-      const local = memberPositions.get(m.id) ?? m.position;
+      const local = memberPositions.get(m.id) ?? { x: 0, y: 0 };
       const { w, h } = nodeSize(m);
       const abs = {
-        x: LANE_PAD_X + local.x,
+        x: contentOriginX + local.x,
         y: yOffset + LANE_PAD_Y + LANE_HEADER + local.y,
       };
       if (isMovable(m, prefs)) positions.set(m.id, abs);
@@ -365,34 +440,52 @@ async function layoutSwimlanes(
       maxY = Math.max(maxY, local.y + h);
     }
 
-    const laneW = Math.max(480, maxX + LANE_PAD_X * 2);
+    const laneW = Math.max(520, contentOriginX + maxX + LANE_PAD_X);
     const laneH = Math.max(180, maxY + LANE_PAD_Y + LANE_HEADER + PAD_BOTTOM);
+
+    const prev = existingLanes.find(
+      (l) =>
+        l.data.placementDomainId === laneKey.id ||
+        l.data.placementDomain === laneKey.label ||
+        (prefs.preservePinned && l.data.pinned && l.data.placementDomainId === laneKey.key),
+    );
+    if (prev && prefs.preservePinned && prev.data.pinned) {
+      laneNodes.push(prev);
+      yOffset = Math.max(yOffset, prev.position.y + (typeof prev.style?.height === "number" ? prev.style.height : laneH) + LANE_GAP);
+      continue;
+    }
+
     laneNodes.push({
-      id: newNodeId(),
+      id: prev?.id ?? newNodeId(),
       type: "designerLane",
       position: { x: 0, y: yOffset },
       style: { width: laneW, height: laneH },
       zIndex: -10,
-      selectable: false,
-      draggable: false,
+      selectable: true,
+      draggable: true,
       data: {
         kind: "placement.lane",
-        label: domain,
-        placementDomain: domain,
+        label: laneKey.label,
+        placementDomainId: laneKey.id ?? laneKey.key,
+        placementDomain: laneKey.label,
+        placementKind: laneKey.kind === "shared" ? "shared" : "site",
+        placementDescription: laneKey.description,
+        placementIcon: laneKey.icon === "shared" ? "shared" : "site",
+        pinned: prev?.data.pinned,
       },
     });
     yOffset += laneH + LANE_GAP;
   }
 
-  let next = [...laneNodes, ...applyPositions(nodes, positions, prefs)];
-
-  if (prefs.preserveGroups) {
-    for (const g of next.filter((n) => isGroupNode(n))) {
-      next = await layoutGroupChildren(next, edges, g.id, prefs);
+  // Keep any leftover pinned lanes not covered
+  for (const lane of existingLanes) {
+    if (lane.data.pinned && !laneNodes.some((l) => l.id === lane.id)) {
+      laneNodes.push(lane);
     }
   }
 
-  return next;
+  // Swimlanes: never re-layout group children — only position top-level groups.
+  return [...laneNodes, ...applyPositions(withoutLanes, positions, prefs)];
 }
 
 /** Interpolate positions for animate preference (sync helper for caller). */

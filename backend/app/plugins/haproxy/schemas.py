@@ -94,6 +94,8 @@ class HaproxyConfig(BaseModel):
         min_length=1,
         max_length=1024,
     )
+    # Placement metadata for Designer / future multi-site deploy (not rendered into cfg).
+    site: str | None = Field(default=None, max_length=128)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any] | None) -> HaproxyConfig:
