@@ -26,6 +26,11 @@ import {
 } from "../features/designer/DesignerCanvas";
 import { DesignerPropertiesPanel } from "../features/designer/DesignerPropertiesPanel";
 import {
+  groupSelectedNodes,
+  isGroupNode,
+  ungroupNode,
+} from "../features/designer/grouping";
+import {
   emptyDesignerGraph,
   parseGraphDocument,
   serializeGraphDocument,
@@ -57,6 +62,7 @@ export function DesignerPage() {
   const [edges, setEdges] = useState<DesignerEdge[]>([]);
   const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 1 });
   const [selectedNode, setSelectedNode] = useState<DesignerNode | null>(null);
+  const [selectedNodes, setSelectedNodes] = useState<DesignerNode[]>([]);
   const [selectedEdge, setSelectedEdge] = useState<DesignerEdge | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [createName, setCreateName] = useState("");
@@ -86,6 +92,7 @@ export function DesignerPage() {
     setEdges(doc.edges);
     setViewport(doc.viewport);
     setSelectedNode(null);
+    setSelectedNodes([]);
     setSelectedEdge(null);
     setValidationIssues([]);
     setApplySuggestions([]);
@@ -101,12 +108,90 @@ export function DesignerPage() {
   }, []);
 
   const onSelectionChange = useCallback(
-    (selection: { node: DesignerNode | null; edge: DesignerEdge | null }) => {
+    (selection: {
+      nodes: DesignerNode[];
+      node: DesignerNode | null;
+      edge: DesignerEdge | null;
+    }) => {
+      setSelectedNodes(selection.nodes);
       setSelectedNode(selection.node);
       setSelectedEdge(selection.edge);
     },
     [],
   );
+
+  const canGroup =
+    selectedNodes.filter((n) => !isGroupNode(n) && !n.parentId).length >= 2;
+  const canUngroup = Boolean(selectedNode && isGroupNode(selectedNode));
+
+  const onGroup = () => {
+    if (!canGroup) return;
+    setNodes((nds) =>
+      groupSelectedNodes(
+        nds,
+        selectedNodes.map((n) => n.id),
+        t("designer.group.defaultLabel"),
+      ),
+    );
+    setSelectedNode(null);
+    setSelectedNodes([]);
+    setMessage(t("designer.messages.grouped"));
+  };
+
+  const onUngroup = () => {
+    if (!selectedNode || !isGroupNode(selectedNode)) return;
+    setNodes((nds) => ungroupNode(nds, selectedNode.id));
+    setSelectedNode(null);
+    setSelectedNodes([]);
+    setMessage(t("designer.messages.ungrouped"));
+  };
+
+  const deleteSelection = useCallback(() => {
+    if (selectedEdge) {
+      setEdges((eds) => eds.filter((e) => e.id !== selectedEdge.id));
+      setSelectedEdge(null);
+      return;
+    }
+    const ids = new Set(
+      (selectedNodes.length > 0
+        ? selectedNodes
+        : selectedNode
+          ? [selectedNode]
+          : []
+      ).map((n) => n.id),
+    );
+    if (ids.size === 0) return;
+
+    setNodes((nds) => {
+      let next = nds;
+      for (const id of ids) {
+        const node = next.find((n) => n.id === id);
+        if (node && isGroupNode(node)) {
+          next = ungroupNode(next, id).filter((n) => n.id !== id);
+        }
+      }
+      return next.filter((n) => !ids.has(n.id));
+    });
+    setEdges((eds) => eds.filter((e) => !ids.has(e.source) && !ids.has(e.target)));
+    setSelectedNode(null);
+    setSelectedNodes([]);
+  }, [selectedEdge, selectedNode, selectedNodes]);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!flowId) return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+        return;
+      }
+      if (event.key === "Delete" || event.key === "Backspace") {
+        event.preventDefault();
+        deleteSelection();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [deleteSelection, flowId]);
 
   const selectFlow = (id: string | null) => {
     if (!id) {
@@ -322,6 +407,23 @@ export function DesignerPage() {
               </button>
               <button
                 type="button"
+                className="border border-line px-3 py-1.5 text-sm text-ink hover:border-accent disabled:opacity-40"
+                onClick={onGroup}
+                disabled={!canGroup}
+                title={t("designer.group.hint")}
+              >
+                {t("designer.group.action")}
+              </button>
+              <button
+                type="button"
+                className="border border-line px-3 py-1.5 text-sm text-ink hover:border-accent disabled:opacity-40"
+                onClick={onUngroup}
+                disabled={!canUngroup}
+              >
+                {t("designer.group.ungroup")}
+              </button>
+              <button
+                type="button"
                 className="border border-accent bg-accent px-3 py-1.5 text-sm font-medium text-white"
                 onClick={() => void onApply()}
               >
@@ -413,20 +515,7 @@ export function DesignerPage() {
                   };
                 });
               }}
-              onDeleteSelection={() => {
-                if (selectedNode) {
-                  setNodes((nds) => nds.filter((n) => n.id !== selectedNode.id));
-                  setEdges((eds) =>
-                    eds.filter(
-                      (e) => e.source !== selectedNode.id && e.target !== selectedNode.id,
-                    ),
-                  );
-                  setSelectedNode(null);
-                } else if (selectedEdge) {
-                  setEdges((eds) => eds.filter((e) => e.id !== selectedEdge.id));
-                  setSelectedEdge(null);
-                }
-              }}
+              onDeleteSelection={deleteSelection}
             />
           </div>
         </>

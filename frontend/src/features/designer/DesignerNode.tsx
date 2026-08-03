@@ -8,13 +8,22 @@ const kindLabel: Record<string, string> = {
   "catalog.component": "COMPONENT",
   "instance.ref": "INSTANCE",
   "vip.ref": "VIP",
+  "group.frame": "GROUP",
 };
 
 function DesignerNodeComponent({ data, selected }: NodeProps<DesignerNode>) {
   const muted = Boolean(data.comingSoon);
+  const propSummary =
+    data.kind === "catalog.component" && data.props
+      ? Object.entries(data.props)
+          .filter(([, v]) => Boolean(v))
+          .slice(0, 2)
+          .map(([k, v]) => `${k}=${v}`)
+          .join(" · ")
+      : "";
   const subtitle =
     data.kind === "catalog.component"
-      ? data.componentRole ?? data.componentId ?? "—"
+      ? propSummary || data.componentRole || data.componentId || "—"
       : (data.serviceType ?? data.catalogSlug ?? data.vipId?.slice(0, 8) ?? "—");
 
   return (

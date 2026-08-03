@@ -1,4 +1,6 @@
 import type { XYPosition } from "@xyflow/react";
+import { defaultComponentProps } from "./componentProps";
+import { childRelativePosition, groupLayoutMetrics } from "./grouping";
 import {
   serviceTreeByCatalogId,
   serviceTreeByServiceType,
@@ -13,8 +15,6 @@ import {
   type DesignerNodeData,
   type PaletteDragPayload,
 } from "./types";
-
-const COL_GAP = 240;
 
 function parentDataFromCatalog(
   payload: Extract<PaletteDragPayload, { source: "catalog" }>,
@@ -53,24 +53,34 @@ function componentNodeData(input: {
     catalogStatus: input.catalogStatus,
     componentId: input.component.id,
     componentRole: input.component.role,
+    props: defaultComponentProps(input.component.role),
   };
 }
 
-function layoutTree(
+/** Parent drop → group frame containing children (no peer parent service node). */
+function layoutTreeAsGroup(
   origin: XYPosition,
   parentData: DesignerNodeData,
   tree: DesignerServiceTree,
   opts?: { serviceId?: string },
 ): { nodes: DesignerNode[]; edges: DesignerEdge[] } {
-  const parentId = newNodeId();
-  const parent: DesignerNode = {
-    id: parentId,
-    type: "designer",
+  const groupId = newNodeId();
+  const { width, height } = groupLayoutMetrics(tree.components.length);
+  const group: DesignerNode = {
+    id: groupId,
+    type: "designerGroup",
     position: origin,
+    style: { width, height },
     data: {
-      ...parentData,
+      kind: "group.frame",
+      label: parentData.label,
+      catalogId: parentData.catalogId ?? tree.catalogId,
+      catalogSlug: parentData.catalogSlug,
+      serviceType: tree.serviceType ?? parentData.serviceType,
       serviceId: opts?.serviceId ?? parentData.serviceId,
-      kind: opts?.serviceId ? "instance.ref" : parentData.kind,
+      brand: parentData.brand,
+      comingSoon: parentData.comingSoon,
+      catalogStatus: parentData.catalogStatus,
     },
   };
 
@@ -81,7 +91,9 @@ function layoutTree(
     return {
       id,
       type: "designer",
-      position: { x: origin.x + COL_GAP * (index + 1), y: origin.y },
+      parentId: groupId,
+      extent: "parent",
+      position: childRelativePosition(index),
       data: componentNodeData({
         component,
         catalogId: tree.catalogId,
@@ -96,19 +108,6 @@ function layoutTree(
   });
 
   const edges: DesignerEdge[] = [];
-  const first = tree.components[0];
-  if (first) {
-    const firstId = idByComponent.get(first.id);
-    if (firstId) {
-      edges.push({
-        id: newEdgeId(),
-        source: parentId,
-        target: firstId,
-        label: "contains",
-        data: { protocol: "contains" },
-      });
-    }
-  }
   for (const link of tree.chain) {
     const source = idByComponent.get(link.from);
     const target = idByComponent.get(link.to);
@@ -122,7 +121,7 @@ function layoutTree(
     });
   }
 
-  return { nodes: [parent, ...childNodes], edges };
+  return { nodes: [group, ...childNodes], edges };
 }
 
 function resolveInstanceTree(payload: Extract<PaletteDragPayload, { source: "instance" }>) {
@@ -144,7 +143,7 @@ export function buildDropGraph(
   if (payload.source === "catalog") {
     const tree = serviceTreeByCatalogId(payload.catalogId);
     if (payload.dropMode === "tree" && tree) {
-      return layoutTree(position, parentDataFromCatalog(payload), tree);
+      return layoutTreeAsGroup(position, parentDataFromCatalog(payload), tree);
     }
     return {
       nodes: [
@@ -192,7 +191,7 @@ export function buildDropGraph(
   if (payload.source === "instance") {
     const instanceTree = resolveInstanceTree(payload);
     if (payload.dropMode === "tree" && instanceTree) {
-      return layoutTree(
+      return layoutTreeAsGroup(
         position,
         {
           kind: "instance.ref",
@@ -245,6 +244,7 @@ export function buildDropGraph(
             brand: payload.brand,
             componentId: payload.componentId,
             componentRole: payload.componentRole,
+            props: defaultComponentProps(payload.componentRole),
           },
         },
       ],

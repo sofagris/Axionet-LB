@@ -17,6 +17,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { useReactFlow } from "@xyflow/react";
 import { DesignerFlowNode } from "./DesignerNode";
+import { DesignerGroupNode } from "./DesignerGroupNode";
 import { buildDropGraph } from "./buildDropGraph";
 import {
   DESIGNER_DND_MIME,
@@ -29,6 +30,7 @@ import {
 
 const nodeTypes: NodeTypes = {
   designer: DesignerFlowNode,
+  designerGroup: DesignerGroupNode,
 };
 
 type Props = {
@@ -40,6 +42,7 @@ type Props = {
   onEdges: (edges: DesignerEdge[] | ((prev: DesignerEdge[]) => DesignerEdge[])) => void;
   onViewportChange: (viewport: Viewport) => void;
   onSelectionChange: (selection: {
+    nodes: DesignerNode[];
     node: DesignerNode | null;
     edge: DesignerEdge | null;
   }) => void;
@@ -75,8 +78,10 @@ function DesignerCanvasInner({
 
   const onSelectionChangeInternal = useCallback(
     ({ nodes: selNodes, edges: selEdges }: OnSelectionChangeParams) => {
+      const typed = selNodes as DesignerNode[];
       onSelectionChange({
-        node: (selNodes[0] as DesignerNode | undefined) ?? null,
+        nodes: typed,
+        node: typed[typed.length - 1] ?? null,
         edge: (selEdges[0] as DesignerEdge | undefined) ?? null,
       });
     },
@@ -128,9 +133,10 @@ function DesignerCanvasInner({
         onMoveEnd={(_, vp) => onViewportChange(vp)}
         nodeTypes={nodeTypes}
         fitView
+        multiSelectionKeyCode={["Meta", "Control", "Shift"]}
         defaultEdgeOptions={defaultEdgeOptions}
         proOptions={{ hideAttribution: true }}
-        deleteKeyCode={["Backspace", "Delete"]}
+        deleteKeyCode={null}
       >
         <Background gap={16} size={1} />
         <Controls />
@@ -153,7 +159,14 @@ export function patchNodeData(
   nodeId: string,
   patch: Partial<DesignerNodeData>,
 ): DesignerNode[] {
-  return nodes.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, ...patch } } : n));
+  return nodes.map((n) => {
+    if (n.id !== nodeId) return n;
+    const nextData = { ...n.data, ...patch };
+    if (patch.props) {
+      nextData.props = { ...(n.data.props ?? {}), ...patch.props };
+    }
+    return { ...n, data: nextData };
+  });
 }
 
 export function patchEdgeData(

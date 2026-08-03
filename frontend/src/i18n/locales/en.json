@@ -286,7 +286,37 @@
       "validateOk": "Validation passed.",
       "validateIssues": "{{count}} validation issue(s).",
       "applyBlocked": "Fix validation errors before Apply.",
-      "applyReady": "Design saved. Next steps below."
+      "applyReady": "Design saved. Next steps below.",
+      "grouped": "Nodes grouped.",
+      "ungrouped": "Group dissolved."
+    },
+    "group": {
+      "action": "Group",
+      "ungroup": "Ungroup",
+      "defaultLabel": "Group",
+      "hint": "Select 2+ free nodes (Shift-click or drag-select), then Group"
+    },
+    "props": {
+      "name": "Name",
+      "bind": "Bind",
+      "mode": "Mode",
+      "defaultBackend": "Default backend",
+      "balance": "Balance",
+      "address": "Address",
+      "port": "Port",
+      "check": "Health check",
+      "weight": "Weight",
+      "listen": "Listen",
+      "issuerUrl": "Issuer URL",
+      "clientId": "Client ID",
+      "redirectUrl": "Redirect URL",
+      "upstreamUrl": "Upstream URL",
+      "peerIp": "Peer IP",
+      "asn": "ASN",
+      "routerId": "Router ID",
+      "prefix": "Prefix",
+      "realm": "Realm",
+      "group": "Group"
     },
     "palette": {
       "title": "Palette",
@@ -312,6 +342,7 @@
       "kind": "Kind",
       "serviceType": "Service type",
       "componentRole": "Component",
+      "componentProps": "Component settings",
       "protocol": "Protocol",
       "note": "Note",
       "linkInstance": "Linked instance",

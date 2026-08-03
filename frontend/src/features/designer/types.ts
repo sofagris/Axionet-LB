@@ -5,7 +5,8 @@ export type DesignerNodeKind =
   | "catalog.service"
   | "catalog.component"
   | "instance.ref"
-  | "vip.ref";
+  | "vip.ref"
+  | "group.frame";
 
 export type DesignerNodeData = {
   kind: DesignerNodeKind;
@@ -23,6 +24,8 @@ export type DesignerNodeData = {
   /** Component within a service tree (Frontend / Backend / …) */
   componentId?: string;
   componentRole?: string;
+  /** Role-specific configuration fields */
+  props?: Record<string, string>;
 };
 
 export type DesignerEdgeData = {
@@ -30,7 +33,7 @@ export type DesignerEdgeData = {
   note?: string;
 };
 
-export type DesignerNode = Node<DesignerNodeData, "designer">;
+export type DesignerNode = Node<DesignerNodeData, "designer" | "designerGroup">;
 export type DesignerEdge = Edge<DesignerEdgeData>;
 
 export type DesignerGraphDocument = {
@@ -117,6 +120,11 @@ export function serializeGraphDocument(doc: DesignerGraphDocument): DesignerGrap
       type: node.type ?? "designer",
       position: node.position,
       data: node.data,
+      parentId: node.parentId,
+      extent: node.extent,
+      style: node.style,
+      width: node.width,
+      height: node.height,
     })),
     edges: doc.edges.map((edge) => ({
       id: edge.id,

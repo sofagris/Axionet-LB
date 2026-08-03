@@ -287,7 +287,37 @@
       "validateOk": "Validering OK.",
       "validateIssues": "{{count}} valideringsfunn.",
       "applyBlocked": "Rett valideringsfeil før Apply.",
-      "applyReady": "Design lagret. Neste steg under."
+      "applyReady": "Design lagret. Neste steg under.",
+      "grouped": "Noder gruppert.",
+      "ungrouped": "Gruppe oppløst."
+    },
+    "group": {
+      "action": "Grupper",
+      "ungroup": "Opphev gruppe",
+      "defaultLabel": "Gruppe",
+      "hint": "Velg 2+ frie noder (Shift-klikk eller dra-utvalg), deretter Grupper"
+    },
+    "props": {
+      "name": "Navn",
+      "bind": "Bind",
+      "mode": "Mode",
+      "defaultBackend": "Default backend",
+      "balance": "Balance",
+      "address": "Adresse",
+      "port": "Port",
+      "check": "Health check",
+      "weight": "Vekt",
+      "listen": "Listen",
+      "issuerUrl": "Issuer-URL",
+      "clientId": "Client ID",
+      "redirectUrl": "Redirect-URL",
+      "upstreamUrl": "Upstream-URL",
+      "peerIp": "Peer-IP",
+      "asn": "ASN",
+      "routerId": "Router ID",
+      "prefix": "Prefix",
+      "realm": "Realm",
+      "group": "Gruppe"
     },
     "palette": {
       "title": "Palett",
@@ -313,6 +343,7 @@
       "kind": "Type",
       "serviceType": "Tjenestetype",
       "componentRole": "Komponent",
+      "componentProps": "Komponentinnstillinger",
       "protocol": "Protokoll",
       "note": "Notat",
       "linkInstance": "Koblet instans",

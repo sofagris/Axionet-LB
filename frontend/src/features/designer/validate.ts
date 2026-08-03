@@ -79,6 +79,15 @@ export function validateDesignerGraph(input: {
         nodeId: node.id,
       });
     }
+    if (data.kind === "group.frame" && !data.serviceId && !data.comingSoon && data.serviceType) {
+      issues.push({
+        id: `unbound-group-${node.id}`,
+        severity: "warning",
+        messageKey: "designer.validate.unboundCatalog",
+        messageParams: { label: data.label },
+        nodeId: node.id,
+      });
+    }
   }
 
   for (const edge of input.edges) {
@@ -116,7 +125,11 @@ export function buildApplySuggestions(
     if (data.comingSoon) continue;
     if (data.kind === "catalog.component") continue;
 
-    if (data.kind === "catalog.service" && data.serviceType && !data.serviceId) {
+    if (
+      (data.kind === "catalog.service" || data.kind === "group.frame") &&
+      data.serviceType &&
+      !data.serviceId
+    ) {
       suggestions.push({
         id: `create-${node.id}`,
         kind: "create-instance",
