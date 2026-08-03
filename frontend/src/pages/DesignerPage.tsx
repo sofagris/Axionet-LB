@@ -32,16 +32,14 @@ import {
   readDesignerFullWidth,
   writeDesignerFullWidth,
 } from "../features/designer/fullWidth";
+import type { HaproxyConfigSnapshot } from "../features/designer/haproxyConfigFingerprint";
 import {
-  applyHydratedGroup,
-  hydrateHaproxyGraph,
-} from "../features/designer/haproxyGraphMapper";
-import {
-  fetchHaproxyAcls,
-  fetchHaproxyBackends,
-  fetchHaproxyErrorFiles,
-  fetchHaproxyFrontends,
-} from "../api/haproxy";
+  applySnapshotToGroup,
+  fetchHaproxyConfigSnapshot,
+  setGroupHydrating,
+  type LinkedHaproxyGroup,
+} from "../features/designer/haproxyRehydrate";
+import { useLinkedHaproxySync } from "../features/designer/useLinkedHaproxySync";
 import {
   deleteGroups,
   groupSelectedNodes,
@@ -133,6 +131,8 @@ export function DesignerPage() {
   } | null>(null);
   const [fullWidth, setFullWidth] = useState(readDesignerFullWidth);
   const loadedStampRef = useRef<string | null>(null);
+  const fingerprintsRef = useRef(new Map<string, string>());
+  const inFlightRef = useRef(new Set<string>());
 
   useEffect(() => {
     const sync = () => setFullWidth(readDesignerFullWidth());
@@ -162,12 +162,16 @@ export function DesignerPage() {
   useEffect(() => {
     if (!flowId) {
       loadedStampRef.current = null;
+      fingerprintsRef.current.clear();
+      inFlightRef.current.clear();
       return;
     }
     if (!flowQuery.data || flowQuery.data.id !== flowId) return;
     const stamp = `${flowQuery.data.id}:${flowQuery.data.updated_at}`;
     if (loadedStampRef.current === stamp) return;
     loadedStampRef.current = stamp;
+    fingerprintsRef.current.clear();
+    inFlightRef.current.clear();
     const doc = parseGraphDocument(flowQuery.data.graph_json);
     setName(flowQuery.data.name);
     setNodes(doc.nodes);
@@ -233,63 +237,96 @@ export function DesignerPage() {
     graphRef.current = { nodes, edges };
   }, [nodes, edges]);
 
-  const onHaproxyInstanceDropped = useCallback(
-    async (info: {
-      groupId: string;
-      serviceId: string;
-      label: string;
-      catalogSlug?: string;
-      brand?: DesignerNode["data"]["brand"];
-    }) => {
+  const rehydrateHaproxyGroup = useCallback(
+    async (
+      link: LinkedHaproxyGroup,
+      options?: {
+        snapshot?: HaproxyConfigSnapshot;
+        force?: boolean;
+        /** Wait one frame so a just-dropped skeleton is in graphRef. */
+        waitRaf?: boolean;
+        silent?: boolean;
+      },
+    ) => {
+      if (inFlightRef.current.has(link.groupId) && !options?.force) return;
+      inFlightRef.current.add(link.groupId);
+      setNodes((current) => setGroupHydrating(current, link.groupId, true));
       try {
-        const [frontends, backends, errorFiles, acls] = await Promise.all([
-          fetchHaproxyFrontends(info.serviceId),
-          fetchHaproxyBackends(info.serviceId),
-          fetchHaproxyErrorFiles(info.serviceId),
-          fetchHaproxyAcls(info.serviceId),
-        ]);
-        // Wait for React to commit the skeleton drop into graphRef.
-        await new Promise<void>((resolve) => {
-          requestAnimationFrame(() => resolve());
-        });
+        const snapshot =
+          options?.snapshot ?? (await fetchHaproxyConfigSnapshot(link.serviceId));
+        if (options?.waitRaf) {
+          await new Promise<void>((resolve) => {
+            requestAnimationFrame(() => resolve());
+          });
+        }
         const { nodes: currentNodes, edges: currentEdges } = graphRef.current;
-        const group = currentNodes.find((n) => n.id === info.groupId);
-        if (!group) return;
-        const hydrated = hydrateHaproxyGraph({
-          serviceId: info.serviceId,
-          groupId: info.groupId,
-          groupPosition: group.position,
-          label: info.label,
-          catalogSlug: info.catalogSlug,
-          brand: info.brand,
-          frontends,
-          backends,
-          errorFiles,
-          acls,
-        });
-        const result = applyHydratedGroup(
-          currentNodes,
-          currentEdges,
-          info.groupId,
-          hydrated,
-        );
+        const result = applySnapshotToGroup(currentNodes, currentEdges, link, snapshot);
+        if (!result) {
+          setNodes((current) => setGroupHydrating(current, link.groupId, false));
+          return;
+        }
         setNodes(result.nodes);
         setEdges(result.edges);
-        setMessage(t("designer.messages.hydrated", { label: info.label }));
-        setError(null);
-      } catch (err) {
-        setNodes((current) =>
-          current.map((n) =>
-            n.id === info.groupId ? { ...n, data: { ...n.data, hydrating: false } } : n,
+        fingerprintsRef.current.set(link.serviceId, result.fingerprint);
+        setMessage(
+          t(
+            options?.silent
+              ? "designer.messages.synced"
+              : "designer.messages.hydrated",
+            { label: link.label },
           ),
         );
+        setError(null);
+      } catch (err) {
+        setNodes((current) => setGroupHydrating(current, link.groupId, false));
         setError(
           err instanceof Error ? err.message : t("designer.messages.hydrateFailed"),
         );
+      } finally {
+        inFlightRef.current.delete(link.groupId);
       }
     },
     [t],
   );
+
+  const onHaproxyInstanceDropped = useCallback(
+    (info: LinkedHaproxyGroup) => {
+      void rehydrateHaproxyGroup(info, { waitRaf: true });
+    },
+    [rehydrateHaproxyGroup],
+  );
+
+  const onRefreshFromInstance = useCallback(() => {
+    if (!selectedNode || selectedNode.data.kind !== "group.frame") return;
+    if (!selectedNode.data.serviceId || selectedNode.data.serviceType !== "haproxy") {
+      return;
+    }
+    void rehydrateHaproxyGroup(
+      {
+        groupId: selectedNode.id,
+        serviceId: selectedNode.data.serviceId,
+        label: selectedNode.data.label,
+        catalogSlug: selectedNode.data.catalogSlug,
+        brand: selectedNode.data.brand,
+      },
+      { force: true },
+    );
+  }, [rehydrateHaproxyGroup, selectedNode]);
+
+  const onLinkedConfigChanged = useCallback(
+    (link: LinkedHaproxyGroup, snapshot: HaproxyConfigSnapshot) => {
+      void rehydrateHaproxyGroup(link, { snapshot, silent: true });
+    },
+    [rehydrateHaproxyGroup],
+  );
+
+  useLinkedHaproxySync({
+    nodes,
+    fingerprintsRef,
+    inFlightRef,
+    onConfigChanged: onLinkedConfigChanged,
+    enabled: Boolean(flowId),
+  });
 
   const applyNodeDeletion = useCallback(
     (groupIds: string[], otherIds: string[], deleteGroupContents: boolean) => {
@@ -625,7 +662,7 @@ export function DesignerPage() {
                   onEdges={setEdges}
                   onViewportChange={setViewport}
                   onSelectionChange={onSelectionChange}
-                  onHaproxyInstanceDropped={(info) => void onHaproxyInstanceDropped(info)}
+                  onHaproxyInstanceDropped={(info) => onHaproxyInstanceDropped(info)}
                 />
               </div>
             </div>
@@ -634,6 +671,7 @@ export function DesignerPage() {
               selectedEdge={selectedEdge}
               instances={instances}
               vips={vips}
+              onRefreshFromInstance={onRefreshFromInstance}
               onUpdateNode={(nodeId, patch) => {
                 setNodes((nds) => patchNodeData(nds, nodeId, patch));
                 setSelectedNode((prev) =>

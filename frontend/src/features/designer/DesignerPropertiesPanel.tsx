@@ -18,6 +18,8 @@ type Props = {
   onUpdateNode: (nodeId: string, patch: Partial<DesignerNode["data"]>) => void;
   onUpdateEdge: (edgeId: string, patch: Partial<DesignerEdge["data"]> & { label?: string }) => void;
   onDeleteSelection: () => void;
+  /** Re-hydrate linked HAProxy group from live instance config. */
+  onRefreshFromInstance?: () => void;
 };
 
 export function DesignerPropertiesPanel({
@@ -28,6 +30,7 @@ export function DesignerPropertiesPanel({
   onUpdateNode,
   onUpdateEdge,
   onDeleteSelection,
+  onRefreshFromInstance,
 }: Props) {
   const { t } = useTranslation();
 
@@ -268,6 +271,21 @@ export function DesignerPropertiesPanel({
             >
               {t("designer.properties.openInstance")}
             </Link>
+          ) : null}
+          {data.kind === "group.frame" &&
+          data.serviceId &&
+          data.serviceType === "haproxy" &&
+          onRefreshFromInstance ? (
+            <button
+              type="button"
+              className="block w-full border border-line px-2 py-1.5 text-center text-xs text-ink hover:border-accent disabled:opacity-50"
+              disabled={Boolean(data.hydrating)}
+              onClick={onRefreshFromInstance}
+            >
+              {data.hydrating
+                ? t("designer.properties.refreshingFromInstance")
+                : t("designer.properties.refreshFromInstance")}
+            </button>
           ) : null}
           {data.kind === "vip.ref" ? (
             <Link

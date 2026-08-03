@@ -296,7 +296,8 @@
       "groupDeletedKeepNodes": "Gruppe fjernet. Nodene ble beholdt på lerretet.",
       "groupDeletedWithNodes": "Gruppe og noder slettet.",
       "hydrated": "Lastet live-config for {{label}} inn på lerretet.",
-      "hydrateFailed": "Kunne ikke laste instans-config inn på lerretet."
+      "hydrateFailed": "Kunne ikke laste instans-config inn på lerretet.",
+      "synced": "Oppdatert canvas fra live-config for {{label}}."
     },
     "deleteGroup": {
       "title": "Slette gruppe?",
@@ -378,6 +379,8 @@
       "comingSoonHint": "Dette Catalog-elementet er ikke deploybart ennå.",
       "createInstance": "Opprett instans",
       "openInstance": "Åpne instans",
+      "refreshFromInstance": "Oppdater fra instans",
+      "refreshingFromInstance": "Oppdaterer…",
       "openVips": "Åpne VIPs"
     },
     "validation": {

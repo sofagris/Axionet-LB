@@ -1,7 +1,7 @@
 /**
  * Bidirectional mapping between live HAProxy API entities and Designer graph nodes.
  *
- * - hydrateHaproxyGraph: API → canvas (used on instance drop)
+ * - hydrateHaproxyGraph: API → canvas (instance drop / live sync)
  * - toHaproxyDesiredState: canvas → desired config shape (for future Designer deploy; not applied yet)
  */
 import type {

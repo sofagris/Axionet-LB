@@ -295,7 +295,8 @@
       "groupDeletedKeepNodes": "Group removed. Nodes kept on the canvas.",
       "groupDeletedWithNodes": "Group and its nodes deleted.",
       "hydrated": "Loaded live config for {{label}} into the canvas.",
-      "hydrateFailed": "Could not load instance config onto the canvas."
+      "hydrateFailed": "Could not load instance config onto the canvas.",
+      "synced": "Updated canvas from live config for {{label}}."
     },
     "deleteGroup": {
       "title": "Delete group?",
@@ -377,6 +378,8 @@
       "comingSoonHint": "This Catalog item is not deployable yet.",
       "createInstance": "Create instance",
       "openInstance": "Open instance",
+      "refreshFromInstance": "Refresh from instance",
+      "refreshingFromInstance": "Refreshing…",
       "openVips": "Open VIPs"
     },
     "validation": {
