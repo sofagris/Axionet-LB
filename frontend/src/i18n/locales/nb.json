@@ -289,7 +289,17 @@
       "applyBlocked": "Rett valideringsfeil før Apply.",
       "applyReady": "Design lagret. Neste steg under.",
       "grouped": "Noder gruppert.",
-      "ungrouped": "Gruppe oppløst."
+      "ungrouped": "Gruppe oppløst.",
+      "groupDeletedKeepNodes": "Gruppe fjernet. Nodene ble beholdt på lerretet.",
+      "groupDeletedWithNodes": "Gruppe og noder slettet."
+    },
+    "deleteGroup": {
+      "title": "Slette gruppe?",
+      "titleMany": "Slette {{count}} grupper?",
+      "body": "Gruppens ramme fjernes. Innholdet blir stående på lerretet med mindre du huker av under.",
+      "deleteNodes": "Slett også nodene i gruppen",
+      "deleteNodesHint": "La stå uavhuket for å beholde Frontend, Backend, Server osv. på lerretet.",
+      "confirm": "Slett gruppe"
     },
     "group": {
       "action": "Grupper",

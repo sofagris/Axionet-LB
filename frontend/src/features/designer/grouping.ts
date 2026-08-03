@@ -256,6 +256,38 @@ export function ungroupNode(allNodes: DesignerNode[], groupId: string): Designer
     });
 }
 
+/**
+ * Remove group frames. When deleteContents is true, also remove all child nodes.
+ * When false, children are promoted to the free canvas (ungroup).
+ */
+export function deleteGroups(
+  allNodes: DesignerNode[],
+  groupIds: string[],
+  deleteContents: boolean,
+): { nodes: DesignerNode[]; removedIds: Set<string> } {
+  const groupSet = new Set(groupIds);
+  const removedIds = new Set<string>();
+
+  if (deleteContents) {
+    for (const n of allNodes) {
+      if (groupSet.has(n.id) || (n.parentId && groupSet.has(n.parentId))) {
+        removedIds.add(n.id);
+      }
+    }
+    return {
+      nodes: allNodes.filter((n) => !removedIds.has(n.id)),
+      removedIds,
+    };
+  }
+
+  let next = allNodes;
+  for (const gid of groupIds) {
+    removedIds.add(gid);
+    next = ungroupNode(next, gid);
+  }
+  return { nodes: next, removedIds };
+}
+
 export function groupLayoutMetrics(childCount: number): { width: number; height: number } {
   const width = PAD_X * 2 + childCount * CHILD_W + Math.max(0, childCount - 1) * COL_GAP;
   const height = PAD_Y + CHILD_H + PAD_BOTTOM;

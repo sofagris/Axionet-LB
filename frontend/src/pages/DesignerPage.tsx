@@ -19,6 +19,7 @@ import {
   useUpdateDesignFlow,
 } from "../features/designer/hooks";
 import { CatalogPalette } from "../features/designer/CatalogPalette";
+import { DeleteGroupDialog } from "../features/designer/DeleteGroupDialog";
 import {
   DesignerCanvas,
   patchEdgeData,
@@ -26,6 +27,7 @@ import {
 } from "../features/designer/DesignerCanvas";
 import { DesignerPropertiesPanel } from "../features/designer/DesignerPropertiesPanel";
 import {
+  deleteGroups,
   groupSelectedNodes,
   isGroupNode,
   ungroupNode,
@@ -72,6 +74,10 @@ export function DesignerPage() {
   const [applySuggestions, setApplySuggestions] = useState<ApplySuggestion[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [canvasKey, setCanvasKey] = useState(0);
+  const [groupDeletePrompt, setGroupDeletePrompt] = useState<{
+    groupIds: string[];
+    otherIds: string[];
+  } | null>(null);
   const loadedStampRef = useRef<string | null>(null);
 
   const instances = instancesQuery.data ?? [];
@@ -146,32 +152,52 @@ export function DesignerPage() {
     setMessage(t("designer.messages.ungrouped"));
   };
 
+  const applyNodeDeletion = useCallback(
+    (groupIds: string[], otherIds: string[], deleteGroupContents: boolean) => {
+      const { nodes: afterGroups, removedIds } = deleteGroups(
+        nodes,
+        groupIds,
+        deleteGroupContents,
+      );
+      const otherSet = new Set(otherIds);
+      const allRemoved = new Set([...removedIds, ...otherSet]);
+      setNodes(afterGroups.filter((n) => !otherSet.has(n.id)));
+      setEdges((eds) =>
+        eds.filter((e) => !allRemoved.has(e.source) && !allRemoved.has(e.target)),
+      );
+      setSelectedNode(null);
+      setSelectedNodes([]);
+      setSelectedEdge(null);
+      setGroupDeletePrompt(null);
+      setMessage(
+        deleteGroupContents
+          ? t("designer.messages.groupDeletedWithNodes")
+          : t("designer.messages.groupDeletedKeepNodes"),
+      );
+    },
+    [nodes, t],
+  );
+
   const deleteSelection = useCallback(() => {
     if (selectedEdge) {
       setEdges((eds) => eds.filter((e) => e.id !== selectedEdge.id));
       setSelectedEdge(null);
       return;
     }
-    const ids = new Set(
-      (selectedNodes.length > 0
-        ? selectedNodes
-        : selectedNode
-          ? [selectedNode]
-          : []
-      ).map((n) => n.id),
-    );
-    if (ids.size === 0) return;
+    const selected =
+      selectedNodes.length > 0 ? selectedNodes : selectedNode ? [selectedNode] : [];
+    if (selected.length === 0) return;
 
-    setNodes((nds) => {
-      let next = nds;
-      for (const id of ids) {
-        const node = next.find((n) => n.id === id);
-        if (node && isGroupNode(node)) {
-          next = ungroupNode(next, id).filter((n) => n.id !== id);
-        }
-      }
-      return next.filter((n) => !ids.has(n.id));
-    });
+    const groupIds = selected.filter(isGroupNode).map((n) => n.id);
+    const otherIds = selected.filter((n) => !isGroupNode(n)).map((n) => n.id);
+
+    if (groupIds.length > 0) {
+      setGroupDeletePrompt({ groupIds, otherIds });
+      return;
+    }
+
+    const ids = new Set(otherIds);
+    setNodes((nds) => nds.filter((n) => !ids.has(n.id)));
     setEdges((eds) => eds.filter((e) => !ids.has(e.source) && !ids.has(e.target)));
     setSelectedNode(null);
     setSelectedNodes([]);
@@ -520,6 +546,20 @@ export function DesignerPage() {
           </div>
         </>
       )}
+
+      {groupDeletePrompt ? (
+        <DeleteGroupDialog
+          groupCount={groupDeletePrompt.groupIds.length}
+          onCancel={() => setGroupDeletePrompt(null)}
+          onConfirm={(deleteNodesInside) =>
+            applyNodeDeletion(
+              groupDeletePrompt.groupIds,
+              groupDeletePrompt.otherIds,
+              deleteNodesInside,
+            )
+          }
+        />
+      ) : null}
     </div>
   );
 }

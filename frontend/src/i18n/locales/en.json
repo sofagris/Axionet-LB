@@ -288,7 +288,17 @@
       "applyBlocked": "Fix validation errors before Apply.",
       "applyReady": "Design saved. Next steps below.",
       "grouped": "Nodes grouped.",
-      "ungrouped": "Group dissolved."
+      "ungrouped": "Group dissolved.",
+      "groupDeletedKeepNodes": "Group removed. Nodes kept on the canvas.",
+      "groupDeletedWithNodes": "Group and its nodes deleted."
+    },
+    "deleteGroup": {
+      "title": "Delete group?",
+      "titleMany": "Delete {{count}} groups?",
+      "body": "The group frame will be removed. Nodes inside stay on the canvas unless you choose otherwise.",
+      "deleteNodes": "Also delete nodes inside",
+      "deleteNodesHint": "Leave unchecked to keep Frontend, Backend, Server, etc. on the canvas.",
+      "confirm": "Delete group"
     },
     "group": {
       "action": "Group",
