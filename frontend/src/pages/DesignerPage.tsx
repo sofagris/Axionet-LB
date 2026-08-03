@@ -26,6 +26,7 @@ import {
   patchNodeData,
 } from "../features/designer/DesignerCanvas";
 import { DesignerPropertiesPanel } from "../features/designer/DesignerPropertiesPanel";
+import { DesignerToolbar } from "../features/designer/DesignerToolbar";
 import {
   deleteGroups,
   groupSelectedNodes,
@@ -401,69 +402,12 @@ export function DesignerPage() {
         <p className="text-sm text-ink-muted">{t("common.loading")}</p>
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              className="min-w-[12rem] flex-1 border border-line bg-paper px-2 py-1.5 text-sm text-ink"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              aria-label={t("designer.name")}
-            />
-            <MutationGate hide>
-              <button
-                type="button"
-                className="border border-line px-3 py-1.5 text-sm text-ink hover:border-accent"
-                onClick={() => void onSave()}
-                disabled={updateMutation.isPending}
-              >
-                {t("designer.save")}
-              </button>
-              <button
-                type="button"
-                className="border border-line px-3 py-1.5 text-sm text-ink hover:border-accent"
-                onClick={onValidate}
-              >
-                {t("designer.validate")}
-              </button>
-              <button
-                type="button"
-                className="border border-line px-3 py-1.5 text-sm text-ink hover:border-accent"
-                onClick={onPreview}
-              >
-                {t("designer.preview")}
-              </button>
-              <button
-                type="button"
-                className="border border-line px-3 py-1.5 text-sm text-ink hover:border-accent disabled:opacity-40"
-                onClick={onGroup}
-                disabled={!canGroup}
-                title={t("designer.group.hint")}
-              >
-                {t("designer.group.action")}
-              </button>
-              <button
-                type="button"
-                className="border border-line px-3 py-1.5 text-sm text-ink hover:border-accent disabled:opacity-40"
-                onClick={onUngroup}
-                disabled={!canUngroup}
-              >
-                {t("designer.group.ungroup")}
-              </button>
-              <button
-                type="button"
-                className="border border-accent bg-accent px-3 py-1.5 text-sm font-medium text-white"
-                onClick={() => void onApply()}
-              >
-                {t("designer.apply")}
-              </button>
-              <button
-                type="button"
-                className="border border-line px-3 py-1.5 text-sm text-danger hover:border-danger"
-                onClick={() => void onDelete()}
-              >
-                {t("designer.delete")}
-              </button>
-            </MutationGate>
-          </div>
+          <input
+            className="min-w-[12rem] max-w-md border border-line bg-paper px-2 py-1.5 text-sm text-ink"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            aria-label={t("designer.name")}
+          />
 
           {message ? <p className="text-sm text-ok">{message}</p> : null}
           {error ? <p className="text-sm text-danger">{error}</p> : null}
@@ -505,18 +449,34 @@ export function DesignerPage() {
 
           <div className="flex min-h-0 flex-1 overflow-hidden rounded-md border border-line">
             <CatalogPalette instances={instances} vips={vips} />
-            <div className="min-w-0 flex-1 bg-paper">
-              <DesignerCanvas
-                key={canvasKey}
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onNodes={setNodes}
-                onEdges={setEdges}
-                onViewportChange={setViewport}
-                onSelectionChange={onSelectionChange}
-              />
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-paper">
+              <MutationGate hide className="w-full shrink-0">
+                <DesignerToolbar
+                  saving={updateMutation.isPending}
+                  canGroup={canGroup}
+                  canUngroup={canUngroup}
+                  onSave={() => void onSave()}
+                  onValidate={onValidate}
+                  onPreview={onPreview}
+                  onGroup={onGroup}
+                  onUngroup={onUngroup}
+                  onApply={() => void onApply()}
+                  onDelete={() => void onDelete()}
+                />
+              </MutationGate>
+              <div className="min-h-0 flex-1">
+                <DesignerCanvas
+                  key={canvasKey}
+                  nodes={nodes}
+                  edges={edges}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={onEdgesChange}
+                  onNodes={setNodes}
+                  onEdges={setEdges}
+                  onViewportChange={setViewport}
+                  onSelectionChange={onSelectionChange}
+                />
+              </div>
             </div>
             <DesignerPropertiesPanel
               selectedNode={selectedNode}
