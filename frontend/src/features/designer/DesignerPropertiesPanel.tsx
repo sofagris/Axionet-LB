@@ -149,6 +149,34 @@ export function DesignerPropertiesPanel({
           </p>
         ) : null}
 
+        {data.kind === "group.frame" ? (
+          <label className="block">
+            <span className="text-ink-muted">{t("designer.properties.placementDomain")}</span>
+            <input
+              className="mt-1 w-full border border-line bg-paper px-2 py-1.5 text-ink"
+              list="designer-placement-domains"
+              value={data.placementDomain ?? ""}
+              placeholder={t("designer.properties.placementDomainHint")}
+              onChange={(e) =>
+                onUpdateNode(node.id, {
+                  placementDomain: e.target.value.trim() || undefined,
+                })
+              }
+            />
+            <datalist id="designer-placement-domains">
+              <option value="Site A" />
+              <option value="Site B" />
+              <option value="Shared Services" />
+            </datalist>
+          </label>
+        ) : null}
+
+        {data.pinned ? (
+          <p className="rounded border border-line bg-paper px-2 py-1.5 text-xs text-ink-muted">
+            {t("designer.properties.pinnedHint")}
+          </p>
+        ) : null}
+
         {(data.kind === "catalog.service" ||
           data.kind === "instance.ref" ||
           data.kind === "catalog.component" ||

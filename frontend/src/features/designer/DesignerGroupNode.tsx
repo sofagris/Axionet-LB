@@ -36,8 +36,16 @@ function DesignerGroupNodeComponent({ data, selected }: NodeProps<DesignerNode>)
           <div className="min-w-0 flex-1">
             <p className="font-mono text-[10px] tracking-wide text-ink-muted uppercase">
               {data.hydrating ? "loading…" : (data.serviceType ?? "group")}
+              {data.placementDomain ? ` · ${data.placementDomain}` : ""}
             </p>
-            <p className="truncate text-sm font-semibold text-ink">{data.label}</p>
+            <p className="truncate text-sm font-semibold text-ink">
+              {data.label}
+              {data.pinned ? (
+                <span className="ml-1 font-mono text-[9px] font-normal text-accent uppercase">
+                  pin
+                </span>
+              ) : null}
+            </p>
           </div>
         </div>
       </div>

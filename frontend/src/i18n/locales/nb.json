@@ -299,15 +299,28 @@
       "hydrateFailed": "Kunne ikke laste instans-config inn på lerretet.",
       "synced": "Oppdatert canvas fra live-config for {{label}}.",
       "layoutGroup": "Auto-layout brukt på valgt gruppe.",
-      "layoutCanvas": "Auto-layout brukt på canvas."
+      "layoutCanvas": "Auto-layout brukt på canvas.",
+      "layoutFailed": "Auto-layout feilet.",
+      "layoutNeedSelection": "Velg noder før «Selected nodes only»."
     },
     "layout": {
-      "mode": "Layout",
-      "flow": "Flyt",
-      "grid": "Rutenett",
-      "stack": "Stabel",
       "auto": "Auto layout",
-      "autoHint": "Velg en gruppe for å legge ut innholdet; ellers top-level noder"
+      "autoHint": "Velg layout-algoritme. Valgt gruppe = innhold; Selected nodes only = utvalg",
+      "options": "Layout-innstillinger",
+      "preserveGroups": "Behold grupper",
+      "preservePinned": "Behold pinnede noder",
+      "animate": "Animer flytting",
+      "fitView": "Tilpass visning etter layout",
+      "snapToGrid": "Fest til rutenett",
+      "kinds": {
+        "traffic": "Traffic flow — venstre til høyre",
+        "process": "Process flow — topp til bunn",
+        "tree": "Hierarchy — tre",
+        "star": "Central service — stjerne",
+        "swimlanes": "Multi-site — swimlanes",
+        "compact": "Compact",
+        "selected": "Selected nodes only"
+      }
     },
     "deleteGroup": {
       "title": "Slette gruppe?",
@@ -326,6 +339,8 @@
     "context": {
       "addToGroup": "Legg til i gruppe",
       "removeFromGroup": "Fjern fra gruppe",
+      "pin": "Pin position",
+      "unpin": "Unpin position",
       "noActions": "Ingen gruppehandlinger for denne noden"
     },
     "props": {
@@ -391,6 +406,9 @@
       "openInstance": "Åpne instans",
       "refreshFromInstance": "Oppdater fra instans",
       "refreshingFromInstance": "Oppdaterer…",
+      "placementDomain": "Placement domain",
+      "placementDomainHint": "Site A, Shared Services, …",
+      "pinnedHint": "Posisjon er pinnnet — auto-layout flytter den ikke.",
       "openVips": "Åpne VIPs"
     },
     "validation": {

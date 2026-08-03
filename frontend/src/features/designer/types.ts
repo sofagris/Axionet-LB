@@ -6,7 +6,8 @@ export type DesignerNodeKind =
   | "catalog.component"
   | "instance.ref"
   | "vip.ref"
-  | "group.frame";
+  | "group.frame"
+  | "placement.lane";
 
 export type DesignerNodeData = {
   kind: DesignerNodeKind;
@@ -28,6 +29,13 @@ export type DesignerNodeData = {
   props?: Record<string, string>;
   /** True while live instance config is being fetched into this group */
   hydrating?: boolean;
+  /** Pin position — auto-layout will not move this node when preservePinned is on */
+  pinned?: boolean;
+  /**
+   * Placement domain for Multi-site / Swimlanes (e.g. "Site A", "Shared Services").
+   * Stored on the graph for a future deployable multi-site model.
+   */
+  placementDomain?: string;
 };
 
 export type DesignerEdgeData = {
@@ -35,7 +43,7 @@ export type DesignerEdgeData = {
   note?: string;
 };
 
-export type DesignerNode = Node<DesignerNodeData, "designer" | "designerGroup">;
+export type DesignerNode = Node<DesignerNodeData, "designer" | "designerGroup" | "designerLane">;
 export type DesignerEdge = Edge<DesignerEdgeData>;
 
 export type DesignerGraphDocument = {

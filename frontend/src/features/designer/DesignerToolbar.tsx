@@ -1,6 +1,7 @@
-import type { ReactNode, SVGProps } from "react";
+import { useEffect, useRef, useState, type ReactNode, type SVGProps } from "react";
 import { useTranslation } from "react-i18next";
-import type { DesignerLayoutMode } from "./autoLayout";
+import type { ElkLayoutKind } from "./layoutPrefs";
+import type { DesignerLayoutPrefs } from "./layoutPrefs";
 
 type IconProps = SVGProps<SVGSVGElement>;
 
@@ -97,12 +98,32 @@ function IconAutoLayout(props: IconProps) {
   );
 }
 
+function IconSnap(props: IconProps) {
+  return (
+    <svg {...iconBase(props)}>
+      <path d="M4 4h4v4H4zM16 4h4v4h-4zM4 16h4v4H4zM16 16h4v4h-4z" />
+      <path d="M8 6h8M6 8v8M18 8v8M8 18h8" />
+    </svg>
+  );
+}
+
+const LAYOUT_KINDS: ElkLayoutKind[] = [
+  "traffic",
+  "process",
+  "tree",
+  "star",
+  "swimlanes",
+  "compact",
+  "selected",
+];
+
 type ToolBtnProps = {
   label: string;
   title?: string;
   onClick: () => void;
   disabled?: boolean;
   variant?: "default" | "primary" | "danger";
+  pressed?: boolean;
   children: ReactNode;
 };
 
@@ -112,6 +133,7 @@ function ToolBtn({
   onClick,
   disabled,
   variant = "default",
+  pressed,
   children,
 }: ToolBtnProps) {
   const tone =
@@ -119,7 +141,9 @@ function ToolBtn({
       ? "bg-accent text-white shadow-sm hover:brightness-125 hover:shadow-md active:brightness-95"
       : variant === "danger"
         ? "text-danger hover:bg-danger/15 hover:ring-1 hover:ring-danger/30 active:bg-danger/25"
-        : "text-ink hover:bg-ink/10 hover:text-accent hover:ring-1 hover:ring-accent/25 active:bg-ink/15";
+        : pressed
+          ? "bg-accent/15 text-accent ring-1 ring-accent/40"
+          : "text-ink hover:bg-ink/10 hover:text-accent hover:ring-1 hover:ring-accent/25 active:bg-ink/15";
 
   return (
     <button
@@ -129,6 +153,7 @@ function ToolBtn({
       disabled={disabled}
       aria-label={label}
       title={title ?? label}
+      aria-pressed={pressed}
     >
       {children}
     </button>
@@ -143,9 +168,10 @@ type Props = {
   saving?: boolean;
   canGroup: boolean;
   canUngroup: boolean;
-  layoutMode: DesignerLayoutMode;
-  onLayoutModeChange: (mode: DesignerLayoutMode) => void;
-  onAutoLayout: () => void;
+  layoutPrefs: DesignerLayoutPrefs;
+  onLayoutPrefsChange: (prefs: DesignerLayoutPrefs) => void;
+  onRunLayout: (kind: ElkLayoutKind) => void;
+  layoutBusy?: boolean;
   onSave: () => void;
   onValidate: () => void;
   onPreview: () => void;
@@ -159,9 +185,10 @@ export function DesignerToolbar({
   saving,
   canGroup,
   canUngroup,
-  layoutMode,
-  onLayoutModeChange,
-  onAutoLayout,
+  layoutPrefs,
+  onLayoutPrefsChange,
+  onRunLayout,
+  layoutBusy,
   onSave,
   onValidate,
   onPreview,
@@ -171,6 +198,25 @@ export function DesignerToolbar({
   onDelete,
 }: Props) {
   const { t } = useTranslation();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [optsOpen, setOptsOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen && !optsOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) {
+        setMenuOpen(false);
+        setOptsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [menuOpen, optsOpen]);
+
+  const patchPrefs = (patch: Partial<DesignerLayoutPrefs>) => {
+    onLayoutPrefsChange({ ...layoutPrefs, ...patch });
+  };
 
   return (
     <div
@@ -205,26 +251,89 @@ export function DesignerToolbar({
         <IconUngroup />
       </ToolBtn>
       <Divider />
-      <label className="flex items-center gap-1 px-1">
-        <span className="sr-only">{t("designer.layout.mode")}</span>
-        <select
-          className="h-8 max-w-[7.5rem] border border-line bg-paper px-1.5 text-xs text-ink"
-          value={layoutMode}
-          title={t("designer.layout.mode")}
-          aria-label={t("designer.layout.mode")}
-          onChange={(e) => onLayoutModeChange(e.target.value as DesignerLayoutMode)}
+      <div className="relative flex items-center gap-0.5" ref={menuRef}>
+        <ToolBtn
+          label={t("designer.layout.auto")}
+          title={t("designer.layout.autoHint")}
+          onClick={() => {
+            setMenuOpen((o) => !o);
+            setOptsOpen(false);
+          }}
+          disabled={layoutBusy}
+          pressed={menuOpen}
         >
-          <option value="flow">{t("designer.layout.flow")}</option>
-          <option value="grid">{t("designer.layout.grid")}</option>
-          <option value="stack">{t("designer.layout.stack")}</option>
-        </select>
-      </label>
+          <IconAutoLayout />
+        </ToolBtn>
+        <button
+          type="button"
+          className="h-8 border border-line bg-paper px-1.5 text-[10px] text-ink-muted hover:border-accent hover:text-accent"
+          onClick={() => {
+            setOptsOpen((o) => !o);
+            setMenuOpen(false);
+          }}
+          aria-expanded={optsOpen}
+          aria-label={t("designer.layout.options")}
+          title={t("designer.layout.options")}
+        >
+          ▾
+        </button>
+        {menuOpen ? (
+          <div
+            className="absolute top-full left-0 z-[30] mt-1 min-w-[14rem] border border-line bg-paper-elevated py-1 shadow-lg"
+            role="menu"
+          >
+            <p className="px-3 py-1 font-mono text-[10px] tracking-wide text-ink-muted uppercase">
+              {t("designer.layout.auto")}
+            </p>
+            {LAYOUT_KINDS.map((kind) => (
+              <button
+                key={kind}
+                type="button"
+                role="menuitem"
+                className="block w-full px-3 py-1.5 text-left text-sm text-ink hover:bg-paper"
+                disabled={layoutBusy}
+                onClick={() => {
+                  setMenuOpen(false);
+                  onRunLayout(kind);
+                }}
+              >
+                {t(`designer.layout.kinds.${kind}`)}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {optsOpen ? (
+          <div className="absolute top-full left-0 z-[30] mt-1 min-w-[15rem] space-y-2 border border-line bg-paper-elevated px-3 py-2 text-xs shadow-lg">
+            <p className="font-mono text-[10px] tracking-wide text-ink-muted uppercase">
+              {t("designer.layout.options")}
+            </p>
+            {(
+              [
+                ["preserveGroups", "preserveGroups"],
+                ["preservePinned", "preservePinned"],
+                ["animate", "animate"],
+                ["fitView", "fitView"],
+                ["snapToGrid", "snapToGrid"],
+              ] as const
+            ).map(([key, labelKey]) => (
+              <label key={key} className="flex cursor-pointer items-center gap-2 text-ink">
+                <input
+                  type="checkbox"
+                  checked={layoutPrefs[key]}
+                  onChange={(e) => patchPrefs({ [key]: e.target.checked })}
+                />
+                {t(`designer.layout.${labelKey}`)}
+              </label>
+            ))}
+          </div>
+        ) : null}
+      </div>
       <ToolBtn
-        label={t("designer.layout.auto")}
-        title={t("designer.layout.autoHint")}
-        onClick={onAutoLayout}
+        label={t("designer.layout.snapToGrid")}
+        onClick={() => patchPrefs({ snapToGrid: !layoutPrefs.snapToGrid })}
+        pressed={layoutPrefs.snapToGrid}
       >
-        <IconAutoLayout />
+        <IconSnap />
       </ToolBtn>
       <Divider />
       <ToolBtn label={t("designer.apply")} onClick={onApply} variant="primary">

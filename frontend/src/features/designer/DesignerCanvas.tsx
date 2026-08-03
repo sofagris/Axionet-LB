@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type DragEvent, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type DragEvent, type MouseEvent } from "react";
 import {
   Background,
   Controls,
@@ -20,6 +20,7 @@ import { useReactFlow } from "@xyflow/react";
 import { useTranslation } from "react-i18next";
 import { DesignerFlowNode } from "./DesignerNode";
 import { DesignerGroupNode } from "./DesignerGroupNode";
+import { DesignerLaneNode } from "./DesignerLaneNode";
 import { buildDropGraph } from "./buildDropGraph";
 import {
   addNodeToGroup,
@@ -40,6 +41,7 @@ import {
 const nodeTypes: NodeTypes = {
   designer: DesignerFlowNode,
   designerGroup: DesignerGroupNode,
+  designerLane: DesignerLaneNode,
 };
 
 type ContextMenuState = {
@@ -61,6 +63,9 @@ type Props = {
     node: DesignerNode | null;
     edge: DesignerEdge | null;
   }) => void;
+  snapToGrid?: boolean;
+  /** Increment to trigger fitView after layout. */
+  fitViewNonce?: number;
   /** Fired after a HAProxy instance tree skeleton is placed — parent should hydrate from API. */
   onHaproxyInstanceDropped?: (info: {
     groupId: string;
@@ -80,11 +85,18 @@ function DesignerCanvasInner({
   onEdges,
   onViewportChange,
   onSelectionChange,
+  snapToGrid = false,
+  fitViewNonce = 0,
   onHaproxyInstanceDropped,
 }: Props) {
   const { t } = useTranslation();
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, fitView } = useReactFlow();
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+
+  useEffect(() => {
+    if (!fitViewNonce) return;
+    void fitView({ padding: 0.15, duration: 200 });
+  }, [fitViewNonce, fitView]);
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -195,6 +207,8 @@ function DesignerCanvasInner({
   const canAddToGroup = Boolean(
     menuNode && !isGroupNode(menuNode) && !menuNode.parentId && groups.length > 0,
   );
+  const canPin = Boolean(menuNode && menuNode.data.kind !== "placement.lane");
+  const isPinned = Boolean(menuNode?.data.pinned);
 
   const defaultEdgeOptions = useMemo(
     () => ({
@@ -223,6 +237,8 @@ function DesignerCanvasInner({
         multiSelectionKeyCode={["Meta", "Control", "Shift"]}
         edgesFocusable
         elementsSelectable
+        snapToGrid={snapToGrid}
+        snapGrid={[16, 16]}
         defaultEdgeOptions={defaultEdgeOptions}
         proOptions={{ hideAttribution: true }}
         deleteKeyCode={null}
@@ -239,6 +255,25 @@ function DesignerCanvasInner({
           style={{ left: contextMenu.x, top: contextMenu.y }}
           role="menu"
         >
+          {canPin ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="block w-full px-3 py-1.5 text-left text-ink hover:bg-paper"
+              onClick={() => {
+                onNodes((nds) =>
+                  nds.map((n) =>
+                    n.id === menuNode.id
+                      ? { ...n, data: { ...n.data, pinned: !n.data.pinned } }
+                      : n,
+                  ),
+                );
+                closeMenu();
+              }}
+            >
+              {isPinned ? t("designer.context.unpin") : t("designer.context.pin")}
+            </button>
+          ) : null}
           {canAddToGroup ? (
             <div className="border-b border-line px-1 pb-1 mb-1">
               <p className="px-2 py-1 font-mono text-[10px] tracking-wide text-ink-muted uppercase">
@@ -273,7 +308,7 @@ function DesignerCanvasInner({
               {t("designer.context.removeFromGroup")}
             </button>
           ) : null}
-          {!canAddToGroup && !canRemoveFromGroup ? (
+          {!canPin && !canAddToGroup && !canRemoveFromGroup ? (
             <p className="px-3 py-2 text-xs text-ink-muted">{t("designer.context.noActions")}</p>
           ) : null}
         </div>

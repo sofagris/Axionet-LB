@@ -60,9 +60,16 @@ function DesignerNodeComponent({ data, selected }: NodeProps<DesignerNode>) {
                 ? data.componentRole
                 : (kindLabel[data.kind] ?? data.kind)}
             </span>
-            {muted ? (
-              <span className="font-mono text-[9px] text-warn uppercase">soon</span>
-            ) : null}
+            <span className="flex items-center gap-1">
+              {data.pinned ? (
+                <span className="font-mono text-[9px] text-accent uppercase" title="Pinned">
+                  pin
+                </span>
+              ) : null}
+              {muted ? (
+                <span className="font-mono text-[9px] text-warn uppercase">soon</span>
+              ) : null}
+            </span>
           </div>
           <p className="mt-0.5 truncate text-sm font-semibold text-ink">{data.label}</p>
           <p className="truncate font-mono text-[11px] text-ink-muted">{subtitle}</p>

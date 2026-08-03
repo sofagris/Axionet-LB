@@ -23,6 +23,7 @@ export function validateDesignerGraph(input: {
 
   for (const node of input.nodes) {
     const data = node.data;
+    if (data.kind === "placement.lane") continue;
     if (data.comingSoon || data.catalogStatus === "planned" || data.catalogStatus === "concept") {
       issues.push({
         id: `planned-${node.id}`,

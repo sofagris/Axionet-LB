@@ -32,12 +32,13 @@ import {
   readDesignerFullWidth,
   writeDesignerFullWidth,
 } from "../features/designer/fullWidth";
+import { runElkLayout, interpolatePositions } from "../features/designer/elkLayout";
 import {
-  applyDesignerAutoLayout,
-  readDesignerLayoutMode,
-  writeDesignerLayoutMode,
-  type DesignerLayoutMode,
-} from "../features/designer/autoLayout";
+  readDesignerLayoutPrefs,
+  writeDesignerLayoutPrefs,
+  type DesignerLayoutPrefs,
+  type ElkLayoutKind,
+} from "../features/designer/layoutPrefs";
 import type { HaproxyConfigSnapshot } from "../features/designer/haproxyConfigFingerprint";
 import {
   applySnapshotToGroup,
@@ -136,7 +137,9 @@ export function DesignerPage() {
     otherIds: string[];
   } | null>(null);
   const [fullWidth, setFullWidth] = useState(readDesignerFullWidth);
-  const [layoutMode, setLayoutMode] = useState<DesignerLayoutMode>(readDesignerLayoutMode);
+  const [layoutPrefs, setLayoutPrefs] = useState<DesignerLayoutPrefs>(readDesignerLayoutPrefs);
+  const [layoutBusy, setLayoutBusy] = useState(false);
+  const [fitViewNonce, setFitViewNonce] = useState(0);
   const loadedStampRef = useRef<string | null>(null);
   const fingerprintsRef = useRef(new Map<string, string>());
   const inFlightRef = useRef(new Set<string>());
@@ -248,21 +251,74 @@ export function DesignerPage() {
     setMessage(t("designer.messages.ungrouped"));
   };
 
-  const onLayoutModeChange = (mode: DesignerLayoutMode) => {
-    setLayoutMode(mode);
-    writeDesignerLayoutMode(mode);
+  const onLayoutPrefsChange = (prefs: DesignerLayoutPrefs) => {
+    setLayoutPrefs(prefs);
+    writeDesignerLayoutPrefs(prefs);
   };
 
-  const onAutoLayout = () => {
-    const scopeGroupId =
-      selectedNode && isGroupNode(selectedNode) ? selectedNode.id : null;
-    setNodes((nds) => applyDesignerAutoLayout(nds, edges, layoutMode, scopeGroupId));
-    setMessage(
-      scopeGroupId
-        ? t("designer.messages.layoutGroup")
-        : t("designer.messages.layoutCanvas"),
-    );
-  };
+  const onRunLayout = useCallback(
+    async (kind: ElkLayoutKind) => {
+      if (kind === "selected" && selectedNodes.length === 0) {
+        setMessage(t("designer.messages.layoutNeedSelection"));
+        return;
+      }
+      setLayoutBusy(true);
+      setError(null);
+      try {
+        const scopeGroupId =
+          kind !== "selected" && selectedNode && isGroupNode(selectedNode)
+            ? selectedNode.id
+            : null;
+        const scopeIds =
+          kind === "selected" ? selectedNodes.map((n) => n.id) : null;
+        const hubId = selectedNode?.id ?? null;
+        const before = nodes;
+        const next = await runElkLayout({
+          nodes,
+          edges,
+          kind,
+          prefs: layoutPrefs,
+          hubId,
+          scopeIds,
+          scopeGroupId,
+        });
+
+        if (layoutPrefs.animate && before.length > 0) {
+          const duration = 280;
+          const start = performance.now();
+          await new Promise<void>((resolve) => {
+            const tick = (now: number) => {
+              const t = Math.min(1, (now - start) / duration);
+              const eased = 1 - (1 - t) * (1 - t);
+              setNodes(interpolatePositions(before, next, eased));
+              if (t < 1) requestAnimationFrame(tick);
+              else {
+                setNodes(next);
+                resolve();
+              }
+            };
+            requestAnimationFrame(tick);
+          });
+        } else {
+          setNodes(next);
+        }
+
+        if (layoutPrefs.fitView) {
+          setFitViewNonce((n) => n + 1);
+        }
+        setMessage(
+          scopeGroupId
+            ? t("designer.messages.layoutGroup")
+            : t("designer.messages.layoutCanvas"),
+        );
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t("designer.messages.layoutFailed"));
+      } finally {
+        setLayoutBusy(false);
+      }
+    },
+    [edges, layoutPrefs, nodes, selectedNode, selectedNodes, t],
+  );
 
   const graphRef = useRef({ nodes, edges });
   useEffect(() => {
@@ -680,9 +736,10 @@ export function DesignerPage() {
                   saving={updateMutation.isPending}
                   canGroup={canGroup}
                   canUngroup={canUngroup}
-                  layoutMode={layoutMode}
-                  onLayoutModeChange={onLayoutModeChange}
-                  onAutoLayout={onAutoLayout}
+                  layoutPrefs={layoutPrefs}
+                  onLayoutPrefsChange={onLayoutPrefsChange}
+                  onRunLayout={(kind) => void onRunLayout(kind)}
+                  layoutBusy={layoutBusy}
                   onSave={() => void onSave()}
                   onValidate={onValidate}
                   onPreview={onPreview}
@@ -703,6 +760,8 @@ export function DesignerPage() {
                   onEdges={setEdges}
                   onViewportChange={setViewport}
                   onSelectionChange={onSelectionChange}
+                  snapToGrid={layoutPrefs.snapToGrid}
+                  fitViewNonce={fitViewNonce}
                   onHaproxyInstanceDropped={(info) => onHaproxyInstanceDropped(info)}
                 />
               </div>

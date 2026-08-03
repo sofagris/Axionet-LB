@@ -298,15 +298,28 @@
       "hydrateFailed": "Could not load instance config onto the canvas.",
       "synced": "Updated canvas from live config for {{label}}.",
       "layoutGroup": "Auto-layout applied to the selected group.",
-      "layoutCanvas": "Auto-layout applied to the canvas."
+      "layoutCanvas": "Auto-layout applied to the canvas.",
+      "layoutFailed": "Auto-layout failed.",
+      "layoutNeedSelection": "Select nodes before using “Selected nodes only”."
     },
     "layout": {
-      "mode": "Layout",
-      "flow": "Flow",
-      "grid": "Grid",
-      "stack": "Stack",
       "auto": "Auto layout",
-      "autoHint": "Select a group to lay out its contents; otherwise top-level nodes"
+      "autoHint": "Pick a layout algorithm. Selected group = contents; Selected nodes only = selection",
+      "options": "Layout options",
+      "preserveGroups": "Preserve groups",
+      "preservePinned": "Preserve manually pinned nodes",
+      "animate": "Animate movement",
+      "fitView": "Fit view after layout",
+      "snapToGrid": "Snap to grid",
+      "kinds": {
+        "traffic": "Traffic flow — Left to right",
+        "process": "Process flow — Top to bottom",
+        "tree": "Hierarchy — Tree",
+        "star": "Central service — Star",
+        "swimlanes": "Multi-site — Swimlanes",
+        "compact": "Compact",
+        "selected": "Selected nodes only"
+      }
     },
     "deleteGroup": {
       "title": "Delete group?",
@@ -325,6 +338,8 @@
     "context": {
       "addToGroup": "Add to group",
       "removeFromGroup": "Remove from group",
+      "pin": "Pin position",
+      "unpin": "Unpin position",
       "noActions": "No group actions for this node"
     },
     "props": {
@@ -390,6 +405,9 @@
       "openInstance": "Open instance",
       "refreshFromInstance": "Refresh from instance",
       "refreshingFromInstance": "Refreshing…",
+      "placementDomain": "Placement domain",
+      "placementDomainHint": "Site A, Shared Services, …",
+      "pinnedHint": "Position is pinned — auto-layout will not move it.",
       "openVips": "Open VIPs"
     },
     "validation": {
