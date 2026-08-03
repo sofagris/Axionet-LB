@@ -340,10 +340,26 @@ export function applyHydratedGroup(
   groupId: string,
   hydrated: { group: DesignerNode; children: DesignerNode[]; edges: DesignerEdge[] },
 ): { nodes: DesignerNode[]; edges: DesignerEdge[] } {
+  const existing = allNodes.find((n) => n.id === groupId);
   const oldChildren = allNodes.filter((n) => n.parentId === groupId);
   const oldChildIds = new Set(oldChildren.map((n) => n.id));
   const children = mergePreservedChildPositions(oldChildren, hydrated.children);
-  const group = resizeGroupToChildren(hydrated.group, children);
+  const group = resizeGroupToChildren(
+    {
+      ...hydrated.group,
+      // Keep canvas placement (lane parent + relative pos) across rehydrate/sync.
+      parentId: existing?.parentId,
+      extent: existing?.extent,
+      position: existing?.position ?? hydrated.group.position,
+      data: {
+        ...hydrated.group.data,
+        placementDomainId: existing?.data.placementDomainId,
+        placementDomain: existing?.data.placementDomain,
+        pinned: existing?.data.pinned,
+      },
+    },
+    children,
+  );
   const nodes = [
     ...allNodes.filter((n) => n.id !== groupId && n.parentId !== groupId),
     group,

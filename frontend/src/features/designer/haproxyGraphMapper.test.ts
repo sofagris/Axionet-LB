@@ -167,4 +167,48 @@ describe("hydrateHaproxyGraph", () => {
     expect(nodes.filter((n) => n.parentId === "g1").length).toBe(hydrated.children.length);
     expect(edges.length).toBe(hydrated.edges.length);
   });
+
+  it("applyHydratedGroup keeps placement domain and lane parent", () => {
+    const skeleton: DesignerNode[] = [
+      {
+        id: "lane-oslo",
+        type: "designerLane",
+        position: { x: 0, y: 0 },
+        style: { width: 800, height: 400 },
+        data: {
+          kind: "placement.lane",
+          label: "Oslo",
+          placementDomainId: "pd-oslo",
+          placementDomain: "Oslo",
+        },
+      },
+      {
+        id: "g1",
+        type: "designerGroup",
+        parentId: "lane-oslo",
+        extent: "parent",
+        position: { x: 220, y: 40 },
+        style: { width: 400, height: 160 },
+        data: {
+          kind: "group.frame",
+          label: "edge-1",
+          serviceId: "inst-1",
+          placementDomainId: "pd-oslo",
+          placementDomain: "Oslo",
+          pinned: true,
+        },
+      },
+    ];
+    const hydrated = hydrateHaproxyGraph(fixture);
+    const { nodes } = applyHydratedGroup(skeleton, [], "g1", hydrated);
+    const group = nodes.find((n) => n.id === "g1");
+    expect(group?.parentId).toBe("lane-oslo");
+    expect(group?.extent).toBe("parent");
+    expect(group?.position).toEqual({ x: 220, y: 40 });
+    expect(group?.data.placementDomainId).toBe("pd-oslo");
+    expect(group?.data.placementDomain).toBe("Oslo");
+    expect(group?.data.pinned).toBe(true);
+    expect(group?.data.serviceId).toBe("inst-1");
+    expect(group?.data.hydrating).toBe(false);
+  });
 });
