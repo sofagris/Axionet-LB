@@ -436,6 +436,10 @@
       "applianceSiteHint": "This Axionet-LB Site: {{site}}",
       "applianceSiteMismatch": "differs from selected domain",
       "pinnedHint": "Position is pinned — auto-layout will not move it.",
+      "fillAppearance": "Background",
+      "fillColor": "Color",
+      "fillOpacity": "Opacity",
+      "fillClear": "Clear color",
       "openVips": "Open VIPs"
     },
     "validation": {

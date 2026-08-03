@@ -437,6 +437,10 @@
       "applianceSiteHint": "Denne Axionet-LB har Site: {{site}}",
       "applianceSiteMismatch": "avviker fra valgt domain",
       "pinnedHint": "Posisjon er pinnnet — auto-layout flytter den ikke.",
+      "fillAppearance": "Bakgrunn",
+      "fillColor": "Farge",
+      "fillOpacity": "Gjennomsiktighet",
+      "fillClear": "Fjern farge",
       "openVips": "Åpne VIPs"
     },
     "validation": {

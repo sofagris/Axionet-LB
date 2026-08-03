@@ -196,6 +196,8 @@ describe("hydrateHaproxyGraph", () => {
           placementDomainId: "pd-oslo",
           placementDomain: "Oslo",
           pinned: true,
+          fillColor: "#0f766e",
+          fillOpacity: 0.4,
         },
       },
     ];
@@ -208,6 +210,8 @@ describe("hydrateHaproxyGraph", () => {
     expect(group?.data.placementDomainId).toBe("pd-oslo");
     expect(group?.data.placementDomain).toBe("Oslo");
     expect(group?.data.pinned).toBe(true);
+    expect(group?.data.fillColor).toBe("#0f766e");
+    expect(group?.data.fillOpacity).toBe(0.4);
     expect(group?.data.serviceId).toBe("inst-1");
     expect(group?.data.hydrating).toBe(false);
   });

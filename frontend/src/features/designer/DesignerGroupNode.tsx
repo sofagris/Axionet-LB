@@ -1,9 +1,13 @@
 import { memo } from "react";
 import { NodeResizer, type NodeProps } from "@xyflow/react";
 import { CatalogBrandIcon } from "../catalog/CatalogBrandIcon";
+import { nodeFillBackground } from "./nodeAppearance";
 import type { DesignerNode } from "./types";
 
 function DesignerGroupNodeComponent({ data, selected }: NodeProps<DesignerNode>) {
+  const fill = nodeFillBackground(data);
+  const hasCustomFill = Boolean(fill.backgroundColor);
+
   return (
     <>
       <NodeResizer
@@ -16,9 +20,11 @@ function DesignerGroupNodeComponent({ data, selected }: NodeProps<DesignerNode>)
       {/* pointer-events none on body so edges inside the group remain clickable */}
       <div
         className={[
-          "pointer-events-none box-border h-full w-full rounded-md border-2 border-dashed bg-paper/30",
+          "pointer-events-none box-border h-full w-full rounded-md border-2 border-dashed",
+          hasCustomFill ? "" : "bg-paper/30",
           selected ? "border-accent" : "border-line",
         ].join(" ")}
+        style={fill}
       >
         <div className="pointer-events-auto flex items-center gap-2 border-b border-line/70 bg-paper-elevated/90 px-3 py-1.5">
           {data.brand ? (

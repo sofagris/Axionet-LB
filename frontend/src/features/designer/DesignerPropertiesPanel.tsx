@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { Instance } from "../../types/instances";
 import type { Vip } from "../../types/vips";
 import { componentPropFields } from "./componentProps";
+import { FillAppearanceFields } from "./FillAppearanceFields";
 import { createPlacementDomain } from "./placementDomains";
 import {
   createWizardPath,
@@ -231,6 +232,13 @@ export function DesignerPropertiesPanel({
               />
             </label>
           </div>
+        ) : null}
+
+        {data.kind === "group.frame" || data.kind === "placement.lane" ? (
+          <FillAppearanceFields
+            data={data}
+            onChange={(patch) => onUpdateNode(node.id, patch)}
+          />
         ) : null}
 
         {data.kind === "group.frame" ? (

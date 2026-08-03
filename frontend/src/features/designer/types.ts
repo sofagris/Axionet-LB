@@ -42,6 +42,10 @@ export type DesignerNodeData = {
   placementKind?: "site" | "shared";
   placementDescription?: string;
   placementIcon?: "site" | "shared" | "building";
+  /** Optional fill for group.frame / placement.lane (#rrggbb) */
+  fillColor?: string;
+  /** Fill opacity 0–1 (default ~0.28 when fillColor is set) */
+  fillOpacity?: number;
 };
 
 export type DesignerEdgeData = {

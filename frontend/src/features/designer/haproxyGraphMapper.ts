@@ -356,6 +356,8 @@ export function applyHydratedGroup(
         placementDomainId: existing?.data.placementDomainId,
         placementDomain: existing?.data.placementDomain,
         pinned: existing?.data.pinned,
+        fillColor: existing?.data.fillColor,
+        fillOpacity: existing?.data.fillOpacity,
       },
     },
     children,

@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { NodeResizer, type NodeProps } from "@xyflow/react";
+import { nodeFillBackground } from "./nodeAppearance";
 import type { DesignerNode } from "./types";
 
 function LaneIcon({ kind }: { kind?: string }) {
@@ -25,6 +26,8 @@ function DesignerLaneNodeComponent({ data, selected }: NodeProps<DesignerNode>) 
   const { t } = useTranslation();
   const kind = data.placementKind ?? (/shared/i.test(data.label) ? "shared" : "site");
   const description = data.placementDescription ?? "";
+  const fill = nodeFillBackground(data);
+  const hasCustomFill = Boolean(fill.backgroundColor);
 
   return (
     <>
@@ -37,9 +40,11 @@ function DesignerLaneNodeComponent({ data, selected }: NodeProps<DesignerNode>) 
       />
       <div
         className={[
-          "pointer-events-none box-border flex h-full w-full overflow-hidden rounded-md border bg-paper/50",
+          "pointer-events-none box-border flex h-full w-full overflow-hidden rounded-md border",
+          hasCustomFill ? "" : "bg-paper/50",
           selected ? "border-accent" : "border-line/70",
         ].join(" ")}
+        style={fill}
       >
         <div className="pointer-events-auto flex w-[11.5rem] shrink-0 flex-col gap-2 border-r border-line/60 bg-paper-elevated/90 px-3 py-3">
           <div className="text-accent">
