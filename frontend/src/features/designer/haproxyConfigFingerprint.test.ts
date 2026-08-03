@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { fingerprintHaproxyConfig } from "./haproxyConfigFingerprint";
-import type { HaproxyBackend } from "../../types/haproxy";
+import type { HaproxyBackend, HaproxyServer } from "../../types/haproxy";
+
+const server = (
+  partial: Pick<HaproxyServer, "name" | "address" | "port"> &
+    Partial<HaproxyServer>,
+): HaproxyServer => ({
+  check: true,
+  weight: 1,
+  inter_ms: 2000,
+  rise: 2,
+  fall: 3,
+  ...partial,
+});
 
 const baseBackend = (name: string, servers: HaproxyBackend["servers"]): HaproxyBackend => ({
   name,
@@ -42,8 +54,8 @@ describe("fingerprintHaproxyConfig", () => {
       ],
       backends: [
         baseBackend("z", [
-          { name: "s2", address: "10.0.0.2", port: 80, check: true, weight: 1 },
-          { name: "s1", address: "10.0.0.1", port: 80, check: true, weight: 1 },
+          server({ name: "s2", address: "10.0.0.2", port: 80 }),
+          server({ name: "s1", address: "10.0.0.1", port: 80 }),
         ]),
       ],
       errorFiles: [
@@ -78,8 +90,8 @@ describe("fingerprintHaproxyConfig", () => {
       ],
       backends: [
         baseBackend("z", [
-          { name: "s1", address: "10.0.0.1", port: 80, check: true, weight: 1 },
-          { name: "s2", address: "10.0.0.2", port: 80, check: true, weight: 1 },
+          server({ name: "s1", address: "10.0.0.1", port: 80 }),
+          server({ name: "s2", address: "10.0.0.2", port: 80 }),
         ]),
       ],
       errorFiles: [
@@ -99,21 +111,13 @@ describe("fingerprintHaproxyConfig", () => {
   it("changes when a server address changes", () => {
     const before = fingerprintHaproxyConfig({
       frontends: [],
-      backends: [
-        baseBackend("app", [
-          { name: "s1", address: "10.0.0.1", port: 80, check: true, weight: 1 },
-        ]),
-      ],
+      backends: [baseBackend("app", [server({ name: "s1", address: "10.0.0.1", port: 80 })])],
       errorFiles: [],
       acls: [],
     });
     const after = fingerprintHaproxyConfig({
       frontends: [],
-      backends: [
-        baseBackend("app", [
-          { name: "s1", address: "10.0.0.99", port: 80, check: true, weight: 1 },
-        ]),
-      ],
+      backends: [baseBackend("app", [server({ name: "s1", address: "10.0.0.99", port: 80 })])],
       errorFiles: [],
       acls: [],
     });
