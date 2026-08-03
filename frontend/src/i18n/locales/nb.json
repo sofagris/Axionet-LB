@@ -370,7 +370,7 @@
       "openInstance": "Åpne instans",
       "openVips": "Åpne VIPs"
     },
-    "validate": {
+    "validation": {
       "plannedNode": "«{{label}}» er planned/concept og kan ikke applies.",
       "missingServiceId": "«{{label}}» mangler instans-kobling.",
       "brokenInstance": "«{{label}}» peker på manglende instans.",
@@ -379,7 +379,7 @@
       "unboundCatalog": "«{{label}}» er Catalog-blueprint — opprett eller koble en instans for deploy.",
       "brokenEdge": "En kobling peker på manglende node."
     },
-    "apply": {
+    "applySteps": {
       "createInstance": "Opprett {{label}} ({{type}})",
       "openInstance": "Konfigurer {{label}}",
       "openVips": "Se VIP {{label}}",

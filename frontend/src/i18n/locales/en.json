@@ -369,7 +369,7 @@
       "openInstance": "Open instance",
       "openVips": "Open VIPs"
     },
-    "validate": {
+    "validation": {
       "plannedNode": "“{{label}}” is planned/concept and cannot be applied.",
       "missingServiceId": "“{{label}}” has no instance link.",
       "brokenInstance": "“{{label}}” points to a missing instance.",
@@ -378,7 +378,7 @@
       "unboundCatalog": "“{{label}}” is a Catalog blueprint — create or link an instance to deploy.",
       "brokenEdge": "A link points to a missing node."
     },
-    "apply": {
+    "applySteps": {
       "createInstance": "Create {{label}} ({{type}})",
       "openInstance": "Configure {{label}}",
       "openVips": "Review VIP {{label}}",

@@ -27,7 +27,7 @@ export function validateDesignerGraph(input: {
       issues.push({
         id: `planned-${node.id}`,
         severity: "error",
-        messageKey: "designer.validate.plannedNode",
+        messageKey: "designer.validation.plannedNode",
         messageParams: { label: data.label },
         nodeId: node.id,
       });
@@ -37,7 +37,7 @@ export function validateDesignerGraph(input: {
         issues.push({
           id: `missing-service-${node.id}`,
           severity: "error",
-          messageKey: "designer.validate.missingServiceId",
+          messageKey: "designer.validation.missingServiceId",
           messageParams: { label: data.label },
           nodeId: node.id,
         });
@@ -45,7 +45,7 @@ export function validateDesignerGraph(input: {
         issues.push({
           id: `broken-service-${node.id}`,
           severity: "error",
-          messageKey: "designer.validate.brokenInstance",
+          messageKey: "designer.validation.brokenInstance",
           messageParams: { label: data.label },
           nodeId: node.id,
         });
@@ -56,7 +56,7 @@ export function validateDesignerGraph(input: {
         issues.push({
           id: `missing-vip-${node.id}`,
           severity: "error",
-          messageKey: "designer.validate.missingVipId",
+          messageKey: "designer.validation.missingVipId",
           messageParams: { label: data.label },
           nodeId: node.id,
         });
@@ -64,7 +64,7 @@ export function validateDesignerGraph(input: {
         issues.push({
           id: `broken-vip-${node.id}`,
           severity: "error",
-          messageKey: "designer.validate.brokenVip",
+          messageKey: "designer.validation.brokenVip",
           messageParams: { label: data.label },
           nodeId: node.id,
         });
@@ -74,7 +74,7 @@ export function validateDesignerGraph(input: {
       issues.push({
         id: `unbound-${node.id}`,
         severity: "warning",
-        messageKey: "designer.validate.unboundCatalog",
+        messageKey: "designer.validation.unboundCatalog",
         messageParams: { label: data.label },
         nodeId: node.id,
       });
@@ -83,7 +83,7 @@ export function validateDesignerGraph(input: {
       issues.push({
         id: `unbound-group-${node.id}`,
         severity: "warning",
-        messageKey: "designer.validate.unboundCatalog",
+        messageKey: "designer.validation.unboundCatalog",
         messageParams: { label: data.label },
         nodeId: node.id,
       });
@@ -95,7 +95,7 @@ export function validateDesignerGraph(input: {
       issues.push({
         id: `broken-edge-${edge.id}`,
         severity: "error",
-        messageKey: "designer.validate.brokenEdge",
+        messageKey: "designer.validation.brokenEdge",
       });
     }
   }
@@ -135,7 +135,7 @@ export function buildApplySuggestions(
         kind: "create-instance",
         label: data.label,
         href: `/instances/new?type=${encodeURIComponent(data.serviceType)}`,
-        messageKey: "designer.apply.createInstance",
+        messageKey: "designer.applySteps.createInstance",
         messageParams: { label: data.label, type: data.serviceType },
       });
       continue;
@@ -155,7 +155,7 @@ export function buildApplySuggestions(
           href: known.includes(serviceType)
             ? `/instances/${serviceId}/${serviceType}`
             : "/instances",
-          messageKey: "designer.apply.openInstance",
+          messageKey: "designer.applySteps.openInstance",
           messageParams: { label: data.label },
         });
       }
@@ -167,7 +167,7 @@ export function buildApplySuggestions(
         kind: "open-vips",
         label: data.label,
         href: "/vips",
-        messageKey: "designer.apply.openVips",
+        messageKey: "designer.applySteps.openVips",
         messageParams: { label: data.label },
       });
     }
@@ -181,7 +181,7 @@ export function buildApplySuggestions(
       id: "guidance-ag-hap",
       kind: "guidance",
       label: "HAProxy ↔ Auth Gateway",
-      messageKey: "designer.apply.guidanceAuthGateway",
+      messageKey: "designer.applySteps.guidanceAuthGateway",
     });
   }
 

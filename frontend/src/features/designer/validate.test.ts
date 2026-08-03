@@ -18,7 +18,7 @@ describe("validateDesignerGraph", () => {
       },
     ];
     const issues = validateDesignerGraph({ nodes, edges: [], instances: [], vips: [] });
-    expect(issues.some((i) => i.messageKey === "designer.validate.plannedNode")).toBe(true);
+    expect(issues.some((i) => i.messageKey === "designer.validation.plannedNode")).toBe(true);
   });
 
   it("flags broken instance refs", () => {
@@ -36,6 +36,6 @@ describe("validateDesignerGraph", () => {
       },
     ];
     const issues = validateDesignerGraph({ nodes, edges: [], instances: [], vips: [] });
-    expect(issues.some((i) => i.messageKey === "designer.validate.brokenInstance")).toBe(true);
+    expect(issues.some((i) => i.messageKey === "designer.validation.brokenInstance")).toBe(true);
   });
 });
