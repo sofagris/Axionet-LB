@@ -10,12 +10,15 @@ from app.models.user import User
 from app.plugins.keycloak.common import overview_payload
 from app.schemas.keycloak import (
     KeycloakOverview,
+    KeycloakWireAppIdpRequest,
+    KeycloakWireAppIdpResponse,
     KeycloakWireOidcRequest,
     KeycloakWireOidcResponse,
 )
 from app.services.audit.service import AuditService
 from app.services.docker.client import DockerClientAdapter, create_docker_adapter
 from app.services.instances.service import InstanceService
+from app.services.keycloak.wire_app_idp import wire_app_idp
 from app.services.keycloak.wire_oidc import KeycloakWireError, wire_platform_oidc
 
 router = APIRouter(prefix="/instances/{instance_id}/keycloak", tags=["keycloak"])
@@ -98,3 +101,42 @@ def post_wire_platform_oidc(
         commit=True,
     )
     return KeycloakWireOidcResponse.model_validate(result)
+
+
+@router.post("/wire-app-idp", response_model=KeycloakWireAppIdpResponse)
+def post_wire_app_idp(
+    instance_id: str,
+    payload: KeycloakWireAppIdpRequest,
+    db: Session = Depends(get_db),
+    actor: User = Depends(require_roles("admin")),
+    service: InstanceService = Depends(get_instance_service),
+) -> KeycloakWireAppIdpResponse:
+    instance = _require_keycloak(service, instance_id)
+    if instance.service_type != "keycloak-apps":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="App IdP wiring is only available for keycloak-apps",
+        )
+    attachments = service.list_attachments(instance.id)
+    try:
+        result = wire_app_idp(
+            db,
+            instance,
+            attachments,
+            idp_name=payload.idp_name,
+            customer_id=payload.customer_id,
+            application_id=payload.application_id,
+        )
+    except KeycloakWireError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    AuditService(db).record(
+        event_type="keycloak.wire_app_idp",
+        resource_type="instance",
+        resource_id=instance.id,
+        actor=actor.username,
+        payload=result,
+        result="ok",
+        commit=True,
+    )
+    return KeycloakWireAppIdpResponse.model_validate(result)

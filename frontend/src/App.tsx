@@ -1,6 +1,7 @@
 import { Route, Routes } from "react-router-dom";
 import { RequireAuth } from "./components/RequireAuth";
 import { AppLayout } from "./layouts/AppLayout";
+import { AuthGatewayDetailPage } from "./pages/AuthGatewayDetailPage";
 import { CatalogPage } from "./pages/CatalogPage";
 import { ApplicationDetailPage } from "./pages/ApplicationDetailPage";
 import { CreateInstanceWizardPage } from "./pages/CreateInstanceWizardPage";
@@ -43,6 +44,7 @@ export function App() {
           <Route path="instances/:instanceId/frr" element={<FrrDetailPage />} />
           <Route path="instances/:instanceId/keycloak-mgmt" element={<KeycloakDetailPage />} />
           <Route path="instances/:instanceId/keycloak-apps" element={<KeycloakDetailPage />} />
+          <Route path="instances/:instanceId/auth-gateway" element={<AuthGatewayDetailPage />} />
           <Route path="vips" element={<VipsPage />} />
           <Route path="logs" element={<SystemLogsPage />} />
           <Route path="users" element={<UsersPage />} />

@@ -70,6 +70,29 @@ function isKeycloakService(serviceType: string): boolean {
   return serviceType === "keycloak-mgmt" || serviceType === "keycloak-apps";
 }
 
+function isAuthGatewayService(serviceType: string): boolean {
+  return serviceType === "auth-gateway";
+}
+
+function buildAuthGatewayConfig(input: {
+  upstreamUrl: string;
+  oidcIssuerUrl: string;
+  clientId: string;
+  clientSecret: string;
+}) {
+  return {
+    upstream_url: input.upstreamUrl.trim() || "http://127.0.0.1:8080",
+    oidc_issuer_url: input.oidcIssuerUrl.trim(),
+    client_id: input.clientId.trim() || "axionet-app",
+    client_secret: input.clientSecret.trim() || "axionet-app-lab-secret",
+    email_domains: "*",
+    http_port: 4180,
+    cookie_secure: false,
+    pass_user_headers: true,
+    set_xauthrequest: true,
+  };
+}
+
 function buildKeycloakConfig(input: {
   realm: string;
   adminUsername: string;
@@ -165,6 +188,10 @@ export function CreateInstanceWizardPage() {
   const [kcAdminPass, setKcAdminPass] = useState("admin");
   const [kcPublicBaseUrl, setKcPublicBaseUrl] = useState("http://192.168.50.195");
   const [kcGuiSecret, setKcGuiSecret] = useState("axionet-gui-lab-secret");
+  const [gwUpstream, setGwUpstream] = useState("http://192.168.50.195:9080");
+  const [gwIssuer, setGwIssuer] = useState("http://192.168.50.60:8080/realms/axionet");
+  const [gwClientId, setGwClientId] = useState("axionet-app");
+  const [gwClientSecret, setGwClientSecret] = useState("axionet-app-lab-secret");
   const [validation, setValidation] = useState<InstanceValidateResult | null>(null);
   const [desiredRunning, setDesiredRunning] = useState(false);
 
@@ -205,6 +232,14 @@ export function CreateInstanceWizardPage() {
         guiClientSecret: kcGuiSecret,
       });
     }
+    if (isAuthGatewayService(serviceType)) {
+      return buildAuthGatewayConfig({
+        upstreamUrl: gwUpstream,
+        oidcIssuerUrl: gwIssuer,
+        clientId: gwClientId,
+        clientSecret: gwClientSecret,
+      });
+    }
     return buildHaproxyConfig({
       mode,
       bindPort,
@@ -227,6 +262,10 @@ export function CreateInstanceWizardPage() {
     kcAdminPass,
     kcPublicBaseUrl,
     kcGuiSecret,
+    gwUpstream,
+    gwIssuer,
+    gwClientId,
+    gwClientSecret,
     mode,
     bindPort,
     serverAddress,
@@ -237,13 +276,13 @@ export function CreateInstanceWizardPage() {
     if (step === 1) return Boolean(selectedDef?.enabled);
     if (step === 2) return name.trim().length > 0;
     if (step === 3) {
-      if (isKeycloakService(serviceType)) {
+      if (isKeycloakService(serviceType) || isAuthGatewayService(serviceType)) {
         return attachments.some((item) => item.network_id);
       }
       return true;
     }
     if (step === 4) {
-      if (isKeycloakService(serviceType)) {
+      if (isKeycloakService(serviceType) || isAuthGatewayService(serviceType)) {
         return attachments.some((item) => item.network_id && item.ip_address.trim());
       }
       return attachments.every(
@@ -257,6 +296,9 @@ export function CreateInstanceWizardPage() {
       }
       if (isKeycloakService(serviceType)) {
         return Boolean(kcRealm.trim() && kcAdminUser.trim() && kcAdminPass.trim());
+      }
+      if (isAuthGatewayService(serviceType)) {
+        return Boolean(gwUpstream.trim() && gwIssuer.trim() && gwClientId.trim() && gwClientSecret.trim());
       }
       return bindPort > 0 && serverPort > 0;
     }
@@ -517,6 +559,45 @@ export function CreateInstanceWizardPage() {
               ) : null}
               <p className="text-sm text-ink-muted md:col-span-2">{t("keycloak.configHint")}</p>
             </div>
+          ) : isAuthGatewayService(serviceType) ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block text-sm md:col-span-2">
+                <span className="text-ink-muted">{t("authGateway.upstream")}</span>
+                <input
+                  value={gwUpstream}
+                  onChange={(e) => setGwUpstream(e.target.value)}
+                  className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                  placeholder="http://192.168.50.10:80"
+                />
+              </label>
+              <label className="block text-sm md:col-span-2">
+                <span className="text-ink-muted">{t("authGateway.issuer")}</span>
+                <input
+                  value={gwIssuer}
+                  onChange={(e) => setGwIssuer(e.target.value)}
+                  className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                  placeholder="http://10.0.0.20:8080/realms/axionet"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="text-ink-muted">{t("authGateway.clientId")}</span>
+                <input
+                  value={gwClientId}
+                  onChange={(e) => setGwClientId(e.target.value)}
+                  className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="text-ink-muted">{t("authGateway.clientSecret")}</span>
+                <input
+                  type="password"
+                  value={gwClientSecret}
+                  onChange={(e) => setGwClientSecret(e.target.value)}
+                  className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                />
+              </label>
+              <p className="text-sm text-ink-muted md:col-span-2">{t("authGateway.configHint")}</p>
+            </div>
           ) : serviceType === "frr" ? (
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block text-sm">
@@ -689,6 +770,17 @@ export function CreateInstanceWizardPage() {
                   <div>
                     <dt className="text-ink-muted">{t("keycloak.publicBaseUrl")}</dt>
                     <dd className="font-mono">{kcPublicBaseUrl || "—"}</dd>
+                  </div>
+                </>
+              ) : isAuthGatewayService(serviceType) ? (
+                <>
+                  <div>
+                    <dt className="text-ink-muted">{t("authGateway.upstream")}</dt>
+                    <dd className="font-mono break-all">{gwUpstream}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-muted">{t("authGateway.issuer")}</dt>
+                    <dd className="font-mono break-all">{gwIssuer}</dd>
                   </div>
                 </>
               ) : serviceType === "frr" ? (

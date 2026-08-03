@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.plugins.auth_gateway.plugin import AuthGatewayPlugin
 from app.plugins.haproxy.plugin import HaproxyPlugin
 from app.plugins.frr.plugin import FrrPlugin
 from app.plugins.keycloak.plugin import KeycloakAppsPlugin, KeycloakMgmtPlugin
@@ -10,6 +11,7 @@ _PLUGINS: dict[str, ServicePlugin] = {
     FrrPlugin.service_type: FrrPlugin(),
     KeycloakMgmtPlugin.service_type: KeycloakMgmtPlugin(),
     KeycloakAppsPlugin.service_type: KeycloakAppsPlugin(),
+    AuthGatewayPlugin.service_type: AuthGatewayPlugin(),
 }
 
 

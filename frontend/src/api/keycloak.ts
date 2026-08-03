@@ -41,3 +41,30 @@ export function wireKeycloakPlatformOidc(
     { method: "POST", body },
   );
 }
+
+const KeycloakWireAppIdpResponseSchema = z.object({
+  app_identity_provider_id: z.string(),
+  app_identity_provider_name: z.string(),
+  issuer_url: z.string(),
+  app_client_id: z.string(),
+  customer_id: z.string().nullable().optional(),
+  application_id: z.string().nullable().optional(),
+  binding_id: z.string().nullable().optional(),
+});
+
+export type KeycloakWireAppIdpResponse = z.infer<typeof KeycloakWireAppIdpResponseSchema>;
+
+export function wireKeycloakAppIdp(
+  instanceId: string,
+  body: {
+    idp_name?: string;
+    customer_id?: string | null;
+    application_id?: string | null;
+  } = {},
+): Promise<KeycloakWireAppIdpResponse> {
+  return apiFetch(
+    `${base(instanceId)}/wire-app-idp`,
+    (data) => KeycloakWireAppIdpResponseSchema.parse(data),
+    { method: "POST", body },
+  );
+}

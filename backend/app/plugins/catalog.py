@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from app.plugins.auth_gateway.definition import AUTH_GATEWAY_SERVICE
 from app.plugins.frr.definition import FRR_SERVICE
 from app.plugins.haproxy.definition import HAPROXY_SERVICE
 from app.plugins.keycloak.definition import KEYCLOAK_APPS_SERVICE, KEYCLOAK_MGMT_SERVICE
@@ -52,6 +53,7 @@ def list_service_definitions() -> list[dict]:
         FRR_SERVICE,
         KEYCLOAK_MGMT_SERVICE,
         KEYCLOAK_APPS_SERVICE,
+        AUTH_GATEWAY_SERVICE,
         *STUB_SERVICES,
     ]
 

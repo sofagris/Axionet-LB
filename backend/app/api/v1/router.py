@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends
 from app.api.v1 import (
     app_idp_bindings,
     auth,
+    auth_gateway,
     auth_sources,
     dashboards,
     frr,
@@ -34,6 +35,7 @@ api_router.include_router(revisions.router)
 api_router.include_router(haproxy.router)
 api_router.include_router(frr.router)
 api_router.include_router(keycloak.router)
+api_router.include_router(auth_gateway.router)
 api_router.include_router(vips.router)
 api_router.include_router(dashboards.router)
 api_router.include_router(users.router)

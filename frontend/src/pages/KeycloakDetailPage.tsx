@@ -8,7 +8,7 @@ import {
   useInstanceNetworkMutations,
   useInstances,
 } from "../features/instances/hooks";
-import { useKeycloakOverview, useWireKeycloakPlatformOidc } from "../features/keycloak/hooks";
+import { useKeycloakOverview, useWireKeycloakAppIdp, useWireKeycloakPlatformOidc } from "../features/keycloak/hooks";
 import { useNetworks } from "../features/networks/hooks";
 
 type Tab = "overview" | "networks" | "logs";
@@ -27,9 +27,14 @@ export function KeycloakDetailPage() {
   const [upnSuffix, setUpnSuffix] = useState("lab.local");
   const [sourceName, setSourceName] = useState("Keycloak Management");
   const [wireResult, setWireResult] = useState<string | null>(null);
+  const [idpName, setIdpName] = useState("Keycloak Apps");
+  const [customerId, setCustomerId] = useState("kunde-a");
+  const [applicationId, setApplicationId] = useState("app-web");
+  const [appWireResult, setAppWireResult] = useState<string | null>(null);
 
   const overviewQuery = useKeycloakOverview(instanceId);
   const wireMutation = useWireKeycloakPlatformOidc(instanceId);
+  const appWireMutation = useWireKeycloakAppIdp(instanceId);
   const logsQuery = useInstanceLogs(tab === "logs" ? instanceId : null, logTail);
   const actionMutation = useInstanceAction();
   const networksQuery = useNetworks();
@@ -38,6 +43,7 @@ export function KeycloakDetailPage() {
   const [attachIp, setAttachIp] = useState("");
 
   const isMgmt = instance?.service_type === "keycloak-mgmt";
+  const isApps = instance?.service_type === "keycloak-apps";
   const attachableNetworks = useMemo(() => {
     const all = networksQuery.data ?? [];
     if (isMgmt) {
@@ -64,6 +70,22 @@ export function KeycloakDetailPage() {
         name: result.auth_source_name,
         issuer: result.issuer_url,
         suffix: result.upn_suffix,
+      }),
+    );
+  }
+
+  async function onWireAppIdp(event: FormEvent) {
+    event.preventDefault();
+    setAppWireResult(null);
+    const result = await appWireMutation.mutateAsync({
+      idp_name: idpName.trim() || "Keycloak Apps",
+      customer_id: customerId.trim() || null,
+      application_id: applicationId.trim() || null,
+    });
+    setAppWireResult(
+      t("keycloak.wireAppOk", {
+        name: result.app_identity_provider_name,
+        issuer: result.issuer_url,
       }),
     );
   }
@@ -215,6 +237,56 @@ export function KeycloakDetailPage() {
                 </p>
               ) : null}
               {wireResult ? <p className="text-sm text-ok">{wireResult}</p> : null}
+            </div>
+          ) : isApps ? (
+            <div className="space-y-3 border border-line bg-paper-elevated p-4">
+              <h3 className="font-medium text-ink">{t("keycloak.wireAppTitle")}</h3>
+              <p className="text-sm text-ink-muted">{t("keycloak.wireAppHint")}</p>
+              <MutationGate>
+                <form className="space-y-3" onSubmit={(event) => void onWireAppIdp(event)}>
+                  <label className="block text-sm">
+                    <span className="text-ink-muted">{t("keycloak.idpName")}</span>
+                    <input
+                      value={idpName}
+                      onChange={(e) => setIdpName(e.target.value)}
+                      className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="text-ink-muted">{t("keycloak.customerId")}</span>
+                    <input
+                      value={customerId}
+                      onChange={(e) => setCustomerId(e.target.value)}
+                      className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                      placeholder="kunde-a"
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="text-ink-muted">{t("keycloak.applicationId")}</span>
+                    <input
+                      value={applicationId}
+                      onChange={(e) => setApplicationId(e.target.value)}
+                      className="mt-1 w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                      placeholder="app-web"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={appWireMutation.isPending}
+                    className="border border-accent bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+                  >
+                    {appWireMutation.isPending ? t("common.saving") : t("keycloak.wireAppAction")}
+                  </button>
+                </form>
+              </MutationGate>
+              {appWireMutation.isError ? (
+                <p className="text-sm text-danger">
+                  {appWireMutation.error instanceof Error
+                    ? appWireMutation.error.message
+                    : t("common.unknownError")}
+                </p>
+              ) : null}
+              {appWireResult ? <p className="text-sm text-ok">{appWireResult}</p> : null}
             </div>
           ) : (
             <div className="space-y-3 border border-line bg-paper-elevated p-4">

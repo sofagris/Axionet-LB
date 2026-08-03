@@ -847,8 +847,39 @@
     "upnSuffix": "UPN-suffix",
     "wireAction": "Koble plattform-OIDC",
     "wireOk": "Koblet {{name}} → {{issuer}} (suffix {{suffix}}).",
+    "wireAppTitle": "Koble App IdP",
+    "wireAppHint": "Opprett eller oppdater App IdP-metadata (og valgfri kunde/app-binding) fra denne issuer.",
+    "idpName": "App IdP-navn",
+    "customerId": "Kunde-id (mock)",
+    "applicationId": "Applikasjons-id (mock)",
+    "wireAppAction": "Koble App IdP",
+    "wireAppOk": "Koblet App IdP {{name}} → {{issuer}}.",
     "appsMetaTitle": "App IdP-issuer",
     "appsMetaHint": "Pek App IdP-metadata mot denne issuer. Foretrekk egne realms per tenant."
+  },
+
+  "authGateway": {
+    "tabs": {
+      "overview": "Oversikt",
+      "networks": "Nettverk",
+      "logs": "Logger"
+    },
+    "label": "Auth Gateway",
+    "endpointsTitle": "Endepunkter",
+    "listenUrl": "Lytte-URL",
+    "upstream": "Upstream-URL",
+    "issuer": "OIDC issuer-URL",
+    "redirect": "OAuth2 redirect-URL",
+    "clientId": "Client ID",
+    "clientSecret": "Client secret",
+    "configHint": "Issuer må være nåbar fra gateway-containeren. Redirect-URL settes fra første attachment-IP.",
+    "patternTitle": "HAProxy-mønster",
+    "patternHint": "Bruk gatewayen som VIP-backend; ikke eksponer legacy-appen direkte.",
+    "patternStep1": "Deploy Keycloak (Apps) og koble App IdP.",
+    "patternStep2": "Deploy Auth Gateway med issuer + upstream mot legacy-appen.",
+    "patternStep3": "Opprett HAProxy VIP/backend til gateway lytte-IP:4180.",
+    "headersHint": "Autentiserte forespørsler til upstream får X-Forwarded-User, X-Forwarded-Email og X-Forwarded-Groups.",
+    "networksHint": "Knytt til app-/dataplane-nett (samme L2 som Keycloak-apps når mulig)."
   },
 
   "revisions": {

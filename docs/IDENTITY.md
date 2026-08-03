@@ -89,7 +89,25 @@ Håndheves sentralt for alle ikke-GET kall under `/api/v1` (etter autentisering)
 
 ## App Identity (kunde)
 
-**App IdP**-definisjoner under Identity er metadata for kundetjenester. De brukes **ikke** til plattform-login. Når `keycloak-apps` er deployet, pek issuer mot den instansens realm-URL.
+**App IdP**-definisjoner under Identity er metadata for kundetjenester. De brukes **ikke** til plattform-login. Når `keycloak-apps` er deployet, pek issuer mot den instansens realm-URL via **Wire App IdP** på instansdetaljen.
+
+### Legacy app front door (auth-gateway)
+
+Apper som ikke snakker OIDC selv skal ikke eksponeres direkte. Bruk Catalog-tjenesten **Auth Gateway** (`oauth2-proxy`):
+
+```
+Browser → HAProxy VIP → auth-gateway (:4180) → legacy upstream
+                 ↘ OIDC ↗
+              Keycloak (apps)
+```
+
+1. Deploy `keycloak-apps` på app-/dataplane-nett; **Wire App IdP** (valgfri binding til kunde/app-mock).
+2. Deploy `auth-gateway` med `oidc_issuer_url` = apps-issuer og `upstream_url` = legacy-app.
+3. Opprett HAProxy VIP/backend mot gateway attachment-IP:4180.
+
+Autentiserte forespørsler til upstream får bl.a. `X-Forwarded-User`, `X-Forwarded-Email`, `X-Forwarded-Groups`.
+
+`secure-web-frontend` i Catalog er fortsatt et blueprint-konsept; de deploybare byggesteinene er `keycloak-apps` + `auth-gateway` (+ HAProxy).
 
 ### Binding til Customers
 
@@ -106,6 +124,8 @@ Tabell `app_idp_bindings` knytter en App IdP til soft-referanser (`customer_id`,
 |--------|-----|---------|
 | GET | `/api/v1/instances/{id}/keycloak/overview` | Issuer, admin console, attachment-IP |
 | POST | `/api/v1/instances/{id}/keycloak/wire-platform-oidc` | Admin; kun `keycloak-mgmt` |
+| POST | `/api/v1/instances/{id}/keycloak/wire-app-idp` | Admin; kun `keycloak-apps` |
+| GET | `/api/v1/instances/{id}/auth-gateway/overview` | Listen/upstream/issuer for auth-gateway |
 
 ## Keycloak (lab compose — fallback)
 

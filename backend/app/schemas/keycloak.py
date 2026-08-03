@@ -27,3 +27,19 @@ class KeycloakWireOidcResponse(BaseModel):
     issuer_url: str
     upn_suffix: str
     gui_client_id: str
+
+
+class KeycloakWireAppIdpRequest(BaseModel):
+    idp_name: str = Field(default="Keycloak Apps", min_length=1, max_length=128)
+    customer_id: str | None = Field(default=None, max_length=64)
+    application_id: str | None = Field(default=None, max_length=64)
+
+
+class KeycloakWireAppIdpResponse(BaseModel):
+    app_identity_provider_id: str
+    app_identity_provider_name: str
+    issuer_url: str
+    app_client_id: str
+    customer_id: str | None = None
+    application_id: str | None = None
+    binding_id: str | None = None

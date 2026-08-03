@@ -101,6 +101,10 @@ def build_mgmt_realm(cfg: KeycloakConfig) -> dict[str, Any]:
 
 
 def build_apps_realm(cfg: KeycloakConfig) -> dict[str, Any]:
+    bases = _redirect_bases(cfg)
+    # oauth2-proxy / auth-gateway callback paths on gateway hostnames
+    gateway_callbacks = [f"{base}/oauth2/callback" for base in bases]
+    redirect_uris = ["*", *gateway_callbacks]
     return {
         "realm": cfg.realm,
         "enabled": True,
@@ -111,10 +115,11 @@ def build_apps_realm(cfg: KeycloakConfig) -> dict[str, Any]:
         "resetPasswordAllowed": False,
         "editUsernameAllowed": False,
         "sslRequired": "none",
+        "groups": [{"name": "appusers", "path": "/appusers"}],
         "clients": [
             {
                 "clientId": cfg.app_client_id,
-                "name": "AxioNet application client",
+                "name": "AxioNet application / auth-gateway client",
                 "enabled": True,
                 "protocol": "openid-connect",
                 "publicClient": False,
@@ -122,11 +127,40 @@ def build_apps_realm(cfg: KeycloakConfig) -> dict[str, Any]:
                 "clientAuthenticatorType": "client-secret",
                 "standardFlowEnabled": True,
                 "directAccessGrantsEnabled": False,
-                "redirectUris": ["*"],
-                "webOrigins": ["*"],
+                "redirectUris": redirect_uris,
+                "webOrigins": ["*", *bases],
+                "attributes": {"post.logout.redirect.uris": "+"},
+                "protocolMappers": [
+                    {
+                        "name": "groups",
+                        "protocol": "openid-connect",
+                        "protocolMapper": "oidc-group-membership-mapper",
+                        "consentRequired": False,
+                        "config": {
+                            "full.path": "false",
+                            "id.token.claim": "true",
+                            "access.token.claim": "true",
+                            "claim.name": "groups",
+                            "userinfo.token.claim": "true",
+                        },
+                    }
+                ],
             }
         ],
-        "users": [],
+        "users": [
+            {
+                "username": "appuser",
+                "enabled": True,
+                "emailVerified": True,
+                "firstName": "App",
+                "lastName": "User",
+                "email": "appuser@lab.local",
+                "credentials": [
+                    {"type": "password", "value": "AppPass1!", "temporary": False},
+                ],
+                "groups": ["/appusers"],
+            }
+        ],
     }
 
 

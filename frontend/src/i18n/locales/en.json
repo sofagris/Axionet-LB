@@ -846,8 +846,39 @@
     "upnSuffix": "UPN suffix",
     "wireAction": "Wire platform OIDC",
     "wireOk": "Wired {{name}} → {{issuer}} (suffix {{suffix}}).",
+    "wireAppTitle": "Wire App IdP",
+    "wireAppHint": "Create or update App IdP metadata (and optional customer/app binding) from this issuer.",
+    "idpName": "App IdP name",
+    "customerId": "Customer id (mock)",
+    "applicationId": "Application id (mock)",
+    "wireAppAction": "Wire App IdP",
+    "wireAppOk": "Wired App IdP {{name}} → {{issuer}}.",
     "appsMetaTitle": "App IdP issuer",
     "appsMetaHint": "Point customer App IdP metadata at this issuer. Prefer separate realms per tenant."
+  },
+
+  "authGateway": {
+    "tabs": {
+      "overview": "Overview",
+      "networks": "Networks",
+      "logs": "Logs"
+    },
+    "label": "Auth Gateway",
+    "endpointsTitle": "Endpoints",
+    "listenUrl": "Listen URL",
+    "upstream": "Upstream URL",
+    "issuer": "OIDC issuer URL",
+    "redirect": "OAuth2 redirect URL",
+    "clientId": "Client ID",
+    "clientSecret": "Client secret",
+    "configHint": "Issuer must be reachable from the gateway container. Redirect URL is set from the first attachment IP.",
+    "patternTitle": "HAProxy pattern",
+    "patternHint": "Use the gateway as the VIP backend; do not expose the legacy app directly.",
+    "patternStep1": "Deploy Keycloak (Apps) and Wire App IdP.",
+    "patternStep2": "Deploy Auth Gateway with issuer + upstream pointing at the legacy app.",
+    "patternStep3": "Create a HAProxy VIP/backend to the gateway listen IP:4180.",
+    "headersHint": "Authenticated requests to the upstream include X-Forwarded-User, X-Forwarded-Email and X-Forwarded-Groups.",
+    "networksHint": "Attach to an app / dataplane network (same L2 as Keycloak-apps when possible)."
   },
 
   "revisions": {

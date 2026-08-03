@@ -24,6 +24,7 @@ export const CATALOG_LOGOS: Partial<Record<string, string>> = {
   "powerdns-platform": powerdns,
   "keycloak-mgmt": keycloak,
   "keycloak-apps": keycloak,
+  "auth-gateway": secureWeb,
   "pki-acme": stepCa,
   "coraza-waf": coraza,
   "secure-web-frontend": secureWeb,

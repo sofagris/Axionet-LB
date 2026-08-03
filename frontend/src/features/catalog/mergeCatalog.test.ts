@@ -78,12 +78,15 @@ describe("filterCatalogItems", () => {
     expect(CATALOG_ITEMS.some((i) => /bind/i.test(i.name))).toBe(false);
   });
 
-  it("exposes Keycloak mgmt and apps as deployables", () => {
+  it("exposes Keycloak mgmt/apps and auth-gateway as deployables", () => {
     const mgmt = CATALOG_ITEMS.find((i) => i.id === "keycloak-mgmt");
     const apps = CATALOG_ITEMS.find((i) => i.id === "keycloak-apps");
+    const gw = CATALOG_ITEMS.find((i) => i.id === "auth-gateway");
     expect(mgmt?.deployableServiceType).toBe("keycloak-mgmt");
     expect(apps?.deployableServiceType).toBe("keycloak-apps");
+    expect(gw?.deployableServiceType).toBe("auth-gateway");
     expect(createInstancePath(mgmt!)).toBe("/instances/new?type=keycloak-mgmt");
     expect(createInstancePath(apps!)).toBe("/instances/new?type=keycloak-apps");
+    expect(createInstancePath(gw!)).toBe("/instances/new?type=auth-gateway");
   });
 });
