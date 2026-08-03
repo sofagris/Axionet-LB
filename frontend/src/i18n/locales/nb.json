@@ -266,6 +266,8 @@
     "subtitle": "Sett sammen Catalog-tjenester på et canvas (Node-RED-stil). Runtime Status per instans forblir live-visning av komponenter.",
     "selectFlow": "Velg design…",
     "new": "Nytt design",
+    "fullWidth": "Bruk full bredde",
+    "constrainedWidth": "Bruk standard bredde",
     "create": "Opprett",
     "name": "Navn",
     "empty": "Opprett eller velg et design for å åpne canvas.",

@@ -265,6 +265,8 @@
     "subtitle": "Compose Catalog services on a canvas (Node-RED style). Runtime Status on each instance stays the live per-component view.",
     "selectFlow": "Select design…",
     "new": "New design",
+    "fullWidth": "Use full width",
+    "constrainedWidth": "Use standard width",
     "create": "Create",
     "name": "Name",
     "empty": "Create or select a design to open the canvas.",

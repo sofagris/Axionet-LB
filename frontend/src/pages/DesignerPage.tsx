@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type SVGProps } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -28,6 +28,11 @@ import {
 import { DesignerPropertiesPanel } from "../features/designer/DesignerPropertiesPanel";
 import { DesignerToolbar } from "../features/designer/DesignerToolbar";
 import {
+  DESIGNER_FULL_WIDTH_EVENT,
+  readDesignerFullWidth,
+  writeDesignerFullWidth,
+} from "../features/designer/fullWidth";
+import {
   deleteGroups,
   groupSelectedNodes,
   isGroupNode,
@@ -46,6 +51,43 @@ import {
   type ApplySuggestion,
   type ValidationIssue,
 } from "../features/designer/validate";
+
+type IconProps = SVGProps<SVGSVGElement>;
+
+function iconBase(props: IconProps) {
+  return {
+    width: 18,
+    height: 18,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.75,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true as const,
+    ...props,
+  };
+}
+
+/** Expand to fill available width. */
+function IconExpandWidth(props: IconProps) {
+  return (
+    <svg {...iconBase(props)}>
+      <path d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4" />
+      <path d="M9 12h6M9 12l2-2M9 12l2 2M15 12l-2-2M15 12l-2 2" />
+    </svg>
+  );
+}
+
+/** Constrain to standard content width. */
+function IconConstrainWidth(props: IconProps) {
+  return (
+    <svg {...iconBase(props)}>
+      <path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4" />
+      <path d="M15 12H9M15 12l-2-2M15 12l-2 2M9 12l2-2M9 12l2 2" />
+    </svg>
+  );
+}
 
 export function DesignerPage() {
   const { t } = useTranslation();
@@ -79,7 +121,30 @@ export function DesignerPage() {
     groupIds: string[];
     otherIds: string[];
   } | null>(null);
+  const [fullWidth, setFullWidth] = useState(readDesignerFullWidth);
   const loadedStampRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const sync = () => setFullWidth(readDesignerFullWidth());
+    const onCustom = (event: Event) => {
+      const detail = (event as CustomEvent<{ fullWidth?: boolean }>).detail;
+      if (typeof detail?.fullWidth === "boolean") {
+        setFullWidth(detail.fullWidth);
+      } else {
+        sync();
+      }
+    };
+    window.addEventListener(DESIGNER_FULL_WIDTH_EVENT, onCustom);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(DESIGNER_FULL_WIDTH_EVENT, onCustom);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
+  const toggleFullWidth = () => {
+    writeDesignerFullWidth(!fullWidth);
+  };
 
   const instances = instancesQuery.data ?? [];
   const vips = vipsQuery.data ?? [];
@@ -357,6 +422,18 @@ export function DesignerPage() {
               {t("designer.new")}
             </button>
           </MutationGate>
+          <button
+            type="button"
+            className="inline-flex size-9 items-center justify-center border border-line text-ink hover:border-accent hover:text-accent"
+            onClick={toggleFullWidth}
+            aria-pressed={fullWidth}
+            aria-label={
+              fullWidth ? t("designer.constrainedWidth") : t("designer.fullWidth")
+            }
+            title={fullWidth ? t("designer.constrainedWidth") : t("designer.fullWidth")}
+          >
+            {fullWidth ? <IconConstrainWidth /> : <IconExpandWidth />}
+          </button>
         </div>
       </header>
 

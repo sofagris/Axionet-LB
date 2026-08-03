@@ -17,6 +17,10 @@ import {
 import { ReadOnlyBanner } from "../components/ReadOnlyBanner";
 import { useAuth } from "../features/auth/AuthProvider";
 import { usePermissions } from "../features/auth/usePermissions";
+import {
+  DESIGNER_FULL_WIDTH_EVENT,
+  readDesignerFullWidth,
+} from "../features/designer/fullWidth";
 import { tenancyNavLabelKey, useTenancy } from "../features/tenancy/TenancyProvider";
 import { useTheme } from "../features/theme/ThemeProvider";
 import { setAppLocale, type AppLocale } from "../i18n";
@@ -67,6 +71,27 @@ export function AppLayout() {
   const location = useLocation();
   const locale = (i18n.language === "en" ? "en" : "nb") as AppLocale;
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [designerFullWidth, setDesignerFullWidth] = useState(readDesignerFullWidth);
+  const isDesigner = location.pathname.startsWith("/designer");
+  const useFullMain = isDesigner && designerFullWidth;
+
+  useEffect(() => {
+    const sync = () => setDesignerFullWidth(readDesignerFullWidth());
+    const onCustom = (event: Event) => {
+      const detail = (event as CustomEvent<{ fullWidth?: boolean }>).detail;
+      if (typeof detail?.fullWidth === "boolean") {
+        setDesignerFullWidth(detail.fullWidth);
+      } else {
+        sync();
+      }
+    };
+    window.addEventListener(DESIGNER_FULL_WIDTH_EVENT, onCustom);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(DESIGNER_FULL_WIDTH_EVENT, onCustom);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
 
   const navGroups = useMemo((): NavGroup[] => {
     const tenancyLabel = tenancyNavLabelKey(mode);
@@ -273,7 +298,13 @@ export function AppLayout() {
           </div>
         </header>
         <ReadOnlyBanner />
-        <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
+        <main
+          className={
+            useFullMain
+              ? "w-full flex-1 px-3 py-4 sm:px-4 sm:py-5"
+              : "mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-8"
+          }
+        >
           <Outlet />
         </main>
       </div>
