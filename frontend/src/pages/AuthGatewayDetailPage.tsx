@@ -253,7 +253,7 @@ export function AuthGatewayDetailPage() {
             </label>
           </div>
           <pre className="max-h-[28rem] overflow-auto bg-ink px-3 py-2 font-mono text-xs text-paper">
-            {logsQuery.data?.join("\n") || t("common.loading")}
+            {logsQuery.data?.logs ?? t("common.loading")}
           </pre>
         </div>
       ) : null}
