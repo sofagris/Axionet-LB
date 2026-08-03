@@ -21,6 +21,8 @@ ADMIN_MUTATION_PREFIXES = (
     "/api/v1/groups",
     "/api/v1/auth-sources",
     "/api/v1/app-idp-bindings",
+    "/api/v1/sites",
+    "/api/v1/load-balancers",
 )
 
 ADMIN_MUTATION_SUFFIXES = (

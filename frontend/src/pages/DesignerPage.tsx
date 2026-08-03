@@ -41,13 +41,18 @@ import {
 } from "../features/designer/layoutPrefs";
 import {
   createLaneNode,
-  createPlacementDomain,
-  ensureSiteDomain,
+  domainForLocalLbSite,
+  fromPlatformRecord,
   migratePlacementDomains,
-  syncNodesToDomain,
-  updateDomainInRegistry,
+  remapNodesToPlatformDomains,
 } from "../features/designer/placementDomains";
 import type { PlacementDomain } from "../features/designer/types";
+import {
+  useInventoryMutations,
+  useLoadBalancers,
+  usePlacementDomains,
+  useSites,
+} from "../features/inventory/hooks";
 import {
   applySnapshotToGroup,
   fetchHaproxyConfigSnapshot,
@@ -125,6 +130,10 @@ export function DesignerPage() {
   const deleteMutation = useDeleteDesignFlow();
   const instancesQuery = useInstances();
   const vipsQuery = useVips();
+  const platformDomainsQuery = usePlacementDomains();
+  const loadBalancersQuery = useLoadBalancers();
+  const sitesQuery = useSites();
+  const inventoryMutations = useInventoryMutations();
 
   const [name, setName] = useState("");
   const [nodes, setNodes] = useState<DesignerNode[]>([]);
@@ -180,6 +189,24 @@ export function DesignerPage() {
 
   const instances = instancesQuery.data ?? [];
   const vips = vipsQuery.data ?? [];
+  const platformDomains = useMemo(
+    () => (platformDomainsQuery.data ?? []).map(fromPlatformRecord),
+    [platformDomainsQuery.data],
+  );
+  const localLb = useMemo(
+    () => (loadBalancersQuery.data ?? []).find((lb) => lb.is_local),
+    [loadBalancersQuery.data],
+  );
+  const localSite = useMemo(() => {
+    if (!localLb?.site_id) return undefined;
+    return (sitesQuery.data ?? []).find((s) => s.id === localLb.site_id);
+  }, [localLb, sitesQuery.data]);
+
+  // Keep Designer registry aligned with platform source of truth.
+  useEffect(() => {
+    if (!platformDomainsQuery.data) return;
+    setPlacementDomains(platformDomains);
+  }, [platformDomains, platformDomainsQuery.data]);
 
   useEffect(() => {
     if (!flowId) {
@@ -207,13 +234,38 @@ export function DesignerPage() {
     setNodes(migrated.nodes);
     setEdges(doc.edges);
     setViewport(doc.viewport);
-    setPlacementDomains(migrated.placementDomains);
     setSelectedNode(null);
     setSelectedNodes([]);
     setSelectedEdge(null);
     setValidationIssues([]);
     setApplySuggestions([]);
     setCanvasKey((k) => k + 1);
+
+    // Ensure design-local domains exist on the platform, then remap node ids.
+    void (async () => {
+      try {
+        let platform = (await platformDomainsQuery.refetch()).data?.map(fromPlatformRecord) ?? [];
+        for (const local of migrated.placementDomains) {
+          const exists = platform.some(
+            (p) => p.name.trim().toLowerCase() === local.name.trim().toLowerCase(),
+          );
+          if (exists) continue;
+          await inventoryMutations.createPlacementDomain.mutateAsync({
+            name: local.name,
+            kind: local.kind,
+            description: local.description ?? null,
+            icon: local.icon ?? null,
+          });
+        }
+        platform = (await platformDomainsQuery.refetch()).data?.map(fromPlatformRecord) ?? [];
+        setPlacementDomains(platform);
+        setNodes((nds) => remapNodesToPlatformDomains(nds, platform));
+      } catch {
+        // Keep design-local registry if platform sync fails.
+        setPlacementDomains(migrated.placementDomains);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run on flow stamp change
   }, [flowId, flowQuery.data]);
 
   const onNodesChange: OnNodesChange<DesignerNode> = useCallback((changes) => {
@@ -334,33 +386,40 @@ export function DesignerPage() {
   );
 
   const onAddLane = useCallback(
-    (kind: "site" | "shared") => {
+    async (kind: "site" | "shared") => {
       const name =
         kind === "shared"
           ? t("designer.placement.defaultShared")
           : t("designer.placement.defaultSite", {
               n: placementDomains.filter((d) => d.kind === "site").length + 1,
             });
-      const domain = createPlacementDomain({
-        name,
-        kind,
-        description:
-          kind === "shared"
-            ? t("designer.placement.sharedDescription")
-            : t("designer.placement.siteDescription", { name }),
-      });
-      const y =
-        nodes
-          .filter((n) => n.data.kind === "placement.lane")
-          .reduce((max, n) => {
-            const h = typeof n.style?.height === "number" ? n.style.height : 220;
-            return Math.max(max, n.position.y + h + 40);
-          }, 0) || 40;
-      setPlacementDomains((ds) => [...ds, domain]);
-      setNodes((nds) => [...nds, createLaneNode(domain, { x: 24, y })]);
-      setMessage(t("designer.messages.laneAdded", { name: domain.name }));
+      try {
+        const created = await inventoryMutations.createPlacementDomain.mutateAsync({
+          name,
+          kind,
+          description:
+            kind === "shared"
+              ? t("designer.placement.sharedDescription")
+              : t("designer.placement.siteDescription", { name }),
+        });
+        const domain = fromPlatformRecord(created);
+        const y =
+          nodes
+            .filter((n) => n.data.kind === "placement.lane")
+            .reduce((max, n) => {
+              const h = typeof n.style?.height === "number" ? n.style.height : 220;
+              return Math.max(max, n.position.y + h + 40);
+            }, 0) || 40;
+        setPlacementDomains((ds) =>
+          ds.some((d) => d.id === domain.id) ? ds : [...ds, domain],
+        );
+        setNodes((nds) => [...nds, createLaneNode(domain, { x: 24, y })]);
+        setMessage(t("designer.messages.laneAdded", { name: domain.name }));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t("designer.messages.laneAddFailed"));
+      }
     },
-    [nodes, placementDomains, t],
+    [inventoryMutations.createPlacementDomain, nodes, placementDomains, t],
   );
 
   const graphRef = useRef({ nodes, edges });
@@ -420,40 +479,49 @@ export function DesignerPage() {
     [t],
   );
 
-  const applySiteFromInstance = useCallback(
-    (groupId: string, serviceId: string) => {
-      const inst = instances.find((i) => i.id === serviceId);
-      const siteRaw = inst?.configuration?.site;
-      const site = typeof siteRaw === "string" ? siteRaw.trim() : "";
-      if (!site) return;
-      setPlacementDomains((domains) => {
-        const { domains: nextDomains, domain } = ensureSiteDomain(domains, site);
-        setNodes((nds) =>
-          nds.map((n) =>
-            n.id === groupId
-              ? {
-                  ...n,
-                  data: {
-                    ...n.data,
-                    placementDomainId: domain.id,
-                    placementDomain: domain.name,
-                  },
-                }
-              : n,
-          ),
-        );
-        return nextDomains;
-      });
+  const applyDomainFromLocalLb = useCallback(
+    (groupId: string) => {
+      const raw = platformDomainsQuery.data ?? [];
+      const linked =
+        localLb?.site_id != null
+          ? raw.find((d) => d.site_id === localLb.site_id)
+          : undefined;
+      const domain = linked
+        ? fromPlatformRecord(linked)
+        : domainForLocalLbSite(placementDomains, {
+            siteId: localLb?.site_id,
+            siteName: localSite?.name,
+          });
+      if (!domain) return;
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === groupId
+            ? {
+                ...n,
+                data: {
+                  ...n.data,
+                  placementDomainId: domain.id,
+                  placementDomain: domain.name,
+                },
+              }
+            : n,
+        ),
+      );
     },
-    [instances],
+    [
+      localLb?.site_id,
+      localSite?.name,
+      placementDomains,
+      platformDomainsQuery.data,
+    ],
   );
 
   const onHaproxyInstanceDropped = useCallback(
     (info: LinkedHaproxyGroup) => {
-      applySiteFromInstance(info.groupId, info.serviceId);
+      applyDomainFromLocalLb(info.groupId);
       void rehydrateHaproxyGroup(info, { waitRaf: true });
     },
-    [applySiteFromInstance, rehydrateHaproxyGroup],
+    [applyDomainFromLocalLb, rehydrateHaproxyGroup],
   );
 
   const onRefreshFromInstance = useCallback(() => {
@@ -846,31 +914,142 @@ export function DesignerPage() {
               instances={instances}
               vips={vips}
               placementDomains={placementDomains}
+              applianceSiteName={localSite?.name}
+              applianceDomainId={
+                localLb?.site_id
+                  ? (platformDomainsQuery.data ?? []).find((d) => d.site_id === localLb.site_id)?.id
+                  : undefined
+              }
               onRefreshFromInstance={onRefreshFromInstance}
+              onCreatePlacementDomain={(name, nodeId) => {
+                void (async () => {
+                  try {
+                    const created = await inventoryMutations.createPlacementDomain.mutateAsync({
+                      name,
+                      kind: /shared/i.test(name) ? "shared" : "site",
+                    });
+                    const domain = fromPlatformRecord(created);
+                    setPlacementDomains((ds) =>
+                      ds.some((d) => d.id === domain.id) ? ds : [...ds, domain],
+                    );
+                    setNodes((nds) =>
+                      nds.map((n) =>
+                        n.id === nodeId
+                          ? {
+                              ...n,
+                              data: {
+                                ...n.data,
+                                placementDomainId: domain.id,
+                                placementDomain: domain.name,
+                              },
+                            }
+                          : n,
+                      ),
+                    );
+                    setSelectedNode((prev) =>
+                      prev && prev.id === nodeId
+                        ? {
+                            ...prev,
+                            data: {
+                              ...prev.data,
+                              placementDomainId: domain.id,
+                              placementDomain: domain.name,
+                            },
+                          }
+                        : prev,
+                    );
+                  } catch (err) {
+                    setError(
+                      err instanceof Error ? err.message : t("designer.messages.domainSaveFailed"),
+                    );
+                  }
+                })();
+              }}
               onUpsertPlacementDomain={(domain) => {
-                setPlacementDomains((ds) => {
-                  const exists = ds.some((d) => d.id === domain.id);
-                  return exists
-                    ? updateDomainInRegistry(ds, domain.id, domain)
-                    : [...ds, domain];
-                });
-                setNodes((nds) => syncNodesToDomain(nds, domain));
-                setSelectedNode((prev) =>
-                  prev && prev.data.placementDomainId === domain.id
-                    ? {
-                        ...prev,
-                        data: {
-                          ...prev.data,
-                          label:
-                            prev.data.kind === "placement.lane" ? domain.name : prev.data.label,
-                          placementDomain: domain.name,
-                          placementKind: domain.kind,
-                          placementDescription: domain.description,
-                          placementIcon: domain.icon,
-                        },
-                      }
-                    : prev,
-                );
+                void (async () => {
+                  const previousId = domain.id;
+                  try {
+                    const existsOnPlatform = platformDomains.some((d) => d.id === domain.id);
+                    const saved = existsOnPlatform
+                      ? await inventoryMutations.updatePlacementDomain.mutateAsync({
+                          id: domain.id,
+                          payload: {
+                            name: domain.name,
+                            kind: domain.kind,
+                            description: domain.description ?? null,
+                            icon: domain.icon ?? null,
+                          },
+                        })
+                      : await inventoryMutations.createPlacementDomain.mutateAsync({
+                          name: domain.name,
+                          kind: domain.kind,
+                          description: domain.description ?? null,
+                          icon: domain.icon ?? null,
+                        });
+                    const next = fromPlatformRecord(saved);
+                    setPlacementDomains((ds) => {
+                      const withoutPrev = ds.filter(
+                        (d) => d.id !== previousId && d.id !== next.id,
+                      );
+                      return [...withoutPrev, next];
+                    });
+                    setNodes((nds) =>
+                      nds.map((n) => {
+                        if (
+                          n.data.placementDomainId !== previousId &&
+                          n.data.placementDomainId !== next.id
+                        ) {
+                          return n;
+                        }
+                        if (n.data.kind === "placement.lane") {
+                          return {
+                            ...n,
+                            data: {
+                              ...n.data,
+                              label: next.name,
+                              placementDomainId: next.id,
+                              placementDomain: next.name,
+                              placementKind: next.kind,
+                              placementDescription: next.description,
+                              placementIcon: next.icon,
+                            },
+                          };
+                        }
+                        return {
+                          ...n,
+                          data: {
+                            ...n.data,
+                            placementDomainId: next.id,
+                            placementDomain: next.name,
+                          },
+                        };
+                      }),
+                    );
+                    setSelectedNode((prev) =>
+                      prev &&
+                      (prev.data.placementDomainId === previousId ||
+                        prev.data.placementDomainId === next.id)
+                        ? {
+                            ...prev,
+                            data: {
+                              ...prev.data,
+                              label:
+                                prev.data.kind === "placement.lane" ? next.name : prev.data.label,
+                              placementDomainId: next.id,
+                              placementDomain: next.name,
+                              placementKind: next.kind,
+                              placementDescription: next.description,
+                              placementIcon: next.icon,
+                            },
+                          }
+                        : prev,
+                    );
+                  } catch (err) {
+                    setError(
+                      err instanceof Error ? err.message : t("designer.messages.domainSaveFailed"),
+                    );
+                  }
+                })();
               }}
               onAssignPlacementDomain={(nodeId, domainId) => {
                 const domain = domainId

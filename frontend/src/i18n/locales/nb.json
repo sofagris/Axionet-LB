@@ -9,6 +9,7 @@
     "cancel": "Avbryt",
     "delete": "Slett",
     "edit": "Rediger",
+    "actions": "Handlinger",
     "close": "Lukk"
   },
   "nav": {
@@ -302,7 +303,9 @@
       "layoutCanvas": "Auto-layout brukt på canvas.",
       "layoutFailed": "Auto-layout feilet.",
       "layoutNeedSelection": "Velg noder før «Selected nodes only».",
-      "laneAdded": "Lane «{{name}}» lagt til."
+      "laneAdded": "Lane «{{name}}» lagt til.",
+      "laneAddFailed": "Kunne ikke legge til lane.",
+      "domainSaveFailed": "Kunne ikke lagre placement domain."
     },
     "placement": {
       "addSiteLane": "Site-lane",
@@ -429,6 +432,8 @@
       "placementDescription": "Beskrivelse",
       "instanceSiteHint": "Koblet LB har Site: {{site}}",
       "instanceSiteMismatch": "avviker fra valgt domain",
+      "applianceSiteHint": "Denne Axionet-LB har Site: {{site}}",
+      "applianceSiteMismatch": "avviker fra valgt domain",
       "pinnedHint": "Posisjon er pinnnet — auto-layout flytter den ikke.",
       "openVips": "Åpne VIPs"
     },
@@ -803,7 +808,35 @@
     "orphanNetworks": "Orphan-nettverk",
     "missingContainers": "DB-containere mangler i Docker",
     "missingNetworks": "DB-nettverk mangler i Docker",
-    "orphansNone": "Ingen."
+    "orphansNone": "Ingen.",
+    "inventory": {
+      "title": "Sites, Placement Domains og LB-inventar",
+      "subtitle": "Site er fysisk sted for en Axionet-LB-boks. Placement Domains brukes i Designer (og senere deploy). LB-tabellen er inventar — ingen remote API-kall ennå.",
+      "sites": "Sites",
+      "placementDomains": "Placement Domains",
+      "loadBalancers": "Load balancers (Axionet-LB)",
+      "loadBalancersHint": "Denne boksen er merket «Denne LB». Andre rader er informative oppføringer for fremtidige bokser.",
+      "colName": "Navn",
+      "colDescription": "Beskrivelse",
+      "colKind": "Type",
+      "colSite": "Site",
+      "colIp": "IP-adresse",
+      "thisLb": "Denne LB",
+      "noSite": "Ingen",
+      "emptySites": "Ingen sites ennå.",
+      "emptyDomains": "Ingen placement domains ennå.",
+      "addSite": "Legg til site",
+      "addDomain": "Legg til domain",
+      "addLb": "Legg til LB",
+      "siteNamePlaceholder": "f.eks. Oslo",
+      "domainNamePlaceholder": "f.eks. Oslo / Shared Services",
+      "lbNamePlaceholder": "LB-navn",
+      "ipPlaceholder": "IP-adresse",
+      "descriptionPlaceholder": "Beskrivelse (valgfritt)",
+      "confirmDeleteSite": "Slette denne siten?",
+      "confirmDeleteDomain": "Slette dette placement domain?",
+      "confirmDeleteLb": "Slette denne LB-oppføringen?"
+    }
   },
 
   "logs": {

@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   createLaneNode,
   createPlacementDomain,
+  domainForLocalLbSite,
   ensureSiteDomain,
   migratePlacementDomains,
+  remapNodesToPlatformDomains,
 } from "./placementDomains";
 import {
   parseGraphDocument,
@@ -97,5 +99,28 @@ describe("placementDomains registry", () => {
     expect(parsed.placementDomains).toHaveLength(1);
     expect(parsed.placementDomains?.[0].name).toBe("Oslo");
     expect(parsed.nodes[0].data.placementDomainId).toBe(domain.id);
+  });
+
+  it("remaps legacy node ids onto platform domains by name", () => {
+    const platform = [createPlacementDomain({ id: "pd_platform", name: "Oslo", kind: "site" })];
+    const nodes = [
+      group("g1", "lb", "Oslo", "pd_legacy"),
+      createLaneNode(
+        createPlacementDomain({ id: "pd_legacy", name: "Oslo", kind: "site" }),
+        { x: 0, y: 0 },
+      ),
+    ];
+    const remapped = remapNodesToPlatformDomains(nodes, platform);
+    expect(remapped[0].data.placementDomainId).toBe("pd_platform");
+    expect(remapped[1].data.placementDomainId).toBe("pd_platform");
+  });
+
+  it("resolves domain for local LB site by name", () => {
+    const domains = [
+      createPlacementDomain({ name: "Shared Services", kind: "shared" }),
+      createPlacementDomain({ name: "Oslo", kind: "site" }),
+    ];
+    expect(domainForLocalLbSite(domains, { siteName: "oslo" })?.name).toBe("Oslo");
+    expect(domainForLocalLbSite(domains, { siteName: null })).toBeUndefined();
   });
 });

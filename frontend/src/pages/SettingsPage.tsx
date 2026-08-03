@@ -10,6 +10,7 @@ import {
   useSystemInfo,
 } from "../features/system/hooks";
 import { FrontPanelSettings } from "../features/settings/front-panel/FrontPanelSettings";
+import { InventorySettings } from "../features/settings/InventorySettings";
 import { TenancySettings } from "../features/settings/TenancySettings";
 import type { ComponentHealth, OrphanReport } from "../types/system";
 
@@ -35,7 +36,7 @@ export function SettingsPage() {
 
   useEffect(() => {
     const section = searchParams.get("section");
-    if (section !== "front-panel" && section !== "tenancy") return;
+    if (section !== "front-panel" && section !== "tenancy" && section !== "sites") return;
     const el = document.getElementById(section);
     if (el && typeof el.scrollIntoView === "function") {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -321,6 +322,8 @@ export function SettingsPage() {
           </div>
         ) : null}
       </section>
+
+      <InventorySettings />
 
       <TenancySettings />
 

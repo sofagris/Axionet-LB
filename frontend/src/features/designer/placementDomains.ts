@@ -3,6 +3,7 @@ import {
   type DesignerNode,
   type DesignerNodeData,
   type PlacementDomain,
+  type PlacementDomainKind,
 } from "./types";
 
 export type { PlacementDomain, PlacementDomainKind, PlacementDomainIcon } from "./types";
@@ -184,4 +185,76 @@ export function syncNodesToDomain(
       },
     };
   });
+}
+
+/** Map a platform API placement-domain row into Designer registry shape. */
+export function fromPlatformRecord(row: {
+  id: string;
+  name: string;
+  kind: string;
+  description?: string | null;
+  icon?: string | null;
+}): PlacementDomain {
+  const kind: PlacementDomainKind = row.kind === "shared" ? "shared" : "site";
+  const icon = row.icon;
+  return {
+    id: row.id,
+    name: row.name,
+    kind,
+    description: row.description ?? undefined,
+    icon:
+      icon === "site" || icon === "shared" || icon === "building" ? icon : undefined,
+  };
+}
+
+/**
+ * Remap node placementDomainId values onto platform domains (match by id, then by name).
+ */
+export function remapNodesToPlatformDomains(
+  nodes: DesignerNode[],
+  platform: PlacementDomain[],
+): DesignerNode[] {
+  const byId = new Map(platform.map((d) => [d.id, d]));
+  const byName = new Map(platform.map((d) => [d.name.trim().toLowerCase(), d]));
+  return nodes.map((node) => {
+    const data = node.data;
+    if (data.placementDomainId && byId.has(data.placementDomainId)) {
+      const d = byId.get(data.placementDomainId)!;
+      if (data.kind === "placement.lane") {
+        return syncLaneDataFromDomain(node, d);
+      }
+      return {
+        ...node,
+        data: { ...data, placementDomainId: d.id, placementDomain: d.name },
+      };
+    }
+    const label = data.placementDomain?.trim();
+    if (!label) return node;
+    const d = byName.get(label.toLowerCase());
+    if (!d) return node;
+    if (data.kind === "placement.lane") {
+      return syncLaneDataFromDomain(node, d);
+    }
+    return {
+      ...node,
+      data: { ...data, placementDomainId: d.id, placementDomain: d.name },
+    };
+  });
+}
+
+/** Pick a site-kind placement domain for the local LB's site. */
+export function domainForLocalLbSite(
+  domains: PlacementDomain[],
+  opts: { siteId?: string | null; siteName?: string | null },
+): PlacementDomain | undefined {
+  if (opts.siteId) {
+    // Prefer domains linked via platform site_id — callers pass pre-filtered list
+    // or we match by name below. Designer domains may not carry site_id; match name.
+  }
+  const name = opts.siteName?.trim();
+  if (!name) return undefined;
+  return (
+    domains.find((d) => d.kind === "site" && d.name.trim().toLowerCase() === name.toLowerCase()) ??
+    domains.find((d) => d.name.trim().toLowerCase() === name.toLowerCase())
+  );
 }

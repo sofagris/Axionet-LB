@@ -46,6 +46,19 @@ def bootstrap_default_admin() -> None:
         db.close()
 
 
+def bootstrap_local_load_balancer() -> None:
+    db = SessionLocal()
+    try:
+        from app.services.inventory.service import InventoryService
+
+        lb = InventoryService(db).ensure_local_load_balancer()
+        logger.info("Local load balancer ready: id=%s name=%s", lb.id, lb.name)
+    except Exception:
+        logger.exception("Failed to ensure local load balancer")
+    finally:
+        db.close()
+
+
 def bootstrap_interface_discovery() -> None:
     settings = get_settings()
     db = SessionLocal()
@@ -140,6 +153,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     run_migrations()
     bootstrap_default_admin()
     bootstrap_interface_discovery()
+    bootstrap_local_load_balancer()
 
     stop_event = asyncio.Event()
     task: asyncio.Task[None] | None = None

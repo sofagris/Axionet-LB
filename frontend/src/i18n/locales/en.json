@@ -9,6 +9,7 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
+    "actions": "Actions",
     "close": "Close"
   },
   "nav": {
@@ -301,7 +302,9 @@
       "layoutCanvas": "Auto-layout applied to the canvas.",
       "layoutFailed": "Auto-layout failed.",
       "layoutNeedSelection": "Select nodes before using “Selected nodes only”.",
-      "laneAdded": "Lane “{{name}}” added."
+      "laneAdded": "Lane “{{name}}” added.",
+      "laneAddFailed": "Could not add lane.",
+      "domainSaveFailed": "Could not save placement domain."
     },
     "placement": {
       "addSiteLane": "Site lane",
@@ -428,6 +431,8 @@
       "placementDescription": "Description",
       "instanceSiteHint": "Linked LB Site: {{site}}",
       "instanceSiteMismatch": "differs from selected domain",
+      "applianceSiteHint": "This Axionet-LB Site: {{site}}",
+      "applianceSiteMismatch": "differs from selected domain",
       "pinnedHint": "Position is pinned — auto-layout will not move it.",
       "openVips": "Open VIPs"
     },
@@ -801,7 +806,35 @@
     "orphanNetworks": "Orphan networks",
     "missingContainers": "DB containers missing in Docker",
     "missingNetworks": "DB networks missing in Docker",
-    "orphansNone": "None."
+    "orphansNone": "None.",
+    "inventory": {
+      "title": "Sites, Placement Domains, and LB inventory",
+      "subtitle": "A Site is the physical location of an Axionet-LB appliance. Placement Domains are used in Designer (and later deploy). The LB table is inventory only — no remote API calls yet.",
+      "sites": "Sites",
+      "placementDomains": "Placement Domains",
+      "loadBalancers": "Load balancers (Axionet-LB)",
+      "loadBalancersHint": "This box is marked “This LB”. Other rows are informative entries for future appliances.",
+      "colName": "Name",
+      "colDescription": "Description",
+      "colKind": "Kind",
+      "colSite": "Site",
+      "colIp": "IP address",
+      "thisLb": "This LB",
+      "noSite": "None",
+      "emptySites": "No sites yet.",
+      "emptyDomains": "No placement domains yet.",
+      "addSite": "Add site",
+      "addDomain": "Add domain",
+      "addLb": "Add LB",
+      "siteNamePlaceholder": "e.g. Oslo",
+      "domainNamePlaceholder": "e.g. Oslo / Shared Services",
+      "lbNamePlaceholder": "LB name",
+      "ipPlaceholder": "IP address",
+      "descriptionPlaceholder": "Description (optional)",
+      "confirmDeleteSite": "Delete this site?",
+      "confirmDeleteDomain": "Delete this placement domain?",
+      "confirmDeleteLb": "Delete this LB entry?"
+    }
   },
 
   "logs": {

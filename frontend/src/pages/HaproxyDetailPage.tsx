@@ -21,7 +21,6 @@ import {
   useInstanceAction,
   useInstanceNetworkMutations,
   useInstances,
-  useUpdateInstance,
   useValidateExistingInstance,
 } from "../features/instances/hooks";
 import { useNetworks } from "../features/networks/hooks";
@@ -107,7 +106,6 @@ export function HaproxyDetailPage() {
   const logsQuery = useInstanceLogs(tab === "logs" ? instanceId : null, logTail);
   const metricsQuery = useInstanceMetrics(tab === "overview" ? instanceId : null);
   const actionMutation = useInstanceAction();
-  const updateInstanceMutation = useUpdateInstance();
   const validateMutation = useValidateExistingInstance();
   const [overviewValidation, setOverviewValidation] = useState<InstanceValidateResult | null>(null);
   const mutations = useHaproxyMutations(instanceId);
@@ -206,12 +204,6 @@ export function HaproxyDetailPage() {
   const [defaultsCompressionType, setDefaultsCompressionType] = useState(
     "text/html text/plain text/css text/javascript application/javascript application/json",
   );
-  const [placementSite, setPlacementSite] = useState("");
-
-  useEffect(() => {
-    const site = instance?.configuration?.site;
-    setPlacementSite(typeof site === "string" ? site : "");
-  }, [instance?.configuration]);
 
   useEffect(() => {
     const defaults = defaultsQuery.data;
@@ -937,57 +929,6 @@ export function HaproxyDetailPage() {
                 {mutations.updateDefaults.error instanceof Error
                   ? mutations.updateDefaults.error.message
                   : "Kunne ikke lagre defaults"}
-              </p>
-            ) : null}
-          </form>
-
-          <form
-            className="grid gap-3 border border-line bg-paper-elevated/40 p-4 md:grid-cols-3"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              if (!instance) return;
-              const site = placementSite.trim();
-              const nextConfig = {
-                ...(instance.configuration ?? {}),
-                site: site || null,
-              };
-              await updateInstanceMutation.mutateAsync({
-                id: instanceId,
-                configuration: nextConfig,
-              });
-            }}
-          >
-            <p className="md:col-span-3 text-sm text-ink-muted">
-              {t("haproxyDetail.placement.help")}
-            </p>
-            <FormField label={t("haproxyDetail.placement.site")}>
-              <input
-                className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
-                list="haproxy-placement-sites"
-                value={placementSite}
-                onChange={(e) => setPlacementSite(e.target.value)}
-                placeholder={t("haproxyDetail.placement.sitePlaceholder")}
-              />
-              <datalist id="haproxy-placement-sites">
-                <option value="Oslo" />
-                <option value="Bergen" />
-                <option value="Trondheim" />
-              </datalist>
-            </FormField>
-            <FormActions>
-              <button
-                type="submit"
-                className="border border-accent bg-accent px-3 py-2 text-sm text-white disabled:opacity-50"
-                disabled={updateInstanceMutation.isPending || !instance}
-              >
-                {t("haproxyDetail.placement.save")}
-              </button>
-            </FormActions>
-            {updateInstanceMutation.isError ? (
-              <p className="md:col-span-3 text-sm text-danger">
-                {updateInstanceMutation.error instanceof Error
-                  ? updateInstanceMutation.error.message
-                  : t("haproxyDetail.placement.saveFailed")}
               </p>
             ) : null}
           </form>

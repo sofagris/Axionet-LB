@@ -18,6 +18,9 @@ type Props = {
   instances: Instance[];
   vips: Vip[];
   placementDomains: PlacementDomain[];
+  /** Site name of this Axionet-LB appliance (from Settings inventory). */
+  applianceSiteName?: string | null;
+  applianceDomainId?: string | null;
   onUpdateNode: (nodeId: string, patch: Partial<DesignerNode["data"]>) => void;
   onUpdateEdge: (edgeId: string, patch: Partial<DesignerEdge["data"]> & { label?: string }) => void;
   onDeleteSelection: () => void;
@@ -25,6 +28,7 @@ type Props = {
   onRefreshFromInstance?: () => void;
   onUpsertPlacementDomain: (domain: PlacementDomain) => void;
   onAssignPlacementDomain: (nodeId: string, domainId: string | undefined) => void;
+  onCreatePlacementDomain?: (name: string, nodeId: string) => void;
 };
 
 export function DesignerPropertiesPanel({
@@ -33,12 +37,15 @@ export function DesignerPropertiesPanel({
   instances,
   vips,
   placementDomains,
+  applianceSiteName,
+  applianceDomainId,
   onUpdateNode,
   onUpdateEdge,
   onDeleteSelection,
   onRefreshFromInstance,
   onUpsertPlacementDomain,
   onAssignPlacementDomain,
+  onCreatePlacementDomain,
 }: Props) {
   const { t } = useTranslation();
 
@@ -238,6 +245,10 @@ export function DesignerPropertiesPanel({
                   if (value === "__create__") {
                     const name = window.prompt(t("designer.properties.createDomainPrompt"));
                     if (!name?.trim()) return;
+                    if (onCreatePlacementDomain) {
+                      onCreatePlacementDomain(name.trim(), node.id);
+                      return;
+                    }
                     const domain = createPlacementDomain({
                       name: name.trim(),
                       kind: /shared/i.test(name) ? "shared" : "site",
@@ -261,27 +272,16 @@ export function DesignerPropertiesPanel({
                 <option value="__create__">{t("designer.properties.createDomain")}</option>
               </select>
             </label>
-            {(() => {
-              const linked = instances.find((i) => i.id === data.serviceId);
-              const site =
-                linked && typeof linked.configuration?.site === "string"
-                  ? linked.configuration.site.trim()
-                  : "";
-              if (!site) return null;
-              const match = placementDomains.find(
-                (d) => d.name.toLowerCase() === site.toLowerCase(),
-              );
-              const diverges =
-                Boolean(data.placementDomainId) &&
-                match &&
-                match.id !== data.placementDomainId;
-              return (
-                <p className="text-[11px] text-ink-muted">
-                  {t("designer.properties.instanceSiteHint", { site })}
-                  {diverges ? ` — ${t("designer.properties.instanceSiteMismatch")}` : null}
-                </p>
-              );
-            })()}
+            {applianceSiteName ? (
+              <p className="text-[11px] text-ink-muted">
+                {t("designer.properties.applianceSiteHint", { site: applianceSiteName })}
+                {applianceDomainId &&
+                data.placementDomainId &&
+                applianceDomainId !== data.placementDomainId
+                  ? ` — ${t("designer.properties.applianceSiteMismatch")}`
+                  : null}
+              </p>
+            ) : null}
           </div>
         ) : null}
 

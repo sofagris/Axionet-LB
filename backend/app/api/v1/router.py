@@ -12,6 +12,7 @@ from app.api.v1 import (
     haproxy,
     instances,
     interfaces,
+    inventory,
     keycloak,
     networks,
     revisions,
@@ -40,5 +41,8 @@ api_router.include_router(auth_gateway.router)
 api_router.include_router(vips.router)
 api_router.include_router(dashboards.router)
 api_router.include_router(design_flows.router)
+api_router.include_router(inventory.sites_router)
+api_router.include_router(inventory.placement_domains_router)
+api_router.include_router(inventory.load_balancers_router)
 api_router.include_router(users.router)
 api_router.include_router(groups.router)
