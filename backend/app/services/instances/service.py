@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.models.config_revision import ConfigRevision, DeploymentStatus
-from app.models.network import Network
+from app.models.network import Network, NetworkType
 from app.models.network_attachment import NetworkAttachment
 from app.models.service_instance import (
     ActualState,
@@ -33,6 +33,11 @@ from app.schemas.instances import (
 from app.services.audit.service import AuditService
 from app.services.docker.client import DockerClientAdapter
 from app.services.instances.attachments import validate_network_attachments
+from app.services.networking.host import HostNetworkAdapter, HostNetworkError
+from app.services.networking.macvlan_host import (
+    ensure_management_host_access,
+    remove_attachment_host_route,
+)
 from app.services.revisions.service import RevisionService
 
 logger = logging.getLogger(__name__)
@@ -155,6 +160,7 @@ class InstanceService:
         )
         self._db.commit()
         self._db.refresh(attachment)
+        self._sync_macvlan_host_access_for_network(attachment.network_id)
         return attachment
 
     def update_network_attachment(
@@ -166,6 +172,9 @@ class InstanceService:
         updates = payload.model_dump(exclude_unset=True)
         if not updates:
             return attachment
+
+        previous_ip = attachment.ip_address
+        previous_network_id = attachment.network_id
 
         next_network_id = updates.get("network_id", attachment.network_id)
         if next_network_id != attachment.network_id:
@@ -216,6 +225,11 @@ class InstanceService:
         )
         self._db.commit()
         self._db.refresh(attachment)
+        if previous_ip and previous_ip != attachment.ip_address:
+            remove_attachment_host_route(self._host_net(), previous_ip)
+        if previous_network_id != attachment.network_id:
+            self._sync_macvlan_host_access_for_network(previous_network_id)
+        self._sync_macvlan_host_access_for_network(attachment.network_id)
         return attachment
 
     def remove_network_attachment(
@@ -228,6 +242,8 @@ class InstanceService:
             "network_id": attachment.network_id,
             "ip_address": attachment.ip_address,
         }
+        removed_ip = attachment.ip_address
+        removed_network_id = attachment.network_id
         network = self._db.get(Network, attachment.network_id)
         if instance.container_id and network and network.docker_network_id:
             try:
@@ -256,6 +272,53 @@ class InstanceService:
             payload=payload,
         )
         self._db.commit()
+        remove_attachment_host_route(self._host_net(), removed_ip)
+        self._sync_macvlan_host_access_for_network(removed_network_id)
+
+    def _host_net(self) -> HostNetworkAdapter:
+        return HostNetworkAdapter(use_host_nsenter=self._settings.host_net_nsenter)
+
+    def _sync_macvlan_host_access_for_network(self, network_id: str | None) -> None:
+        if not network_id:
+            return
+        network = self._db.get(Network, network_id)
+        if network is None:
+            return
+        if network.network_type not in {
+            NetworkType.MANAGEMENT.value,
+            NetworkType.MACVLAN.value,
+        }:
+            return
+        parent = network.parent_device
+        if not parent and network.parent_interface_id:
+            from app.models.physical_interface import PhysicalInterface
+
+            iface = self._db.get(PhysicalInterface, network.parent_interface_id)
+            parent = iface.name if iface else None
+        if not parent or not network.subnet:
+            return
+        host_net = self._host_net()
+        attachment_ips = [
+            row.ip_address
+            for row in self._db.scalars(
+                select(NetworkAttachment).where(NetworkAttachment.network_id == network.id)
+            )
+            if row.ip_address
+        ]
+        try:
+            ensure_management_host_access(
+                host_net,
+                parent=parent,
+                subnet=network.subnet,
+                gateway=network.gateway,
+                host_ips=host_net.list_ipv4_addresses(parent),
+                attachment_ips=attachment_ips,
+            )
+        except HostNetworkError:
+            logger.exception(
+                "Failed to sync macvlan host access for network %s",
+                network.name,
+            )
 
     def create_instance(self, payload: InstanceCreate) -> ServiceInstance:
         definition = get_service_definition(payload.service_type)
@@ -352,6 +415,8 @@ class InstanceService:
         )
         self._db.commit()
         self._db.refresh(instance)
+        for net in networks:
+            self._sync_macvlan_host_access_for_network(net.id)
         return instance
 
     def update_instance(self, instance: ServiceInstance, payload: InstanceUpdate) -> ServiceInstance:

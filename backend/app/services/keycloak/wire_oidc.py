@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.models.network_attachment import NetworkAttachment
 from app.models.service_instance import ServiceInstance
 from app.plugins.keycloak.schemas import KeycloakConfig
-from app.schemas.auth_sources import AuthSourceCreate, UpnSuffixCreate
+from app.schemas.auth_sources import AuthSourceCreate, AuthSourceUpdate, UpnSuffixCreate, UpnSuffixUpdate
 from app.services.auth_sources.service import AuthSourceError, AuthSourceService
 
 
@@ -51,8 +51,6 @@ def wire_platform_oidc(
                 )
             )
         else:
-            from app.schemas.auth_sources import AuthSourceUpdate
-
             source = auth.update_source(
                 existing,
                 AuthSourceUpdate(
@@ -69,13 +67,24 @@ def wire_platform_oidc(
     except AuthSourceError as exc:
         raise KeycloakWireError(str(exc)) from exc
 
-    suffixes = auth.list_suffixes()
-    has_suffix = any(row.suffix.lower() == upn_suffix.lower() for row in suffixes)
-    if not has_suffix:
-        try:
+    try:
+        suffix_row = auth.get_suffix_by_value(upn_suffix)
+        if suffix_row is None:
             auth.create_suffix(UpnSuffixCreate(suffix=upn_suffix, auth_source_id=source.id))
-        except AuthSourceError as exc:
-            raise KeycloakWireError(str(exc)) from exc
+        elif suffix_row.auth_source_id != source.id:
+            auth.update_suffix(suffix_row, UpnSuffixUpdate(auth_source_id=source.id))
+    except AuthSourceError as exc:
+        raise KeycloakWireError(str(exc)) from exc
+
+    # Disable legacy compose IdP (host-published Keycloak profile).
+    for row in auth.list_sources():
+        if row.id == source.id or not row.enabled:
+            continue
+        if row.name == "Lab Keycloak":
+            try:
+                auth.update_source(row, AuthSourceUpdate(enabled=False))
+            except AuthSourceError:
+                pass
 
     # Ensure local Operators group exists for Keycloak claim mapping
     from app.models.group import Group

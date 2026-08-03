@@ -23,6 +23,7 @@ AxioNet GUI/API   ←OIDC─ Keycloak (mgmt)      Keycloak (apps) ─OIDC→ kun
 - **Interfaces:** én NIC markeres MGMT (`eno1`, bind-IP).
 - Ved **promote** / API-bootstrap opprettes (eller gjenbrukes) Docker-nettverket `management` (type `management`, **macvlan** på MGMT-NIC, subnet fra NIC-CIDR).
 - Keycloak-mgmt attaches til dette nettverket med egen LAN-IP (ikke hostens bind-IP).
+- **Host-shim:** Docker macvlan isolerer parent-NIC fra egne macvlan-containere. API oppretter `ax-mgmt-shim` på MGMT-NIC og `/32`-ruter til attachment-IPer, slik at control plane (OIDC token/JWKS) når IdP. `curl` fra host til Keycloak-IP feiler uten denne shimen.
 
 - **Realms** gir logisk isolasjon (brukere/klienter), **ikke** nettverksisolasjon.
 - Management-IdP skal **ikke** eksponeres mot internett; hold den på management-LAN.

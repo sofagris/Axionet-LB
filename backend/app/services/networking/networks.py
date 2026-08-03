@@ -16,6 +16,7 @@ from app.models.service_instance import ServiceInstance
 from app.schemas.networks import NetworkCreate, NetworkUpdate, NetworkValidationResult
 from app.services.docker.client import DockerClientAdapter
 from app.services.networking.host import HostNetworkAdapter, HostNetworkError
+from app.services.networking.macvlan_host import ensure_management_host_access
 from app.services.networking.validation import NetworkValidator
 
 logger = logging.getLogger(__name__)
@@ -205,6 +206,7 @@ class NetworkService:
         if existing:
             network = existing[0]
             if network.docker_network_id and self._docker.network_exists(network.docker_network_id):
+                self._sync_management_host_access(network, interface)
                 return network
             # Recreate missing Docker network using stored fields
             try:
@@ -228,6 +230,7 @@ class NetworkService:
                 network.updated_at = datetime.now(UTC)
                 self._db.commit()
                 self._db.refresh(network)
+                self._sync_management_host_access(network, interface)
                 return network
             except (DockerException, HostNetworkError, ValueError) as exc:
                 network.last_error = str(exc)
@@ -252,7 +255,7 @@ class NetworkService:
         if self._db.scalars(select(Network).where(Network.name == name)).first() is not None:
             name = f"management-{interface.name}"
 
-        return self.create_network(
+        network = self.create_network(
             NetworkCreate(
                 name=name,
                 network_type=NetworkType.MANAGEMENT,
@@ -263,3 +266,46 @@ class NetworkService:
                 enabled=True,
             )
         )
+        self._sync_management_host_access(network, interface)
+        return network
+
+    def _sync_management_host_access(
+        self,
+        network: Network,
+        interface: PhysicalInterface | None = None,
+    ) -> None:
+        """Shim + /32 routes so control plane can reach macvlan management endpoints."""
+        parent = network.parent_device or (interface.name if interface else None)
+        if not parent:
+            parent_iface = (
+                self._db.get(PhysicalInterface, network.parent_interface_id)
+                if network.parent_interface_id
+                else None
+            )
+            parent = parent_iface.name if parent_iface else None
+        if not parent or not network.subnet:
+            return
+
+        host_ips = self._host_net.list_ipv4_addresses(parent)
+        attachment_ips = [
+            row.ip_address
+            for row in self._db.scalars(
+                select(NetworkAttachment).where(NetworkAttachment.network_id == network.id)
+            )
+            if row.ip_address
+        ]
+        try:
+            ensure_management_host_access(
+                self._host_net,
+                parent=parent,
+                subnet=network.subnet,
+                gateway=network.gateway,
+                host_ips=host_ips,
+                attachment_ips=attachment_ips,
+            )
+        except HostNetworkError:
+            logger.exception(
+                "Failed to sync macvlan host access for management network %s",
+                network.name,
+            )
+            raise

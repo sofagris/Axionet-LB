@@ -77,6 +77,70 @@ class HostNetworkAdapter:
         self._require_name(name)
         self._run(["ip", "link", "set", "dev", name, "promisc", "on" if enabled else "off"])
 
+    def ensure_macvlan_shim(
+        self,
+        parent: str,
+        *,
+        shim_name: str,
+        shim_cidr: str,
+    ) -> None:
+        """Idempotent macvlan shim so the host can reach containers on a macvlan network.
+
+        Docker macvlan isolates the parent NIC from its own macvlan endpoints. A bridge-mode
+        shim on the same parent restores L2/L3 reachability from the host (and from
+        containers that hairpin via host routing).
+        """
+        self._require_name(parent)
+        self._require_name(shim_name)
+        if not self.device_exists(parent):
+            raise HostNetworkError(f"Parent interface does not exist on host: {parent}")
+
+        if not self.device_exists(shim_name):
+            self._run(
+                [
+                    "ip",
+                    "link",
+                    "add",
+                    "link",
+                    parent,
+                    "name",
+                    shim_name,
+                    "type",
+                    "macvlan",
+                    "mode",
+                    "bridge",
+                ]
+            )
+
+        # Ensure address (replace if missing or different prefix).
+        existing = self.list_ipv4_cidrs(shim_name)
+        if shim_cidr not in existing:
+            # Prefer adding; if another address exists keep both unless conflict.
+            add = self._run(
+                ["ip", "addr", "add", shim_cidr, "dev", shim_name],
+                check=False,
+            )
+            if add.returncode != 0:
+                detail = (add.stderr or add.stdout or "").strip()
+                # "File exists" is fine when racing / already present under another form.
+                if "File exists" not in detail and "exists" not in detail.lower():
+                    raise HostNetworkError(detail or f"Failed to add {shim_cidr} on {shim_name}")
+
+        self._run(["ip", "link", "set", "dev", shim_name, "up"])
+
+    def ensure_host_route(self, dst_cidr: str, *, device: str) -> None:
+        """Idempotent host route via ``device`` (``ip route replace``)."""
+        self._require_name(device)
+        if not dst_cidr or "/" not in dst_cidr:
+            raise HostNetworkError(f"Invalid route destination CIDR: {dst_cidr}")
+        self._run(["ip", "route", "replace", dst_cidr, "dev", device])
+
+    def delete_host_route(self, dst_cidr: str) -> None:
+        """Best-effort removal of a host route."""
+        if not dst_cidr or "/" not in dst_cidr:
+            return
+        self._run(["ip", "route", "del", dst_cidr], check=False)
+
     def set_mtu(self, name: str, mtu: int) -> None:
         self._require_name(name)
         if not (68 <= mtu <= 9216):
