@@ -62,9 +62,13 @@ import {
 import type { HaproxyConfigSnapshot } from "../features/designer/haproxyConfigFingerprint";
 import { useLinkedHaproxySync } from "../features/designer/useLinkedHaproxySync";
 import {
+  attachGroupsToMatchingLanes,
   deleteGroups,
   groupSelectedNodes,
   isGroupNode,
+  isLaneNode,
+  moveGroupToDomainLane,
+  absolutePosition,
   ungroupNode,
 } from "../features/designer/grouping";
 import {
@@ -231,7 +235,7 @@ export function DesignerPage() {
     const doc = parseGraphDocument(flowQuery.data.graph_json);
     const migrated = migratePlacementDomains(doc.nodes, doc.placementDomains ?? []);
     setName(flowQuery.data.name);
-    setNodes(migrated.nodes);
+    setNodes(attachGroupsToMatchingLanes(migrated.nodes));
     setEdges(doc.edges);
     setViewport(doc.viewport);
     setSelectedNode(null);
@@ -259,7 +263,7 @@ export function DesignerPage() {
         }
         platform = (await platformDomainsQuery.refetch()).data?.map(fromPlatformRecord) ?? [];
         setPlacementDomains(platform);
-        setNodes((nds) => remapNodesToPlatformDomains(nds, platform));
+        setNodes((nds) => attachGroupsToMatchingLanes(remapNodesToPlatformDomains(nds, platform)));
       } catch {
         // Keep design-local registry if platform sync fails.
         setPlacementDomains(migrated.placementDomains);
@@ -413,7 +417,9 @@ export function DesignerPage() {
         setPlacementDomains((ds) =>
           ds.some((d) => d.id === domain.id) ? ds : [...ds, domain],
         );
-        setNodes((nds) => [...nds, createLaneNode(domain, { x: 24, y })]);
+        setNodes((nds) =>
+          attachGroupsToMatchingLanes([...nds, createLaneNode(domain, { x: 24, y })]),
+        );
         setMessage(t("designer.messages.laneAdded", { name: domain.name }));
       } catch (err) {
         setError(err instanceof Error ? err.message : t("designer.messages.laneAddFailed"));
@@ -493,8 +499,8 @@ export function DesignerPage() {
             siteName: localSite?.name,
           });
       if (!domain) return;
-      setNodes((nds) =>
-        nds.map((n) =>
+      setNodes((nds) => {
+        const patched = nds.map((n) =>
           n.id === groupId
             ? {
                 ...n,
@@ -505,8 +511,9 @@ export function DesignerPage() {
                 },
               }
             : n,
-        ),
-      );
+        );
+        return moveGroupToDomainLane(patched, groupId);
+      });
     },
     [
       localLb?.site_id,
@@ -601,7 +608,18 @@ export function DesignerPage() {
     }
 
     const ids = new Set(otherIds);
-    setNodes((nds) => nds.filter((n) => !ids.has(n.id)));
+    setNodes((nds) => {
+      const byId = new Map(nds.map((n) => [n.id, n]));
+      return nds
+        .filter((n) => !ids.has(n.id))
+        .map((n) => {
+          if (!n.parentId || !ids.has(n.parentId)) return n;
+          const parent = byId.get(n.parentId);
+          if (!parent || !isLaneNode(parent) || !isGroupNode(n)) return n;
+          const abs = absolutePosition(n, byId);
+          return { ...n, parentId: undefined, extent: undefined, position: abs };
+        });
+    });
     setEdges((eds) => eds.filter((e) => !ids.has(e.source) && !ids.has(e.target)));
     setSelectedNode(null);
     setSelectedNodes([]);
@@ -932,8 +950,8 @@ export function DesignerPage() {
                     setPlacementDomains((ds) =>
                       ds.some((d) => d.id === domain.id) ? ds : [...ds, domain],
                     );
-                    setNodes((nds) =>
-                      nds.map((n) =>
+                    setNodes((nds) => {
+                      const patched = nds.map((n) =>
                         n.id === nodeId
                           ? {
                               ...n,
@@ -944,8 +962,9 @@ export function DesignerPage() {
                               },
                             }
                           : n,
-                      ),
-                    );
+                      );
+                      return moveGroupToDomainLane(patched, nodeId);
+                    });
                     setSelectedNode((prev) =>
                       prev && prev.id === nodeId
                         ? {
@@ -1055,8 +1074,8 @@ export function DesignerPage() {
                 const domain = domainId
                   ? placementDomains.find((d) => d.id === domainId)
                   : undefined;
-                setNodes((nds) =>
-                  nds.map((n) =>
+                setNodes((nds) => {
+                  const patched = nds.map((n) =>
                     n.id === nodeId
                       ? {
                           ...n,
@@ -1067,8 +1086,13 @@ export function DesignerPage() {
                           },
                         }
                       : n,
-                  ),
-                );
+                  );
+                  const node = patched.find((n) => n.id === nodeId);
+                  if (node && isGroupNode(node)) {
+                    return moveGroupToDomainLane(patched, nodeId);
+                  }
+                  return patched;
+                });
                 setSelectedNode((prev) =>
                   prev && prev.id === nodeId
                     ? {

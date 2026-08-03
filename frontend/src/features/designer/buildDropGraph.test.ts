@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildDropGraph } from "./buildDropGraph";
 import {
+  attachGroupsToMatchingLanes,
   groupSelectedNodes,
   isGroupNode,
   placeDropNodes,
@@ -116,5 +117,83 @@ describe("grouping", () => {
     const server = next.find((n) => n.id === "s1");
     expect(server?.parentId).toBe("g1");
     expect(server?.position.x).toBeGreaterThanOrEqual(24);
+  });
+
+  it("parents a dropped group.frame under a lane hit by flow position", () => {
+    const lane: DesignerNode = {
+      id: "lane-oslo",
+      type: "designerLane",
+      position: { x: 0, y: 0 },
+      style: { width: 800, height: 400 },
+      data: {
+        kind: "placement.lane",
+        label: "Oslo",
+        placementDomainId: "pd-oslo",
+        placementDomain: "Oslo",
+        placementKind: "site",
+      },
+    };
+    const dropped: DesignerNode[] = [
+      {
+        id: "g-new",
+        type: "designerGroup",
+        position: { x: 300, y: 100 },
+        style: { width: 280, height: 160 },
+        data: { kind: "group.frame", label: "HAProxy", serviceType: "haproxy" },
+      },
+      {
+        id: "fe",
+        type: "designer",
+        parentId: "g-new",
+        extent: "parent",
+        position: { x: 24, y: 48 },
+        data: { kind: "catalog.component", label: "Frontend", componentRole: "frontend" },
+      },
+    ];
+    const next = placeDropNodes([lane], dropped, { x: 300, y: 100 });
+    const group = next.find((n) => n.id === "g-new");
+    const child = next.find((n) => n.id === "fe");
+    expect(group?.parentId).toBe("lane-oslo");
+    expect(group?.extent).toBe("parent");
+    expect(group?.data.placementDomainId).toBe("pd-oslo");
+    expect(group?.position.x).toBeGreaterThanOrEqual(184);
+    // Component stays relative to group, not to lane
+    expect(child?.parentId).toBe("g-new");
+    expect(child?.position).toEqual({ x: 24, y: 48 });
+  });
+
+  it("attachGroupsToMatchingLanes parents free groups into matching lanes", () => {
+    const nodes: DesignerNode[] = [
+      {
+        id: "lane-a",
+        type: "designerLane",
+        position: { x: 0, y: 0 },
+        style: { width: 800, height: 300 },
+        data: {
+          kind: "placement.lane",
+          label: "Oslo",
+          placementDomainId: "pd-oslo",
+          placementDomain: "Oslo",
+        },
+      },
+      {
+        id: "g1",
+        type: "designerGroup",
+        position: { x: 250, y: 40 },
+        style: { width: 280, height: 160 },
+        data: {
+          kind: "group.frame",
+          label: "LB",
+          placementDomainId: "pd-oslo",
+          placementDomain: "Oslo",
+        },
+      },
+    ];
+    const next = attachGroupsToMatchingLanes(nodes);
+    const group = next.find((n) => n.id === "g1");
+    expect(group?.parentId).toBe("lane-a");
+    expect(group?.extent).toBe("parent");
+    expect(group!.position.x).toBe(250);
+    expect(group!.position.y).toBe(40);
   });
 });

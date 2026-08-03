@@ -10,6 +10,13 @@ const COL_GAP = 24;
 const ROW_GAP = 20;
 const GRID_COLS = 4;
 
+/** Left rail width — matches DesignerLaneNode `w-[11.5rem]`. */
+export const LANE_RAIL_W = 184;
+export const LANE_PAD_X = 32;
+export const LANE_PAD_Y = 24;
+export const LANE_HEADER = 16;
+const LANE_CONTENT_ORIGIN_X = LANE_RAIL_W + LANE_PAD_X;
+
 export function absolutePosition(
   node: DesignerNode,
   byId: Map<string, DesignerNode>,
@@ -42,25 +49,98 @@ export function groupSize(group: DesignerNode): { width: number; height: number 
   };
 }
 
-/** Find the topmost group whose bounds contain the flow position. */
+export function isLaneNode(node: DesignerNode): boolean {
+  return node.data.kind === "placement.lane" || node.type === "designerLane";
+}
+
+export function listLanes(allNodes: DesignerNode[]): DesignerNode[] {
+  return allNodes.filter(isLaneNode);
+}
+
+export function laneSize(lane: DesignerNode): { width: number; height: number } {
+  return {
+    width: Number(lane.style?.width ?? lane.width ?? 720),
+    height: Number(lane.style?.height ?? lane.height ?? 220),
+  };
+}
+
+/** Find the topmost group whose absolute bounds contain the flow position. */
 export function findGroupAtFlowPosition(
   allNodes: DesignerNode[],
   flowPos: XYPosition,
 ): DesignerNode | null {
+  const byId = new Map(allNodes.map((n) => [n.id, n]));
   const groups = listGroups(allNodes);
   for (let i = groups.length - 1; i >= 0; i -= 1) {
     const g = groups[i]!;
+    const abs = absolutePosition(g, byId);
     const { width, height } = groupSize(g);
     if (
-      flowPos.x >= g.position.x &&
-      flowPos.x <= g.position.x + width &&
-      flowPos.y >= g.position.y &&
-      flowPos.y <= g.position.y + height
+      flowPos.x >= abs.x &&
+      flowPos.x <= abs.x + width &&
+      flowPos.y >= abs.y &&
+      flowPos.y <= abs.y + height
     ) {
       return g;
     }
   }
   return null;
+}
+
+/** Find the topmost lane whose absolute bounds contain the flow position. */
+export function findLaneAtFlowPosition(
+  allNodes: DesignerNode[],
+  flowPos: XYPosition,
+): DesignerNode | null {
+  const byId = new Map(allNodes.map((n) => [n.id, n]));
+  const lanes = listLanes(allNodes);
+  for (let i = lanes.length - 1; i >= 0; i -= 1) {
+    const lane = lanes[i]!;
+    const abs = absolutePosition(lane, byId);
+    const { width, height } = laneSize(lane);
+    if (
+      flowPos.x >= abs.x &&
+      flowPos.x <= abs.x + width &&
+      flowPos.y >= abs.y &&
+      flowPos.y <= abs.y + height
+    ) {
+      return lane;
+    }
+  }
+  return null;
+}
+
+export function findLaneByDomain(
+  allNodes: DesignerNode[],
+  domainId?: string | null,
+  domainName?: string | null,
+): DesignerNode | null {
+  const lanes = listLanes(allNodes);
+  if (domainId) {
+    const byId = lanes.find((l) => l.data.placementDomainId === domainId);
+    if (byId) return byId;
+  }
+  if (domainName) {
+    const name = domainName.trim().toLowerCase();
+    const byName = lanes.find(
+      (l) => (l.data.placementDomain ?? l.data.label).trim().toLowerCase() === name,
+    );
+    if (byName) return byName;
+  }
+  return null;
+}
+
+function expandLaneStyle(
+  lane: DesignerNode,
+  rel: XYPosition,
+  group: DesignerNode,
+): { width: number; height: number } {
+  const { width, height } = laneSize(lane);
+  const { width: gw, height: gh } = groupSize(group);
+  return {
+    width: Math.max(width, rel.x + gw + LANE_PAD_X),
+    height: Math.max(height, rel.y + gh + PAD_BOTTOM),
+  };
 }
 
 function expandGroupStyle(
@@ -87,11 +167,12 @@ export function addNodeToGroup(
   if (node.parentId === groupId) return allNodes;
 
   const byId = new Map(allNodes.map((n) => [n.id, n]));
+  const groupAbs = absolutePosition(group, byId);
   let rel = preferredRel;
   if (!rel) {
     if (node.parentId) {
       const abs = absolutePosition(node, byId);
-      rel = { x: abs.x - group.position.x, y: abs.y - group.position.y };
+      rel = { x: abs.x - groupAbs.x, y: abs.y - groupAbs.y };
     } else {
       const siblings = allNodes.filter((n) => n.parentId === groupId);
       rel = childRelativePosition(siblings.length, siblings.length + 1);
@@ -139,9 +220,132 @@ export function removeNodeFromGroup(
   });
 }
 
+/** Attach a group.frame into a placement.lane (relative position). */
+export function addGroupToLane(
+  allNodes: DesignerNode[],
+  groupId: string,
+  laneId: string,
+  preferredRel?: XYPosition,
+): DesignerNode[] {
+  const lane = allNodes.find((n) => n.id === laneId);
+  const group = allNodes.find((n) => n.id === groupId);
+  if (!lane || !group || !isLaneNode(lane) || !isGroupNode(group)) return allNodes;
+  if (group.parentId === laneId && !preferredRel) return allNodes;
+
+  const byId = new Map(allNodes.map((n) => [n.id, n]));
+  const laneAbs = absolutePosition(lane, byId);
+  let rel = preferredRel;
+  if (!rel) {
+    const abs = absolutePosition(group, byId);
+    rel = { x: abs.x - laneAbs.x, y: abs.y - laneAbs.y };
+  }
+  rel = {
+    x: Math.max(LANE_CONTENT_ORIGIN_X, rel.x),
+    y: Math.max(LANE_PAD_Y + LANE_HEADER, rel.y),
+  };
+  const size = expandLaneStyle(lane, rel, group);
+  const domainId = lane.data.placementDomainId;
+  const domainName = lane.data.placementDomain ?? lane.data.label;
+
+  const updated = allNodes.map((n) => {
+    if (n.id === laneId) {
+      return { ...n, style: { ...n.style, width: size.width, height: size.height } };
+    }
+    if (n.id === groupId) {
+      return {
+        ...n,
+        parentId: laneId,
+        extent: "parent" as const,
+        position: rel!,
+        data: {
+          ...n.data,
+          placementDomainId: domainId ?? n.data.placementDomainId,
+          placementDomain: domainName || n.data.placementDomain,
+        },
+      };
+    }
+    return n;
+  });
+  // React Flow requires parent nodes before children in the array.
+  return [...updated.filter(isLaneNode), ...updated.filter((n) => !isLaneNode(n))];
+}
+
+/** Detach a group from its lane onto the free canvas (keeps placement domain). */
+export function removeGroupFromLane(
+  allNodes: DesignerNode[],
+  groupId: string,
+): DesignerNode[] {
+  const group = allNodes.find((n) => n.id === groupId);
+  if (!group || !isGroupNode(group) || !group.parentId) return allNodes;
+  const byId = new Map(allNodes.map((n) => [n.id, n]));
+  const parent = byId.get(group.parentId);
+  if (!parent || !isLaneNode(parent)) return allNodes;
+  const abs = absolutePosition(group, byId);
+  return allNodes.map((n) => {
+    if (n.id !== groupId) return n;
+    return {
+      ...n,
+      parentId: undefined,
+      extent: undefined,
+      position: abs,
+    };
+  });
+}
+
+/**
+ * Move a group into the lane matching its placement domain (if any).
+ * Detaches from a previous lane first.
+ */
+export function moveGroupToDomainLane(
+  allNodes: DesignerNode[],
+  groupId: string,
+): DesignerNode[] {
+  const group = allNodes.find((n) => n.id === groupId);
+  if (!group || !isGroupNode(group)) return allNodes;
+
+  let next = allNodes;
+  if (group.parentId) {
+    const parent = next.find((n) => n.id === group.parentId);
+    if (parent && isLaneNode(parent)) {
+      next = removeGroupFromLane(next, groupId);
+    }
+  }
+
+  const updated = next.find((n) => n.id === groupId) ?? group;
+  const lane = findLaneByDomain(
+    next,
+    updated.data.placementDomainId,
+    updated.data.placementDomain,
+  );
+  if (!lane) return next;
+  return addGroupToLane(next, groupId, lane.id);
+}
+
+/**
+ * Parent free groups into matching lanes (abs → rel). Used when loading older graphs.
+ */
+export function attachGroupsToMatchingLanes(allNodes: DesignerNode[]): DesignerNode[] {
+  const byId = new Map(allNodes.map((n) => [n.id, n]));
+  let next = allNodes;
+  for (const group of listGroups(allNodes)) {
+    if (group.parentId) {
+      const parent = byId.get(group.parentId);
+      if (parent && isLaneNode(parent)) continue;
+    }
+    const lane = findLaneByDomain(
+      next,
+      group.data.placementDomainId,
+      group.data.placementDomain,
+    );
+    if (!lane) continue;
+    next = addGroupToLane(next, group.id, lane.id);
+  }
+  return next;
+}
+
 /**
  * If drop lands inside a group, parent non-group drop nodes into it.
- * Tree drops (new group frames) are left as-is.
+ * If drop contains group.frame and lands in a lane, parent groups into that lane.
  */
 export function placeDropNodes(
   existing: DesignerNode[],
@@ -149,22 +353,42 @@ export function placeDropNodes(
   flowPos: XYPosition,
 ): DesignerNode[] {
   if (dropNodes.length === 0) return existing;
+
   if (dropNodes.some(isGroupNode)) {
-    return [...existing, ...dropNodes];
+    const lane = findLaneAtFlowPosition(existing, flowPos);
+    if (!lane) {
+      return [...existing, ...dropNodes];
+    }
+    let next = [...existing, ...dropNodes];
+    const byId = new Map(next.map((n) => [n.id, n]));
+    const laneAbs = absolutePosition(lane, byId);
+    for (const dropped of dropNodes) {
+      if (!isGroupNode(dropped)) continue;
+      const base = dropNodes.filter(isGroupNode).length === 1 ? flowPos : dropped.position;
+      const rel = {
+        x: Math.max(LANE_CONTENT_ORIGIN_X, base.x - laneAbs.x),
+        y: Math.max(LANE_PAD_Y + LANE_HEADER, base.y - laneAbs.y),
+      };
+      next = addGroupToLane(next, dropped.id, lane.id, rel);
+    }
+    return next;
   }
+
   const target = findGroupAtFlowPosition(existing, flowPos);
   if (!target) {
     return [...existing, ...dropNodes];
   }
 
+  const byId = new Map(existing.map((n) => [n.id, n]));
+  const targetAbs = absolutePosition(target, byId);
   let nextW = groupSize(target).width;
   let nextH = groupSize(target).height;
 
   const attached = dropNodes.map((dropped) => {
     const base = dropNodes.length === 1 ? flowPos : dropped.position;
     const rel = {
-      x: Math.max(PAD_X, base.x - target.position.x),
-      y: Math.max(PAD_Y, base.y - target.position.y),
+      x: Math.max(PAD_X, base.x - targetAbs.x),
+      y: Math.max(PAD_Y, base.y - targetAbs.y),
     };
     nextW = Math.max(nextW, rel.x + CHILD_W + PAD_X);
     nextH = Math.max(nextH, rel.y + CHILD_H + PAD_BOTTOM);

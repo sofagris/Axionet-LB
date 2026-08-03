@@ -23,10 +23,14 @@ import { DesignerGroupNode } from "./DesignerGroupNode";
 import { DesignerLaneNode } from "./DesignerLaneNode";
 import { buildDropGraph } from "./buildDropGraph";
 import {
+  addGroupToLane,
   addNodeToGroup,
   isGroupNode,
+  isLaneNode,
   listGroups,
+  listLanes,
   placeDropNodes,
+  removeGroupFromLane,
   removeNodeFromGroup,
 } from "./grouping";
 import {
@@ -202,10 +206,18 @@ function DesignerCanvasInner({
   const closeMenu = useCallback(() => setContextMenu(null), []);
 
   const groups = useMemo(() => listGroups(nodes), [nodes]);
+  const lanes = useMemo(() => listLanes(nodes), [nodes]);
   const menuNode = contextMenu?.node;
   const canRemoveFromGroup = Boolean(menuNode && !isGroupNode(menuNode) && menuNode.parentId);
   const canAddToGroup = Boolean(
     menuNode && !isGroupNode(menuNode) && !menuNode.parentId && groups.length > 0,
+  );
+  const menuParentIsLane = Boolean(
+    menuNode?.parentId && nodes.some((n) => n.id === menuNode.parentId && isLaneNode(n)),
+  );
+  const canRemoveFromLane = Boolean(menuNode && isGroupNode(menuNode) && menuParentIsLane);
+  const canAddToLane = Boolean(
+    menuNode && isGroupNode(menuNode) && !menuParentIsLane && lanes.length > 0,
   );
   const canPin = Boolean(menuNode && menuNode.data.kind !== "placement.lane");
   const isPinned = Boolean(menuNode?.data.pinned);
@@ -308,7 +320,45 @@ function DesignerCanvasInner({
               {t("designer.context.removeFromGroup")}
             </button>
           ) : null}
-          {!canPin && !canAddToGroup && !canRemoveFromGroup ? (
+          {canAddToLane ? (
+            <div className="border-b border-line px-1 pb-1 mb-1">
+              <p className="px-2 py-1 font-mono text-[10px] tracking-wide text-ink-muted uppercase">
+                {t("designer.context.addToLane")}
+              </p>
+              {lanes.map((lane) => (
+                <button
+                  key={lane.id}
+                  type="button"
+                  role="menuitem"
+                  className="block w-full px-3 py-1.5 text-left text-ink hover:bg-paper"
+                  onClick={() => {
+                    onNodes((nds) => addGroupToLane(nds, menuNode.id, lane.id));
+                    closeMenu();
+                  }}
+                >
+                  {lane.data.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {canRemoveFromLane ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="block w-full px-3 py-1.5 text-left text-ink hover:bg-paper"
+              onClick={() => {
+                onNodes((nds) => removeGroupFromLane(nds, menuNode.id));
+                closeMenu();
+              }}
+            >
+              {t("designer.context.removeFromLane")}
+            </button>
+          ) : null}
+          {!canPin &&
+          !canAddToGroup &&
+          !canRemoveFromGroup &&
+          !canAddToLane &&
+          !canRemoveFromLane ? (
             <p className="px-3 py-2 text-xs text-ink-muted">{t("designer.context.noActions")}</p>
           ) : null}
         </div>

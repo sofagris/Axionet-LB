@@ -3,10 +3,15 @@ import type { XYPosition } from "@xyflow/react";
 import {
   CHILD_H,
   CHILD_W,
+  LANE_HEADER,
+  LANE_PAD_X,
+  LANE_PAD_Y,
+  LANE_RAIL_W,
   PAD_BOTTOM,
   PAD_X,
   PAD_Y,
   isGroupNode,
+  isLaneNode,
 } from "./grouping";
 import {
   UNASSIGNED_DOMAIN,
@@ -18,11 +23,7 @@ import { resizeGroupToChildren } from "./autoLayout";
 
 const elk = new ELK();
 
-const LANE_PAD_X = 32;
-const LANE_PAD_Y = 24;
 const LANE_GAP = 40;
-const LANE_RAIL_W = 184;
-const LANE_HEADER = 16;
 
 export type RunElkLayoutInput = {
   nodes: DesignerNode[];
@@ -47,15 +48,11 @@ function nodeSize(node: DesignerNode): { w: number; h: number } {
   return { w: CHILD_W, h: CHILD_H };
 }
 
-function isLane(node: DesignerNode): boolean {
-  return node.data.kind === "placement.lane" || node.type === "designerLane";
-}
-
 function isMovable(
   node: DesignerNode,
   prefs: DesignerLayoutPrefs,
 ): boolean {
-  if (isLane(node)) return false;
+  if (isLaneNode(node)) return false;
   if (prefs.preservePinned && node.data.pinned) return false;
   return true;
 }
@@ -236,7 +233,7 @@ export function bucketByPlacementDomain(
 ): Map<string, DesignerNode[]> {
   const map = new Map<string, DesignerNode[]>();
   for (const n of topLevel) {
-    if (isLane(n)) continue;
+    if (isLaneNode(n)) continue;
     const domain = placementDomainOf(n);
     const list = map.get(domain) ?? [];
     list.push(n);
@@ -285,7 +282,7 @@ async function layoutGroupChildren(
  */
 export async function runElkLayout(input: RunElkLayoutInput): Promise<DesignerNode[]> {
   const { edges, kind, prefs, hubId, scopeGroupId } = input;
-  let nodes = input.nodes.filter((n) => !isLane(n));
+  let nodes = input.nodes.filter((n) => !isLaneNode(n));
 
   // Scope: selected nodes only
   if (kind === "selected" && input.scopeIds && input.scopeIds.length > 0) {
@@ -301,7 +298,7 @@ export async function runElkLayout(input: RunElkLayoutInput): Promise<DesignerNo
   }
 
   if (kind === "swimlanes") {
-    return layoutSwimlanes(nodes, edges, prefs, input.placementDomains);
+    return layoutSwimlanes(input.nodes, edges, prefs, input.placementDomains);
   }
 
   const topLevel = nodes.filter((n) => !n.parentId);
@@ -349,10 +346,17 @@ async function layoutSwimlanes(
   prefs: DesignerLayoutPrefs,
   registry?: RunElkLayoutInput["placementDomains"],
 ): Promise<DesignerNode[]> {
-  const withoutLanes = nodes.filter((n) => !isLane(n));
-  const existingLanes = nodes.filter((n) => isLane(n));
-  const topLevel = withoutLanes.filter((n) => !n.parentId);
-  const buckets = bucketByPlacementDomain(topLevel);
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const withoutLanes = nodes.filter((n) => !isLaneNode(n));
+  const existingLanes = nodes.filter((n) => isLaneNode(n));
+
+  // Bucket groups that are free or already children of a lane; plus other free top-level nodes.
+  const laneCandidates = withoutLanes.filter((n) => {
+    if (!n.parentId) return true;
+    const parent = byId.get(n.parentId);
+    return Boolean(parent && isLaneNode(parent));
+  });
+  const buckets = bucketByPlacementDomain(laneCandidates);
 
   // Prefer registry order; include empty domains; fall back to discovered buckets.
   type LaneKey = { key: string; label: string; kind: string; description?: string; icon?: string; id?: string };
@@ -411,6 +415,8 @@ async function layoutSwimlanes(
 
   const laneNodes: DesignerNode[] = [];
   const positions = new Map<string, XYPosition>();
+  /** groupId → laneId for parenting after layout */
+  const memberLane = new Map<string, string>();
   let yOffset = 0;
   const contentOriginX = LANE_RAIL_W + LANE_PAD_X;
 
@@ -430,12 +436,6 @@ async function layoutSwimlanes(
     for (const m of members) {
       const local = memberPositions.get(m.id) ?? { x: 0, y: 0 };
       const { w, h } = nodeSize(m);
-      const abs = {
-        x: contentOriginX + local.x,
-        y: yOffset + LANE_PAD_Y + LANE_HEADER + local.y,
-      };
-      if (isMovable(m, prefs)) positions.set(m.id, abs);
-      else positions.set(m.id, { ...m.position });
       maxX = Math.max(maxX, local.x + w);
       maxY = Math.max(maxY, local.y + h);
     }
@@ -451,12 +451,38 @@ async function layoutSwimlanes(
     );
     if (prev && prefs.preservePinned && prev.data.pinned) {
       laneNodes.push(prev);
-      yOffset = Math.max(yOffset, prev.position.y + (typeof prev.style?.height === "number" ? prev.style.height : laneH) + LANE_GAP);
+      // Keep existing relative positions for members already under this lane
+      for (const m of members) {
+        memberLane.set(m.id, prev.id);
+        if (isGroupNode(m) && m.parentId === prev.id) {
+          positions.set(m.id, { ...m.position });
+        } else if (isGroupNode(m)) {
+          positions.set(m.id, {
+            x: contentOriginX + (memberPositions.get(m.id)?.x ?? 0),
+            y: LANE_PAD_Y + LANE_HEADER + (memberPositions.get(m.id)?.y ?? 0),
+          });
+        } else if (isMovable(m, prefs)) {
+          // Non-groups stay canvas-absolute (outside parenting scope)
+          positions.set(m.id, {
+            x: prev.position.x + contentOriginX + (memberPositions.get(m.id)?.x ?? 0),
+            y: prev.position.y + LANE_PAD_Y + LANE_HEADER + (memberPositions.get(m.id)?.y ?? 0),
+          });
+        } else {
+          positions.set(m.id, { ...m.position });
+        }
+      }
+      yOffset = Math.max(
+        yOffset,
+        prev.position.y +
+          (typeof prev.style?.height === "number" ? prev.style.height : laneH) +
+          LANE_GAP,
+      );
       continue;
     }
 
+    const laneId = prev?.id ?? newNodeId();
     laneNodes.push({
-      id: prev?.id ?? newNodeId(),
+      id: laneId,
       type: "designerLane",
       position: { x: 0, y: yOffset },
       style: { width: laneW, height: laneH },
@@ -474,6 +500,37 @@ async function layoutSwimlanes(
         pinned: prev?.data.pinned,
       },
     });
+
+    for (const m of members) {
+      const local = memberPositions.get(m.id) ?? { x: 0, y: 0 };
+      if (isGroupNode(m)) {
+        memberLane.set(m.id, laneId);
+        if (isMovable(m, prefs)) {
+          positions.set(m.id, {
+            x: contentOriginX + local.x,
+            y: LANE_PAD_Y + LANE_HEADER + local.y,
+          });
+        } else {
+          // Pinned group: keep relative if already in this lane, else convert from abs
+          if (m.parentId === laneId) {
+            positions.set(m.id, { ...m.position });
+          } else {
+            positions.set(m.id, {
+              x: Math.max(contentOriginX, m.position.x),
+              y: Math.max(LANE_PAD_Y + LANE_HEADER, m.position.y - yOffset),
+            });
+          }
+        }
+      } else if (isMovable(m, prefs)) {
+        positions.set(m.id, {
+          x: contentOriginX + local.x,
+          y: yOffset + LANE_PAD_Y + LANE_HEADER + local.y,
+        });
+      } else {
+        positions.set(m.id, { ...m.position });
+      }
+    }
+
     yOffset += laneH + LANE_GAP;
   }
 
@@ -485,7 +542,19 @@ async function layoutSwimlanes(
   }
 
   // Swimlanes: never re-layout group children — only position top-level groups.
-  return [...laneNodes, ...applyPositions(withoutLanes, positions, prefs)];
+  const laid = applyPositions(withoutLanes, positions, prefs);
+  return [
+    ...laneNodes,
+    ...laid.map((n) => {
+      const laneId = memberLane.get(n.id);
+      if (!laneId || !isGroupNode(n)) return n;
+      return {
+        ...n,
+        parentId: laneId,
+        extent: "parent" as const,
+      };
+    }),
+  ];
 }
 
 /** Interpolate positions for animate preference (sync helper for caller). */

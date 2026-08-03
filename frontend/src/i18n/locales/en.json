@@ -354,6 +354,8 @@
     "context": {
       "addToGroup": "Add to group",
       "removeFromGroup": "Remove from group",
+      "addToLane": "Add to lane",
+      "removeFromLane": "Remove from lane",
       "pin": "Pin position",
       "unpin": "Unpin position",
       "noActions": "No group actions for this node"

@@ -355,6 +355,8 @@
     "context": {
       "addToGroup": "Legg til i gruppe",
       "removeFromGroup": "Fjern fra gruppe",
+      "addToLane": "Legg til i lane",
+      "removeFromLane": "Fjern fra lane",
       "pin": "Pin position",
       "unpin": "Unpin position",
       "noActions": "Ingen gruppehandlinger for denne noden"

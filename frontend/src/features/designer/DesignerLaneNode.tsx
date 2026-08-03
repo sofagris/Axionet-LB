@@ -37,11 +37,11 @@ function DesignerLaneNodeComponent({ data, selected }: NodeProps<DesignerNode>) 
       />
       <div
         className={[
-          "box-border flex h-full w-full overflow-hidden rounded-md border bg-paper/50",
+          "pointer-events-none box-border flex h-full w-full overflow-hidden rounded-md border bg-paper/50",
           selected ? "border-accent" : "border-line/70",
         ].join(" ")}
       >
-        <div className="flex w-[11.5rem] shrink-0 flex-col gap-2 border-r border-line/60 bg-paper-elevated/90 px-3 py-3">
+        <div className="pointer-events-auto flex w-[11.5rem] shrink-0 flex-col gap-2 border-r border-line/60 bg-paper-elevated/90 px-3 py-3">
           <div className="text-accent">
             <LaneIcon kind={kind} />
           </div>
