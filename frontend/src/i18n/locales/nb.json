@@ -294,7 +294,9 @@
       "grouped": "Noder gruppert.",
       "ungrouped": "Gruppe oppløst.",
       "groupDeletedKeepNodes": "Gruppe fjernet. Nodene ble beholdt på lerretet.",
-      "groupDeletedWithNodes": "Gruppe og noder slettet."
+      "groupDeletedWithNodes": "Gruppe og noder slettet.",
+      "hydrated": "Lastet live-config for {{label}} inn på lerretet.",
+      "hydrateFailed": "Kunne ikke laste instans-config inn på lerretet."
     },
     "deleteGroup": {
       "title": "Slette gruppe?",
@@ -327,6 +329,9 @@
       "weight": "Vekt",
       "statusCode": "Statuskode",
       "errorTitle": "Sidetittel",
+      "errorFrontend": "Frontend-scope",
+      "certificate": "Sertifikat",
+      "backend": "Backend",
       "listen": "Listen",
       "issuerUrl": "Issuer-URL",
       "clientId": "Client ID",

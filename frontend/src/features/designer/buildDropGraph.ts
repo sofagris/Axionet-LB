@@ -94,7 +94,7 @@ function layoutTreeAsGroup(
       type: "designer",
       parentId: groupId,
       extent: "parent",
-      position: childRelativePosition(index),
+      position: childRelativePosition(index, tree.components.length),
       data: componentNodeData({
         component,
         catalogId: tree.catalogId,

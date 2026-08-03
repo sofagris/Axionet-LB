@@ -33,6 +33,16 @@ import {
   writeDesignerFullWidth,
 } from "../features/designer/fullWidth";
 import {
+  applyHydratedGroup,
+  hydrateHaproxyGraph,
+} from "../features/designer/haproxyGraphMapper";
+import {
+  fetchHaproxyAcls,
+  fetchHaproxyBackends,
+  fetchHaproxyErrorFiles,
+  fetchHaproxyFrontends,
+} from "../api/haproxy";
+import {
   deleteGroups,
   groupSelectedNodes,
   isGroupNode,
@@ -217,6 +227,69 @@ export function DesignerPage() {
     setSelectedNodes([]);
     setMessage(t("designer.messages.ungrouped"));
   };
+
+  const graphRef = useRef({ nodes, edges });
+  useEffect(() => {
+    graphRef.current = { nodes, edges };
+  }, [nodes, edges]);
+
+  const onHaproxyInstanceDropped = useCallback(
+    async (info: {
+      groupId: string;
+      serviceId: string;
+      label: string;
+      catalogSlug?: string;
+      brand?: DesignerNode["data"]["brand"];
+    }) => {
+      try {
+        const [frontends, backends, errorFiles, acls] = await Promise.all([
+          fetchHaproxyFrontends(info.serviceId),
+          fetchHaproxyBackends(info.serviceId),
+          fetchHaproxyErrorFiles(info.serviceId),
+          fetchHaproxyAcls(info.serviceId),
+        ]);
+        // Wait for React to commit the skeleton drop into graphRef.
+        await new Promise<void>((resolve) => {
+          requestAnimationFrame(() => resolve());
+        });
+        const { nodes: currentNodes, edges: currentEdges } = graphRef.current;
+        const group = currentNodes.find((n) => n.id === info.groupId);
+        if (!group) return;
+        const hydrated = hydrateHaproxyGraph({
+          serviceId: info.serviceId,
+          groupId: info.groupId,
+          groupPosition: group.position,
+          label: info.label,
+          catalogSlug: info.catalogSlug,
+          brand: info.brand,
+          frontends,
+          backends,
+          errorFiles,
+          acls,
+        });
+        const result = applyHydratedGroup(
+          currentNodes,
+          currentEdges,
+          info.groupId,
+          hydrated,
+        );
+        setNodes(result.nodes);
+        setEdges(result.edges);
+        setMessage(t("designer.messages.hydrated", { label: info.label }));
+        setError(null);
+      } catch (err) {
+        setNodes((current) =>
+          current.map((n) =>
+            n.id === info.groupId ? { ...n, data: { ...n.data, hydrating: false } } : n,
+          ),
+        );
+        setError(
+          err instanceof Error ? err.message : t("designer.messages.hydrateFailed"),
+        );
+      }
+    },
+    [t],
+  );
 
   const applyNodeDeletion = useCallback(
     (groupIds: string[], otherIds: string[], deleteGroupContents: boolean) => {
@@ -552,6 +625,7 @@ export function DesignerPage() {
                   onEdges={setEdges}
                   onViewportChange={setViewport}
                   onSelectionChange={onSelectionChange}
+                  onHaproxyInstanceDropped={(info) => void onHaproxyInstanceDropped(info)}
                 />
               </div>
             </div>

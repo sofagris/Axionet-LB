@@ -13,6 +13,7 @@ export function defaultComponentProps(role: string): Record<string, string> {
         bind: "*:443",
         mode: "http",
         default_backend: "",
+        certificate: "",
       };
     case "backend":
       return {
@@ -27,12 +28,14 @@ export function defaultComponentProps(role: string): Record<string, string> {
         port: "80",
         check: "enabled",
         weight: "100",
+        backend: "",
       };
     case "error-page":
       return {
         name: "not-found",
         status_code: "404",
         title: "Not Found",
+        frontend: "",
       };
     case "listen":
       return { listen: "0.0.0.0:4180" };
@@ -69,6 +72,7 @@ export function componentPropFields(role: string): ComponentPropField[] {
           labelKey: "designer.props.defaultBackend",
           placeholder: "be_app",
         },
+        { key: "certificate", labelKey: "designer.props.certificate", placeholder: "site" },
       ];
     case "backend":
       return [
@@ -83,12 +87,14 @@ export function componentPropFields(role: string): ComponentPropField[] {
         { key: "port", labelKey: "designer.props.port", placeholder: "80" },
         { key: "check", labelKey: "designer.props.check", placeholder: "enabled" },
         { key: "weight", labelKey: "designer.props.weight", placeholder: "100" },
+        { key: "backend", labelKey: "designer.props.backend", placeholder: "be_app" },
       ];
     case "error-page":
       return [
         { key: "name", labelKey: "designer.props.name", placeholder: "not-found" },
         { key: "status_code", labelKey: "designer.props.statusCode", placeholder: "404" },
         { key: "title", labelKey: "designer.props.errorTitle", placeholder: "Not Found" },
+        { key: "frontend", labelKey: "designer.props.errorFrontend", placeholder: "" },
       ];
     case "listen":
       return [{ key: "listen", labelKey: "designer.props.listen", placeholder: "0.0.0.0:4180" }];

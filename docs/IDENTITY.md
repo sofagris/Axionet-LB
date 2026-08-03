@@ -112,6 +112,7 @@ Autentiserte forespørsler til upstream får bl.a. `X-Forwarded-User`, `X-Forwar
 ### Designer vs Runtime Status
 
 - **Designer** (`/designer` i venstremenyen) er plattform-omspennende komposisjon: dra Catalog-tjenester / eksisterende instanser / VIP-er inn på et canvas (Node-RED-stil), lagre design-flows via `/api/v1/design-flows`. Apply i MVP lagrer grafen og foreslår deep-links (create-wizard / instansdetalj) — den skriver ikke HAProxy-config automatisk.
+- Når du drar inn en **eksisterende HAProxy-instans**, hydreres gruppen med live frontends / backends / servers / error pages fra API (ikke bare et default-skjelett). `toHaproxyDesiredState` i frontend mapper forbereder senere Designer→deploy; Apply deployer fortsatt ikke.
 - **Runtime Status** (HAProxy-instans → Status) forblir lesevisning av FE→BE→server for *én* dataplane-instans. Bruk Designer for tverrgående flows (f.eks. VIP → HAProxy → Auth Gateway → upstream); bruk Runtime Status for live-metrikker og server-actions på den enkelte LB.
 - **HAProxy error pages** (404 m.m.): egendefinerte `errorfile`-sider lagres under `config/errors/` og styres i HAProxy-detalj → **Error pages**. Designer har en `Error page`-komponent (edge `errorfile` fra Frontend); Apply deep-linker til `?tab=errors` og synker ikke automatisk til cfg.
 

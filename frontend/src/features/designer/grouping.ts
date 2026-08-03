@@ -7,6 +7,8 @@ const PAD_BOTTOM = 24;
 const CHILD_W = 200;
 const CHILD_H = 88;
 const COL_GAP = 24;
+const ROW_GAP = 20;
+const GRID_COLS = 4;
 
 export function absolutePosition(
   node: DesignerNode,
@@ -92,7 +94,7 @@ export function addNodeToGroup(
       rel = { x: abs.x - group.position.x, y: abs.y - group.position.y };
     } else {
       const siblings = allNodes.filter((n) => n.parentId === groupId);
-      rel = childRelativePosition(siblings.length);
+      rel = childRelativePosition(siblings.length, siblings.length + 1);
     }
   }
   rel = {
@@ -289,16 +291,22 @@ export function deleteGroups(
 }
 
 export function groupLayoutMetrics(childCount: number): { width: number; height: number } {
-  const width = PAD_X * 2 + childCount * CHILD_W + Math.max(0, childCount - 1) * COL_GAP;
-  const height = PAD_Y + CHILD_H + PAD_BOTTOM;
+  const cols = Math.min(GRID_COLS, Math.max(1, childCount));
+  const rows = Math.max(1, Math.ceil(childCount / cols));
+  const width = PAD_X * 2 + cols * CHILD_W + Math.max(0, cols - 1) * COL_GAP;
+  const height = PAD_Y + rows * CHILD_H + Math.max(0, rows - 1) * ROW_GAP + PAD_BOTTOM;
   return { width: Math.max(280, width), height: Math.max(160, height) };
 }
 
-export function childRelativePosition(index: number): XYPosition {
+/** Relative position inside a group; pass total for multi-column grid. */
+export function childRelativePosition(index: number, total = index + 1): XYPosition {
+  const cols = Math.min(GRID_COLS, Math.max(1, total));
+  const col = index % cols;
+  const row = Math.floor(index / cols);
   return {
-    x: PAD_X + index * (CHILD_W + COL_GAP),
-    y: PAD_Y,
+    x: PAD_X + col * (CHILD_W + COL_GAP),
+    y: PAD_Y + row * (CHILD_H + ROW_GAP),
   };
 }
 
-export { PAD_X, PAD_Y, CHILD_W, CHILD_H, COL_GAP };
+export { PAD_X, PAD_Y, CHILD_W, CHILD_H, COL_GAP, ROW_GAP, GRID_COLS };

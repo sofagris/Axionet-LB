@@ -61,6 +61,14 @@ type Props = {
     node: DesignerNode | null;
     edge: DesignerEdge | null;
   }) => void;
+  /** Fired after a HAProxy instance tree skeleton is placed — parent should hydrate from API. */
+  onHaproxyInstanceDropped?: (info: {
+    groupId: string;
+    serviceId: string;
+    label: string;
+    catalogSlug?: string;
+    brand?: DesignerNodeData["brand"];
+  }) => void;
 };
 
 function DesignerCanvasInner({
@@ -72,6 +80,7 @@ function DesignerCanvasInner({
   onEdges,
   onViewportChange,
   onSelectionChange,
+  onHaproxyInstanceDropped,
 }: Props) {
   const { t } = useTranslation();
   const { screenToFlowPosition } = useReactFlow();
@@ -124,12 +133,49 @@ function DesignerCanvasInner({
       }
       const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
       const drop = buildDropGraph(position, payload);
-      onNodes((current) => placeDropNodes(current, drop.nodes, position));
+      let placedGroupId: string | null = null;
+      onNodes((current) => {
+        let next = placeDropNodes(current, drop.nodes, position);
+        if (
+          payload.source === "instance" &&
+          payload.serviceType === "haproxy" &&
+          (payload.dropMode ?? "tree") === "tree"
+        ) {
+          const group = next.find(
+            (n) =>
+              n.data.kind === "group.frame" &&
+              n.data.serviceId === payload.serviceId &&
+              drop.nodes.some((d) => d.id === n.id),
+          );
+          if (group) {
+            placedGroupId = group.id;
+            next = next.map((n) =>
+              n.id === group.id ? { ...n, data: { ...n.data, hydrating: true } } : n,
+            );
+          }
+        }
+        return next;
+      });
       if (drop.edges.length > 0) {
         onEdges((eds) => [...eds, ...drop.edges]);
       }
+
+      if (
+        placedGroupId &&
+        payload.source === "instance" &&
+        payload.serviceType === "haproxy" &&
+        onHaproxyInstanceDropped
+      ) {
+        onHaproxyInstanceDropped({
+          groupId: placedGroupId,
+          serviceId: payload.serviceId,
+          label: payload.label,
+          catalogSlug: payload.catalogSlug,
+          brand: payload.brand,
+        });
+      }
     },
-    [onEdges, onNodes, screenToFlowPosition],
+    [onEdges, onHaproxyInstanceDropped, onNodes, screenToFlowPosition],
   );
 
   const onNodeContextMenu = useCallback((event: MouseEvent, node: Node) => {

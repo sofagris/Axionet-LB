@@ -293,7 +293,9 @@
       "grouped": "Nodes grouped.",
       "ungrouped": "Group dissolved.",
       "groupDeletedKeepNodes": "Group removed. Nodes kept on the canvas.",
-      "groupDeletedWithNodes": "Group and its nodes deleted."
+      "groupDeletedWithNodes": "Group and its nodes deleted.",
+      "hydrated": "Loaded live config for {{label}} into the canvas.",
+      "hydrateFailed": "Could not load instance config onto the canvas."
     },
     "deleteGroup": {
       "title": "Delete group?",
@@ -326,6 +328,9 @@
       "weight": "Weight",
       "statusCode": "Status code",
       "errorTitle": "Page title",
+      "errorFrontend": "Frontend scope",
+      "certificate": "Certificate",
+      "backend": "Backend",
       "listen": "Listen",
       "issuerUrl": "Issuer URL",
       "clientId": "Client ID",

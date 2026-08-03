@@ -35,7 +35,7 @@ function DesignerGroupNodeComponent({ data, selected }: NodeProps<DesignerNode>)
           )}
           <div className="min-w-0 flex-1">
             <p className="font-mono text-[10px] tracking-wide text-ink-muted uppercase">
-              {data.serviceType ?? "group"}
+              {data.hydrating ? "loading…" : (data.serviceType ?? "group")}
             </p>
             <p className="truncate text-sm font-semibold text-ink">{data.label}</p>
           </div>

@@ -26,6 +26,8 @@ export type DesignerNodeData = {
   componentRole?: string;
   /** Role-specific configuration fields */
   props?: Record<string, string>;
+  /** True while live instance config is being fetched into this group */
+  hydrating?: boolean;
 };
 
 export type DesignerEdgeData = {
