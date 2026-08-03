@@ -54,6 +54,7 @@ import {
   setGroupHydrating,
   type LinkedHaproxyGroup,
 } from "../features/designer/haproxyRehydrate";
+import type { HaproxyConfigSnapshot } from "../features/designer/haproxyConfigFingerprint";
 import { useLinkedHaproxySync } from "../features/designer/useLinkedHaproxySync";
 import {
   deleteGroups,
