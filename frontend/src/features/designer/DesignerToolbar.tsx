@@ -104,15 +104,15 @@ function ToolBtn({
 }: ToolBtnProps) {
   const tone =
     variant === "primary"
-      ? "bg-accent text-white hover:brightness-110 disabled:opacity-40"
+      ? "bg-accent text-white shadow-sm hover:brightness-125 hover:shadow-md active:brightness-95"
       : variant === "danger"
-        ? "text-danger hover:bg-danger/10 disabled:opacity-40"
-        : "text-ink hover:bg-paper-elevated disabled:opacity-40";
+        ? "text-danger hover:bg-danger/15 hover:ring-1 hover:ring-danger/30 active:bg-danger/25"
+        : "text-ink hover:bg-ink/10 hover:text-accent hover:ring-1 hover:ring-accent/25 active:bg-ink/15";
 
   return (
     <button
       type="button"
-      className={`inline-flex size-9 items-center justify-center rounded-sm transition-colors disabled:pointer-events-none ${tone}`}
+      className={`inline-flex size-9 items-center justify-center rounded-sm transition-[color,background-color,box-shadow,transform,filter] duration-150 ease-out hover:scale-105 active:scale-95 disabled:pointer-events-none disabled:opacity-40 disabled:hover:scale-100 ${tone}`}
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
