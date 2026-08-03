@@ -297,7 +297,17 @@
       "groupDeletedWithNodes": "Gruppe og noder slettet.",
       "hydrated": "Lastet live-config for {{label}} inn på lerretet.",
       "hydrateFailed": "Kunne ikke laste instans-config inn på lerretet.",
-      "synced": "Oppdatert canvas fra live-config for {{label}}."
+      "synced": "Oppdatert canvas fra live-config for {{label}}.",
+      "layoutGroup": "Auto-layout brukt på valgt gruppe.",
+      "layoutCanvas": "Auto-layout brukt på canvas."
+    },
+    "layout": {
+      "mode": "Layout",
+      "flow": "Flyt",
+      "grid": "Rutenett",
+      "stack": "Stabel",
+      "auto": "Auto layout",
+      "autoHint": "Velg en gruppe for å legge ut innholdet; ellers top-level noder"
     },
     "deleteGroup": {
       "title": "Slette gruppe?",

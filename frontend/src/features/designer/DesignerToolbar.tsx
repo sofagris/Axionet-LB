@@ -1,5 +1,6 @@
 import type { ReactNode, SVGProps } from "react";
 import { useTranslation } from "react-i18next";
+import type { DesignerLayoutMode } from "./autoLayout";
 
 type IconProps = SVGProps<SVGSVGElement>;
 
@@ -85,6 +86,17 @@ function IconDelete(props: IconProps) {
   );
 }
 
+function IconAutoLayout(props: IconProps) {
+  return (
+    <svg {...iconBase(props)}>
+      <rect x="3" y="4" width="6" height="6" rx="1" />
+      <rect x="15" y="4" width="6" height="6" rx="1" />
+      <rect x="9" y="14" width="6" height="6" rx="1" />
+      <path d="M9 7h6M12 10v4" />
+    </svg>
+  );
+}
+
 type ToolBtnProps = {
   label: string;
   title?: string;
@@ -131,6 +143,9 @@ type Props = {
   saving?: boolean;
   canGroup: boolean;
   canUngroup: boolean;
+  layoutMode: DesignerLayoutMode;
+  onLayoutModeChange: (mode: DesignerLayoutMode) => void;
+  onAutoLayout: () => void;
   onSave: () => void;
   onValidate: () => void;
   onPreview: () => void;
@@ -144,6 +159,9 @@ export function DesignerToolbar({
   saving,
   canGroup,
   canUngroup,
+  layoutMode,
+  onLayoutModeChange,
+  onAutoLayout,
   onSave,
   onValidate,
   onPreview,
@@ -185,6 +203,28 @@ export function DesignerToolbar({
         disabled={!canUngroup}
       >
         <IconUngroup />
+      </ToolBtn>
+      <Divider />
+      <label className="flex items-center gap-1 px-1">
+        <span className="sr-only">{t("designer.layout.mode")}</span>
+        <select
+          className="h-8 max-w-[7.5rem] border border-line bg-paper px-1.5 text-xs text-ink"
+          value={layoutMode}
+          title={t("designer.layout.mode")}
+          aria-label={t("designer.layout.mode")}
+          onChange={(e) => onLayoutModeChange(e.target.value as DesignerLayoutMode)}
+        >
+          <option value="flow">{t("designer.layout.flow")}</option>
+          <option value="grid">{t("designer.layout.grid")}</option>
+          <option value="stack">{t("designer.layout.stack")}</option>
+        </select>
+      </label>
+      <ToolBtn
+        label={t("designer.layout.auto")}
+        title={t("designer.layout.autoHint")}
+        onClick={onAutoLayout}
+      >
+        <IconAutoLayout />
       </ToolBtn>
       <Divider />
       <ToolBtn label={t("designer.apply")} onClick={onApply} variant="primary">

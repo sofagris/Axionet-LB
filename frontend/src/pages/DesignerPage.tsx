@@ -32,6 +32,12 @@ import {
   readDesignerFullWidth,
   writeDesignerFullWidth,
 } from "../features/designer/fullWidth";
+import {
+  applyDesignerAutoLayout,
+  readDesignerLayoutMode,
+  writeDesignerLayoutMode,
+  type DesignerLayoutMode,
+} from "../features/designer/autoLayout";
 import type { HaproxyConfigSnapshot } from "../features/designer/haproxyConfigFingerprint";
 import {
   applySnapshotToGroup,
@@ -130,9 +136,12 @@ export function DesignerPage() {
     otherIds: string[];
   } | null>(null);
   const [fullWidth, setFullWidth] = useState(readDesignerFullWidth);
+  const [layoutMode, setLayoutMode] = useState<DesignerLayoutMode>(readDesignerLayoutMode);
   const loadedStampRef = useRef<string | null>(null);
   const fingerprintsRef = useRef(new Map<string, string>());
   const inFlightRef = useRef(new Set<string>());
+  /** When true, next flow stamp change from our own save must not remount/rehydrate. */
+  const preserveLocalGraphRef = useRef(false);
 
   useEffect(() => {
     const sync = () => setFullWidth(readDesignerFullWidth());
@@ -164,11 +173,18 @@ export function DesignerPage() {
       loadedStampRef.current = null;
       fingerprintsRef.current.clear();
       inFlightRef.current.clear();
+      preserveLocalGraphRef.current = false;
       return;
     }
     if (!flowQuery.data || flowQuery.data.id !== flowId) return;
     const stamp = `${flowQuery.data.id}:${flowQuery.data.updated_at}`;
     if (loadedStampRef.current === stamp) return;
+    // Own save: keep in-memory canvas + fingerprints (avoid sync rehydrate grid reset).
+    if (preserveLocalGraphRef.current) {
+      preserveLocalGraphRef.current = false;
+      loadedStampRef.current = stamp;
+      return;
+    }
     loadedStampRef.current = stamp;
     fingerprintsRef.current.clear();
     inFlightRef.current.clear();
@@ -230,6 +246,22 @@ export function DesignerPage() {
     setSelectedNode(null);
     setSelectedNodes([]);
     setMessage(t("designer.messages.ungrouped"));
+  };
+
+  const onLayoutModeChange = (mode: DesignerLayoutMode) => {
+    setLayoutMode(mode);
+    writeDesignerLayoutMode(mode);
+  };
+
+  const onAutoLayout = () => {
+    const scopeGroupId =
+      selectedNode && isGroupNode(selectedNode) ? selectedNode.id : null;
+    setNodes((nds) => applyDesignerAutoLayout(nds, edges, layoutMode, scopeGroupId));
+    setMessage(
+      scopeGroupId
+        ? t("designer.messages.layoutGroup")
+        : t("designer.messages.layoutCanvas"),
+    );
   };
 
   const graphRef = useRef({ nodes, edges });
@@ -427,13 +459,16 @@ export function DesignerPage() {
     if (!flowId) return;
     setError(null);
     setMessage(null);
+    preserveLocalGraphRef.current = true;
     try {
-      await updateMutation.mutateAsync({
+      const updated = await updateMutation.mutateAsync({
         name: name.trim() || undefined,
         graph_json: serializeGraphDocument({ nodes, edges, viewport }),
       });
+      loadedStampRef.current = `${updated.id}:${updated.updated_at}`;
       setMessage(t("designer.messages.saved"));
     } catch (err) {
+      preserveLocalGraphRef.current = false;
       setError(err instanceof Error ? err.message : t("designer.messages.saveFailed"));
     }
   };
@@ -477,12 +512,15 @@ export function DesignerPage() {
       return;
     }
     if (flowId) {
+      preserveLocalGraphRef.current = true;
       try {
-        await updateMutation.mutateAsync({
+        const updated = await updateMutation.mutateAsync({
           name: name.trim() || undefined,
           graph_json: serializeGraphDocument({ nodes, edges, viewport }),
         });
+        loadedStampRef.current = `${updated.id}:${updated.updated_at}`;
       } catch (err) {
+        preserveLocalGraphRef.current = false;
         setError(err instanceof Error ? err.message : t("designer.messages.saveFailed"));
         return;
       }
@@ -642,6 +680,9 @@ export function DesignerPage() {
                   saving={updateMutation.isPending}
                   canGroup={canGroup}
                   canUngroup={canUngroup}
+                  layoutMode={layoutMode}
+                  onLayoutModeChange={onLayoutModeChange}
+                  onAutoLayout={onAutoLayout}
                   onSave={() => void onSave()}
                   onValidate={onValidate}
                   onPreview={onPreview}

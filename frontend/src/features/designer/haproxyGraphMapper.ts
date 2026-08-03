@@ -11,7 +11,11 @@ import type {
   HaproxyFrontend,
 } from "../../types/haproxy";
 import type { CatalogBrand, CatalogStatus } from "../catalog/catalogTypes";
-import { childRelativePosition, groupLayoutMetrics } from "./grouping";
+import {
+  layoutSiblingNodes,
+  mergePreservedChildPositions,
+  resizeGroupToChildren,
+} from "./autoLayout";
 import {
   newEdgeId,
   newNodeId,
@@ -244,12 +248,6 @@ export function hydrateHaproxyGraph(input: HydrateHaproxyInput): {
     });
   }
 
-  const total = children.length;
-  const { width, height } = groupLayoutMetrics(Math.max(1, total));
-  children.forEach((node, index) => {
-    node.position = childRelativePosition(index, total);
-  });
-
   const edges: DesignerEdge[] = [];
   const edgeKey = new Set<string>();
 
@@ -309,26 +307,30 @@ export function hydrateHaproxyGraph(input: HydrateHaproxyInput): {
     }
   }
 
-  const group: DesignerNode = {
-    id: groupId,
-    type: "designerGroup",
-    position: groupPosition,
-    style: { width, height },
-    zIndex: -1,
-    data: {
-      kind: "group.frame",
-      label,
-      serviceType: "haproxy",
-      serviceId,
-      catalogId: catalogId ?? "haproxy",
-      catalogSlug: catalogSlug ?? "haproxy",
-      brand,
-      catalogStatus,
-      hydrating: false,
+  const laidOutChildren = layoutSiblingNodes(children, edges, "flow");
+  const group: DesignerNode = resizeGroupToChildren(
+    {
+      id: groupId,
+      type: "designerGroup",
+      position: groupPosition,
+      style: { width: 280, height: 160 },
+      zIndex: -1,
+      data: {
+        kind: "group.frame",
+        label,
+        serviceType: "haproxy",
+        serviceId,
+        catalogId: catalogId ?? "haproxy",
+        catalogSlug: catalogSlug ?? "haproxy",
+        brand,
+        catalogStatus,
+        hydrating: false,
+      },
     },
-  };
+    laidOutChildren,
+  );
 
-  return { group, children, edges };
+  return { group, children: laidOutChildren, edges };
 }
 
 /** Replace skeleton children of a group with a hydrated subgraph. */
@@ -338,13 +340,14 @@ export function applyHydratedGroup(
   groupId: string,
   hydrated: { group: DesignerNode; children: DesignerNode[]; edges: DesignerEdge[] },
 ): { nodes: DesignerNode[]; edges: DesignerEdge[] } {
-  const oldChildIds = new Set(
-    allNodes.filter((n) => n.parentId === groupId).map((n) => n.id),
-  );
+  const oldChildren = allNodes.filter((n) => n.parentId === groupId);
+  const oldChildIds = new Set(oldChildren.map((n) => n.id));
+  const children = mergePreservedChildPositions(oldChildren, hydrated.children);
+  const group = resizeGroupToChildren(hydrated.group, children);
   const nodes = [
     ...allNodes.filter((n) => n.id !== groupId && n.parentId !== groupId),
-    hydrated.group,
-    ...hydrated.children,
+    group,
+    ...children,
   ];
   const edges = [
     ...allEdges.filter(

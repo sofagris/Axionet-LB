@@ -43,11 +43,12 @@ export function useUpdateDesignFlow(id: string | null) {
       if (!id) throw new Error("No design flow selected");
       return updateDesignFlow(id, payload);
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["design-flows"] });
+    onSuccess: async (data) => {
       if (id) {
-        await queryClient.invalidateQueries({ queryKey: ["design-flows", id] });
+        queryClient.setQueryData(["design-flows", id], data);
       }
+      // Refresh list only — avoid refetching the open flow (would remount canvas).
+      await queryClient.invalidateQueries({ queryKey: ["design-flows"], exact: true });
     },
   });
 }

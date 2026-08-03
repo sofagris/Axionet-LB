@@ -309,4 +309,4 @@ export function childRelativePosition(index: number, total = index + 1): XYPosit
   };
 }
 
-export { PAD_X, PAD_Y, CHILD_W, CHILD_H, COL_GAP, ROW_GAP, GRID_COLS };
+export { PAD_X, PAD_Y, PAD_BOTTOM, CHILD_W, CHILD_H, COL_GAP, ROW_GAP, GRID_COLS };

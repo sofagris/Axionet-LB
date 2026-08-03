@@ -296,7 +296,17 @@
       "groupDeletedWithNodes": "Group and its nodes deleted.",
       "hydrated": "Loaded live config for {{label}} into the canvas.",
       "hydrateFailed": "Could not load instance config onto the canvas.",
-      "synced": "Updated canvas from live config for {{label}}."
+      "synced": "Updated canvas from live config for {{label}}.",
+      "layoutGroup": "Auto-layout applied to the selected group.",
+      "layoutCanvas": "Auto-layout applied to the canvas."
+    },
+    "layout": {
+      "mode": "Layout",
+      "flow": "Flow",
+      "grid": "Grid",
+      "stack": "Stack",
+      "auto": "Auto layout",
+      "autoHint": "Select a group to lay out its contents; otherwise top-level nodes"
     },
     "deleteGroup": {
       "title": "Delete group?",

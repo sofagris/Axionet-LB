@@ -134,7 +134,7 @@ describe("hydrateHaproxyGraph", () => {
     expect(desired.backends[0]?.servers.map((s) => s.name).sort()).toEqual(["s1", "s2"]);
   });
 
-  it("applyHydratedGroup replaces skeleton children", () => {
+  it("applyHydratedGroup preserves child positions by stable key", () => {
     const skeleton: DesignerNode[] = [
       {
         id: "g1",
@@ -147,18 +147,23 @@ describe("hydrateHaproxyGraph", () => {
         id: "old-fe",
         type: "designer",
         parentId: "g1",
-        position: { x: 24, y: 48 },
+        position: { x: 120, y: 90 },
         data: {
           kind: "catalog.component",
-          label: "Frontend",
+          label: "web",
           componentRole: "frontend",
           serviceId: "inst-1",
+          props: { name: "web" },
         },
       },
     ];
     const hydrated = hydrateHaproxyGraph(fixture);
     const { nodes, edges } = applyHydratedGroup(skeleton, [], "g1", hydrated);
     expect(nodes.find((n) => n.id === "old-fe")).toBeUndefined();
+    const web = nodes.find(
+      (n) => n.parentId === "g1" && n.data.props?.name === "web",
+    );
+    expect(web?.position).toEqual({ x: 120, y: 90 });
     expect(nodes.filter((n) => n.parentId === "g1").length).toBe(hydrated.children.length);
     expect(edges.length).toBe(hydrated.edges.length);
   });
