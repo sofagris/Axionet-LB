@@ -10,6 +10,7 @@ import { CustomersPage } from "./pages/CustomersPage";
 import { CustomDashboardPage } from "./pages/CustomDashboardPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { DashboardsPage } from "./pages/DashboardsPage";
+import { DesignerPage } from "./pages/DesignerPage";
 import { FrrDetailPage } from "./pages/FrrDetailPage";
 import { HaproxyDetailPage } from "./pages/HaproxyDetailPage";
 import { InstancesPage } from "./pages/InstancesPage";
@@ -35,6 +36,7 @@ export function App() {
           <Route path="interfaces" element={<InterfacesPage />} />
           <Route path="networks" element={<NetworksPage />} />
           <Route path="catalog" element={<CatalogPage />} />
+          <Route path="designer" element={<DesignerPage />} />
           <Route path="customers" element={<CustomersPage />} />
           <Route path="customers/:customerId" element={<CustomerDetailPage />} />
           <Route path="customers/:customerId/apps/:appId" element={<ApplicationDetailPage />} />

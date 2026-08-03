@@ -19,6 +19,7 @@
     "interfaces": "Interfaces",
     "networks": "Networks",
     "catalog": "Catalog",
+    "designer": "Designer",
     "customers": "Customers",
     "serviceAreas": "Service areas",
     "instances": "Instances",
@@ -256,6 +257,81 @@
         "label": "Traffic Flow",
         "description": "Fleet aggregate and per-VIP path: Internet → FRR → Frontend → Backend → Servers."
       }
+    }
+  },
+  "designer": {
+    "eyebrow": "Traffic & LB",
+    "title": "Designer",
+    "subtitle": "Compose Catalog services on a canvas (Node-RED style). Runtime Status on each instance stays the live per-component view.",
+    "selectFlow": "Select design…",
+    "new": "New design",
+    "create": "Create",
+    "name": "Name",
+    "empty": "Create or select a design to open the canvas.",
+    "save": "Save",
+    "validate": "Validate",
+    "preview": "Preview",
+    "apply": "Apply",
+    "delete": "Delete",
+    "confirmDelete": "Delete this design flow?",
+    "openLink": "Open",
+    "previewSummary": "Preview: {{catalog}} catalog nodes, {{refs}} instance refs, {{vips}} VIPs, {{edges}} links.",
+    "messages": {
+      "created": "Design created.",
+      "createFailed": "Could not create design.",
+      "saved": "Design saved.",
+      "saveFailed": "Could not save design.",
+      "deleted": "Design deleted.",
+      "deleteFailed": "Could not delete design.",
+      "validateOk": "Validation passed.",
+      "validateIssues": "{{count}} validation issue(s).",
+      "applyBlocked": "Fix validation errors before Apply.",
+      "applyReady": "Design saved. Next steps below."
+    },
+    "palette": {
+      "title": "Palette",
+      "catalog": "Catalog",
+      "instances": "Instances",
+      "vips": "VIPs",
+      "comingSoon": "Coming soon",
+      "dragHint": "Drag onto canvas",
+      "noInstances": "No instances yet.",
+      "noVips": "No VIPs yet."
+    },
+    "properties": {
+      "title": "Properties",
+      "empty": "Select a node or link.",
+      "node": "Node",
+      "edge": "Link",
+      "delete": "Remove",
+      "label": "Label",
+      "kind": "Kind",
+      "serviceType": "Service type",
+      "protocol": "Protocol",
+      "note": "Note",
+      "linkInstance": "Linked instance",
+      "noInstance": "None (blueprint)",
+      "linkVip": "Linked VIP",
+      "noVip": "None",
+      "comingSoonHint": "This Catalog item is not deployable yet.",
+      "createInstance": "Create instance",
+      "openInstance": "Open instance",
+      "openVips": "Open VIPs"
+    },
+    "validate": {
+      "plannedNode": "“{{label}}” is planned/concept and cannot be applied.",
+      "missingServiceId": "“{{label}}” has no instance link.",
+      "brokenInstance": "“{{label}}” points to a missing instance.",
+      "missingVipId": "“{{label}}” has no VIP link.",
+      "brokenVip": "“{{label}}” points to a missing VIP.",
+      "unboundCatalog": "“{{label}}” is a Catalog blueprint — create or link an instance to deploy.",
+      "brokenEdge": "A link points to a missing node."
+    },
+    "apply": {
+      "createInstance": "Create {{label}} ({{type}})",
+      "openInstance": "Configure {{label}}",
+      "openVips": "Review VIP {{label}}",
+      "guidanceAuthGateway": "Wire HAProxy backend to auth-gateway :4180 (see Identity docs). No ACL is auto-generated yet."
     }
   },
   "interfaces": {

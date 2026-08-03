@@ -19,6 +19,7 @@
     "interfaces": "Interfaces",
     "networks": "Networks",
     "catalog": "Catalog",
+    "designer": "Designer",
     "customers": "Kunder",
     "serviceAreas": "Tjenesteområder",
     "instances": "Instances",
@@ -256,6 +257,82 @@
         "label": "Traffic Flow",
         "description": "Flåte-aggregat og per-VIP-sti: Internet → FRR → Frontend → Backend → Servers."
       }
+    }
+  },
+
+  "designer": {
+    "eyebrow": "Trafikk & LB",
+    "title": "Designer",
+    "subtitle": "Sett sammen Catalog-tjenester på et canvas (Node-RED-stil). Runtime Status per instans forblir live-visning av komponenter.",
+    "selectFlow": "Velg design…",
+    "new": "Nytt design",
+    "create": "Opprett",
+    "name": "Navn",
+    "empty": "Opprett eller velg et design for å åpne canvas.",
+    "save": "Lagre",
+    "validate": "Valider",
+    "preview": "Forhåndsvis",
+    "apply": "Apply",
+    "delete": "Slett",
+    "confirmDelete": "Slette dette designet?",
+    "openLink": "Åpne",
+    "previewSummary": "Forhåndsvisning: {{catalog}} catalog-noder, {{refs}} instans-ref, {{vips}} VIP-er, {{edges}} koblinger.",
+    "messages": {
+      "created": "Design opprettet.",
+      "createFailed": "Kunne ikke opprette design.",
+      "saved": "Design lagret.",
+      "saveFailed": "Kunne ikke lagre design.",
+      "deleted": "Design slettet.",
+      "deleteFailed": "Kunne ikke slette design.",
+      "validateOk": "Validering OK.",
+      "validateIssues": "{{count}} valideringsfunn.",
+      "applyBlocked": "Rett valideringsfeil før Apply.",
+      "applyReady": "Design lagret. Neste steg under."
+    },
+    "palette": {
+      "title": "Palett",
+      "catalog": "Catalog",
+      "instances": "Instances",
+      "vips": "VIPs",
+      "comingSoon": "Kommer",
+      "dragHint": "Dra inn på canvas",
+      "noInstances": "Ingen instanser ennå.",
+      "noVips": "Ingen VIP-er ennå."
+    },
+    "properties": {
+      "title": "Egenskaper",
+      "empty": "Velg en node eller kobling.",
+      "node": "Node",
+      "edge": "Kobling",
+      "delete": "Fjern",
+      "label": "Etikett",
+      "kind": "Type",
+      "serviceType": "Tjenestetype",
+      "protocol": "Protokoll",
+      "note": "Notat",
+      "linkInstance": "Koblet instans",
+      "noInstance": "Ingen (blueprint)",
+      "linkVip": "Koblet VIP",
+      "noVip": "Ingen",
+      "comingSoonHint": "Dette Catalog-elementet er ikke deploybart ennå.",
+      "createInstance": "Opprett instans",
+      "openInstance": "Åpne instans",
+      "openVips": "Åpne VIPs"
+    },
+    "validate": {
+      "plannedNode": "«{{label}}» er planned/concept og kan ikke applies.",
+      "missingServiceId": "«{{label}}» mangler instans-kobling.",
+      "brokenInstance": "«{{label}}» peker på manglende instans.",
+      "missingVipId": "«{{label}}» mangler VIP-kobling.",
+      "brokenVip": "«{{label}}» peker på manglende VIP.",
+      "unboundCatalog": "«{{label}}» er Catalog-blueprint — opprett eller koble en instans for deploy.",
+      "brokenEdge": "En kobling peker på manglende node."
+    },
+    "apply": {
+      "createInstance": "Opprett {{label}} ({{type}})",
+      "openInstance": "Konfigurer {{label}}",
+      "openVips": "Se VIP {{label}}",
+      "guidanceAuthGateway": "Koble HAProxy-backend til auth-gateway :4180 (se Identity-docs). Ingen ACL auto-genereres ennå."
     }
   },
 

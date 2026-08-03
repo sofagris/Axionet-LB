@@ -6,6 +6,7 @@ from app.api.v1 import (
     auth_gateway,
     auth_sources,
     dashboards,
+    design_flows,
     frr,
     groups,
     haproxy,
@@ -38,5 +39,6 @@ api_router.include_router(keycloak.router)
 api_router.include_router(auth_gateway.router)
 api_router.include_router(vips.router)
 api_router.include_router(dashboards.router)
+api_router.include_router(design_flows.router)
 api_router.include_router(users.router)
 api_router.include_router(groups.router)

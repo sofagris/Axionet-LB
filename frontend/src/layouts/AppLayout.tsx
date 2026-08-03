@@ -5,6 +5,7 @@ import {
   IconCatalog,
   IconCustomers,
   IconDashboard,
+  IconDesigner,
   IconInstances,
   IconInterfaces,
   IconLogs,
@@ -71,6 +72,7 @@ export function AppLayout() {
     const tenancyLabel = tenancyNavLabelKey(mode);
     const trafficItems: NavItem[] = [
       { to: "/catalog", labelKey: "nav.catalog", icon: IconCatalog },
+      { to: "/designer", labelKey: "nav.designer", icon: IconDesigner },
       ...(tenancyLabel
         ? [{ to: "/customers", labelKey: tenancyLabel, icon: IconCustomers } satisfies NavItem]
         : []),

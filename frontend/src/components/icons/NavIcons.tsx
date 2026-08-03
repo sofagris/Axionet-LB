@@ -92,6 +92,17 @@ export function IconSettings(props: IconProps) {
   );
 }
 
+export function IconDesigner(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="3" y="4" width="7" height="7" rx="1" />
+      <rect x="14" y="4" width="7" height="7" rx="1" />
+      <rect x="8.5" y="13" width="7" height="7" rx="1" />
+      <path d="M10 7.5h4M11.5 11v2.5M15.5 11v2.5" />
+    </svg>
+  );
+}
+
 export function IconCustomers(props: IconProps) {
   return (
     <svg {...base(props)}>

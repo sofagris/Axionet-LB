@@ -10,6 +10,7 @@ from app.models import (  # noqa: F401
     AuditEvent,
     ConfigRevision,
     Dashboard,
+    DesignFlow,
     Network,
     NetworkAttachment,
     PhysicalInterface,

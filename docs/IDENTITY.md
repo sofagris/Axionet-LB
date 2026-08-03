@@ -109,6 +109,11 @@ Autentiserte forespørsler til upstream får bl.a. `X-Forwarded-User`, `X-Forwar
 
 `secure-web-frontend` i Catalog er fortsatt et blueprint-konsept; de deploybare byggesteinene er `keycloak-apps` + `auth-gateway` (+ HAProxy).
 
+### Designer vs Runtime Status
+
+- **Designer** (`/designer` i venstremenyen) er plattform-omspennende komposisjon: dra Catalog-tjenester / eksisterende instanser / VIP-er inn på et canvas (Node-RED-stil), lagre design-flows via `/api/v1/design-flows`. Apply i MVP lagrer grafen og foreslår deep-links (create-wizard / instansdetalj) — den skriver ikke HAProxy-config automatisk.
+- **Runtime Status** (HAProxy-instans → Status) forblir lesevisning av FE→BE→server for *én* dataplane-instans. Bruk Designer for tverrgående flows (f.eks. VIP → HAProxy → Auth Gateway → upstream); bruk Runtime Status for live-metrikker og server-actions på den enkelte LB.
+
 ### Binding til Customers
 
 Tabell `app_idp_bindings` knytter en App IdP til soft-referanser (`customer_id`, valgfri `application_id`) som matcher mock-IDene under **Kunder** (f.eks. `kunde-a` / `app-web`).
