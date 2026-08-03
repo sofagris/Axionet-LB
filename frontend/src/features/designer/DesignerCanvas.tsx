@@ -1,4 +1,4 @@
-import { useCallback, useMemo, type DragEvent } from "react";
+import { useCallback, useMemo, useState, type DragEvent, type MouseEvent } from "react";
 import {
   Background,
   Controls,
@@ -8,6 +8,7 @@ import {
   addEdge,
   type Connection,
   type Edge,
+  type Node,
   type NodeTypes,
   type OnEdgesChange,
   type OnNodesChange,
@@ -16,9 +17,17 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useReactFlow } from "@xyflow/react";
+import { useTranslation } from "react-i18next";
 import { DesignerFlowNode } from "./DesignerNode";
 import { DesignerGroupNode } from "./DesignerGroupNode";
 import { buildDropGraph } from "./buildDropGraph";
+import {
+  addNodeToGroup,
+  isGroupNode,
+  listGroups,
+  placeDropNodes,
+  removeNodeFromGroup,
+} from "./grouping";
 import {
   DESIGNER_DND_MIME,
   newEdgeId,
@@ -33,12 +42,18 @@ const nodeTypes: NodeTypes = {
   designerGroup: DesignerGroupNode,
 };
 
+type ContextMenuState = {
+  x: number;
+  y: number;
+  node: DesignerNode;
+};
+
 type Props = {
   nodes: DesignerNode[];
   edges: DesignerEdge[];
   onNodesChange: OnNodesChange<DesignerNode>;
   onEdgesChange: OnEdgesChange<DesignerEdge>;
-  onNodes: (nodes: DesignerNode[]) => void;
+  onNodes: (nodes: DesignerNode[] | ((prev: DesignerNode[]) => DesignerNode[])) => void;
   onEdges: (edges: DesignerEdge[] | ((prev: DesignerEdge[]) => DesignerEdge[])) => void;
   onViewportChange: (viewport: Viewport) => void;
   onSelectionChange: (selection: {
@@ -58,7 +73,9 @@ function DesignerCanvasInner({
   onViewportChange,
   onSelectionChange,
 }: Props) {
+  const { t } = useTranslation();
   const { screenToFlowPosition } = useReactFlow();
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -96,6 +113,7 @@ function DesignerCanvasInner({
   const onDrop = useCallback(
     (event: DragEvent) => {
       event.preventDefault();
+      setContextMenu(null);
       const raw = event.dataTransfer.getData(DESIGNER_DND_MIME);
       if (!raw) return;
       let payload: PaletteDragPayload;
@@ -106,23 +124,43 @@ function DesignerCanvasInner({
       }
       const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
       const drop = buildDropGraph(position, payload);
-      onNodes([...nodes, ...drop.nodes]);
+      onNodes((current) => placeDropNodes(current, drop.nodes, position));
       if (drop.edges.length > 0) {
         onEdges((eds) => [...eds, ...drop.edges]);
       }
     },
-    [nodes, onEdges, onNodes, screenToFlowPosition],
+    [onEdges, onNodes, screenToFlowPosition],
+  );
+
+  const onNodeContextMenu = useCallback((event: MouseEvent, node: Node) => {
+    event.preventDefault();
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      node: node as DesignerNode,
+    });
+  }, []);
+
+  const closeMenu = useCallback(() => setContextMenu(null), []);
+
+  const groups = useMemo(() => listGroups(nodes), [nodes]);
+  const menuNode = contextMenu?.node;
+  const canRemoveFromGroup = Boolean(menuNode && !isGroupNode(menuNode) && menuNode.parentId);
+  const canAddToGroup = Boolean(
+    menuNode && !isGroupNode(menuNode) && !menuNode.parentId && groups.length > 0,
   );
 
   const defaultEdgeOptions = useMemo(
     () => ({
       animated: false,
+      zIndex: 1001,
+      interactionWidth: 24,
     }),
     [],
   );
 
   return (
-    <div className="h-full w-full" onDragOver={onDragOver} onDrop={onDrop}>
+    <div className="relative h-full w-full" onDragOver={onDragOver} onDrop={onDrop}>
       <ReactFlow
         nodes={nodes}
         edges={edges as Edge[]}
@@ -130,18 +168,70 @@ function DesignerCanvasInner({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onSelectionChange={onSelectionChangeInternal}
+        onNodeContextMenu={onNodeContextMenu}
+        onPaneClick={closeMenu}
+        onMoveStart={closeMenu}
         onMoveEnd={(_, vp) => onViewportChange(vp)}
         nodeTypes={nodeTypes}
         fitView
         multiSelectionKeyCode={["Meta", "Control", "Shift"]}
+        edgesFocusable
+        elementsSelectable
         defaultEdgeOptions={defaultEdgeOptions}
         proOptions={{ hideAttribution: true }}
         deleteKeyCode={null}
+        className="designer-flow"
       >
         <Background gap={16} size={1} />
         <Controls />
         <MiniMap pannable zoomable />
       </ReactFlow>
+
+      {contextMenu && menuNode ? (
+        <div
+          className="fixed z-[2000] min-w-[11rem] border border-line bg-paper-elevated py-1 text-sm shadow-lg"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          role="menu"
+        >
+          {canAddToGroup ? (
+            <div className="border-b border-line px-1 pb-1 mb-1">
+              <p className="px-2 py-1 font-mono text-[10px] tracking-wide text-ink-muted uppercase">
+                {t("designer.context.addToGroup")}
+              </p>
+              {groups.map((g) => (
+                <button
+                  key={g.id}
+                  type="button"
+                  role="menuitem"
+                  className="block w-full px-3 py-1.5 text-left text-ink hover:bg-paper"
+                  onClick={() => {
+                    onNodes((nds) => addNodeToGroup(nds, menuNode.id, g.id));
+                    closeMenu();
+                  }}
+                >
+                  {g.data.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {canRemoveFromGroup ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="block w-full px-3 py-1.5 text-left text-ink hover:bg-paper"
+              onClick={() => {
+                onNodes((nds) => removeNodeFromGroup(nds, menuNode.id));
+                closeMenu();
+              }}
+            >
+              {t("designer.context.removeFromGroup")}
+            </button>
+          ) : null}
+          {!canAddToGroup && !canRemoveFromGroup ? (
+            <p className="px-3 py-2 text-xs text-ink-muted">{t("designer.context.noActions")}</p>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

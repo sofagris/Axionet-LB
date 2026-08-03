@@ -296,6 +296,11 @@
       "defaultLabel": "Group",
       "hint": "Select 2+ free nodes (Shift-click or drag-select), then Group"
     },
+    "context": {
+      "addToGroup": "Add to group",
+      "removeFromGroup": "Remove from group",
+      "noActions": "No group actions for this node"
+    },
     "props": {
       "name": "Name",
       "bind": "Bind",

@@ -8,7 +8,10 @@ const CHILD_W = 200;
 const CHILD_H = 88;
 const COL_GAP = 24;
 
-function absolutePosition(node: DesignerNode, byId: Map<string, DesignerNode>): XYPosition {
+export function absolutePosition(
+  node: DesignerNode,
+  byId: Map<string, DesignerNode>,
+): XYPosition {
   let x = node.position.x;
   let y = node.position.y;
   let parentId = node.parentId;
@@ -24,6 +27,159 @@ function absolutePosition(node: DesignerNode, byId: Map<string, DesignerNode>): 
 
 export function isGroupNode(node: DesignerNode): boolean {
   return node.data.kind === "group.frame" || node.type === "designerGroup";
+}
+
+export function listGroups(allNodes: DesignerNode[]): DesignerNode[] {
+  return allNodes.filter(isGroupNode);
+}
+
+export function groupSize(group: DesignerNode): { width: number; height: number } {
+  return {
+    width: Number(group.style?.width ?? group.width ?? 280),
+    height: Number(group.style?.height ?? group.height ?? 160),
+  };
+}
+
+/** Find the topmost group whose bounds contain the flow position. */
+export function findGroupAtFlowPosition(
+  allNodes: DesignerNode[],
+  flowPos: XYPosition,
+): DesignerNode | null {
+  const groups = listGroups(allNodes);
+  for (let i = groups.length - 1; i >= 0; i -= 1) {
+    const g = groups[i]!;
+    const { width, height } = groupSize(g);
+    if (
+      flowPos.x >= g.position.x &&
+      flowPos.x <= g.position.x + width &&
+      flowPos.y >= g.position.y &&
+      flowPos.y <= g.position.y + height
+    ) {
+      return g;
+    }
+  }
+  return null;
+}
+
+function expandGroupStyle(
+  group: DesignerNode,
+  rel: XYPosition,
+): { width: number; height: number } {
+  const { width, height } = groupSize(group);
+  return {
+    width: Math.max(width, rel.x + CHILD_W + PAD_X),
+    height: Math.max(height, rel.y + CHILD_H + PAD_BOTTOM),
+  };
+}
+
+/** Attach a free node into a group (relative position). */
+export function addNodeToGroup(
+  allNodes: DesignerNode[],
+  nodeId: string,
+  groupId: string,
+  preferredRel?: XYPosition,
+): DesignerNode[] {
+  const group = allNodes.find((n) => n.id === groupId);
+  const node = allNodes.find((n) => n.id === nodeId);
+  if (!group || !node || !isGroupNode(group) || isGroupNode(node)) return allNodes;
+  if (node.parentId === groupId) return allNodes;
+
+  const byId = new Map(allNodes.map((n) => [n.id, n]));
+  let rel = preferredRel;
+  if (!rel) {
+    if (node.parentId) {
+      const abs = absolutePosition(node, byId);
+      rel = { x: abs.x - group.position.x, y: abs.y - group.position.y };
+    } else {
+      const siblings = allNodes.filter((n) => n.parentId === groupId);
+      rel = childRelativePosition(siblings.length);
+    }
+  }
+  rel = {
+    x: Math.max(PAD_X, rel.x),
+    y: Math.max(PAD_Y, rel.y),
+  };
+  const size = expandGroupStyle(group, rel);
+
+  return allNodes.map((n) => {
+    if (n.id === groupId) {
+      return { ...n, style: { ...n.style, width: size.width, height: size.height } };
+    }
+    if (n.id === nodeId) {
+      return {
+        ...n,
+        parentId: groupId,
+        extent: "parent" as const,
+        position: rel!,
+      };
+    }
+    return n;
+  });
+}
+
+/** Detach a child from its group onto the free canvas. */
+export function removeNodeFromGroup(
+  allNodes: DesignerNode[],
+  nodeId: string,
+): DesignerNode[] {
+  const node = allNodes.find((n) => n.id === nodeId);
+  if (!node?.parentId) return allNodes;
+  const byId = new Map(allNodes.map((n) => [n.id, n]));
+  const abs = absolutePosition(node, byId);
+  return allNodes.map((n) => {
+    if (n.id !== nodeId) return n;
+    return {
+      ...n,
+      parentId: undefined,
+      extent: undefined,
+      position: abs,
+    };
+  });
+}
+
+/**
+ * If drop lands inside a group, parent non-group drop nodes into it.
+ * Tree drops (new group frames) are left as-is.
+ */
+export function placeDropNodes(
+  existing: DesignerNode[],
+  dropNodes: DesignerNode[],
+  flowPos: XYPosition,
+): DesignerNode[] {
+  if (dropNodes.length === 0) return existing;
+  if (dropNodes.some(isGroupNode)) {
+    return [...existing, ...dropNodes];
+  }
+  const target = findGroupAtFlowPosition(existing, flowPos);
+  if (!target) {
+    return [...existing, ...dropNodes];
+  }
+
+  let nextW = groupSize(target).width;
+  let nextH = groupSize(target).height;
+
+  const attached = dropNodes.map((dropped) => {
+    const base = dropNodes.length === 1 ? flowPos : dropped.position;
+    const rel = {
+      x: Math.max(PAD_X, base.x - target.position.x),
+      y: Math.max(PAD_Y, base.y - target.position.y),
+    };
+    nextW = Math.max(nextW, rel.x + CHILD_W + PAD_X);
+    nextH = Math.max(nextH, rel.y + CHILD_H + PAD_BOTTOM);
+    return {
+      ...dropped,
+      parentId: target.id,
+      extent: "parent" as const,
+      position: rel,
+    };
+  });
+
+  const working = existing.map((n) =>
+    n.id === target.id
+      ? { ...n, style: { ...n.style, width: nextW, height: nextH } }
+      : n,
+  );
+  return [...working, ...attached];
 }
 
 /** Wrap selected nodes in a new group frame (positions converted to relative). */
@@ -54,6 +210,7 @@ export function groupSelectedNodes(
     type: "designerGroup",
     position: { x: minX - PAD_X, y: minY - PAD_Y },
     style: { width, height },
+    zIndex: -1,
     data: {
       kind: "group.frame",
       label,
@@ -76,7 +233,6 @@ export function groupSelectedNodes(
     };
   });
 
-  // Groups should render behind children
   return [group, ...next];
 }
 

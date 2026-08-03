@@ -297,6 +297,11 @@
       "defaultLabel": "Gruppe",
       "hint": "Velg 2+ frie noder (Shift-klikk eller dra-utvalg), deretter Grupper"
     },
+    "context": {
+      "addToGroup": "Legg til i gruppe",
+      "removeFromGroup": "Fjern fra gruppe",
+      "noActions": "Ingen gruppehandlinger for denne noden"
+    },
     "props": {
       "name": "Navn",
       "bind": "Bind",

@@ -125,6 +125,7 @@ export function serializeGraphDocument(doc: DesignerGraphDocument): DesignerGrap
       style: node.style,
       width: node.width,
       height: node.height,
+      zIndex: node.zIndex,
     })),
     edges: doc.edges.map((edge) => ({
       id: edge.id,
@@ -132,6 +133,7 @@ export function serializeGraphDocument(doc: DesignerGraphDocument): DesignerGrap
       target: edge.target,
       label: edge.label,
       data: edge.data ?? {},
+      zIndex: edge.zIndex,
     })),
     viewport: doc.viewport,
   };

@@ -124,3 +124,11 @@ html[data-theme="dark"] {
       color 180ms ease;
   }
 }
+
+/* Designer: let edge hits pass through group frames (body uses pointer-events: none). */
+.designer-flow .react-flow__edge-interaction {
+  cursor: pointer;
+}
+.designer-flow .react-flow__resize-control {
+  pointer-events: all;
+}

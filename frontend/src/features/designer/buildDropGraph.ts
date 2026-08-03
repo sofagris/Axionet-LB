@@ -71,6 +71,7 @@ function layoutTreeAsGroup(
     type: "designerGroup",
     position: origin,
     style: { width, height },
+    zIndex: -1,
     data: {
       kind: "group.frame",
       label: parentData.label,

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { buildDropGraph } from "./buildDropGraph";
-import { groupSelectedNodes, isGroupNode, ungroupNode } from "./grouping";
+import {
+  groupSelectedNodes,
+  isGroupNode,
+  placeDropNodes,
+  ungroupNode,
+} from "./grouping";
 import type { DesignerNode } from "./types";
 
 describe("buildDropGraph", () => {
@@ -80,5 +85,34 @@ describe("grouping", () => {
     expect(flat.find((n) => isGroupNode(n))).toBeUndefined();
     expect(flat).toHaveLength(2);
     expect(flat.every((n) => !n.parentId)).toBe(true);
+  });
+
+  it("places a dropped server inside an existing group", () => {
+    const existing: DesignerNode[] = [
+      {
+        id: "g1",
+        type: "designerGroup",
+        position: { x: 0, y: 0 },
+        style: { width: 700, height: 200 },
+        data: { kind: "group.frame", label: "HAProxy", serviceType: "haproxy" },
+      },
+    ];
+    const dropped: DesignerNode[] = [
+      {
+        id: "s1",
+        type: "designer",
+        position: { x: 100, y: 80 },
+        data: {
+          kind: "catalog.component",
+          label: "Server",
+          componentId: "server",
+          componentRole: "server",
+        },
+      },
+    ];
+    const next = placeDropNodes(existing, dropped, { x: 100, y: 80 });
+    const server = next.find((n) => n.id === "s1");
+    expect(server?.parentId).toBe("g1");
+    expect(server?.position.x).toBeGreaterThanOrEqual(24);
   });
 });
