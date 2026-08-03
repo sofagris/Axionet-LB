@@ -6,6 +6,8 @@ import {
   HaproxyCertificateSchema,
   HaproxyConfigPreviewSchema,
   HaproxyDefaultsSchema,
+  HaproxyErrorFileDetailSchema,
+  HaproxyErrorFileSchema,
   HaproxyFrontendSchema,
   HaproxyMapDetailSchema,
   HaproxyMapSchema,
@@ -15,6 +17,9 @@ import {
   type HaproxyBackend,
   type HaproxyCertificate,
   type HaproxyDefaults,
+  type HaproxyErrorFile,
+  type HaproxyErrorFileDetail,
+  type HaproxyErrorFileWrite,
   type HaproxyFrontend,
   type HaproxyMap,
   type HaproxyMapDetail,
@@ -158,6 +163,44 @@ export function updateHaproxyMap(
 
 export function deleteHaproxyMap(id: string, name: string) {
   return apiFetch(`${base(id)}/maps/${encodeURIComponent(name)}`, () => undefined, {
+    method: "DELETE",
+  });
+}
+
+export function fetchHaproxyErrorFiles(id: string) {
+  return apiFetch(`${base(id)}/error-files`, (data) => z.array(HaproxyErrorFileSchema).parse(data));
+}
+
+export function fetchHaproxyErrorFile(id: string, name: string): Promise<HaproxyErrorFileDetail> {
+  return apiFetch(`${base(id)}/error-files/${encodeURIComponent(name)}`, (data) =>
+    HaproxyErrorFileDetailSchema.parse(data),
+  );
+}
+
+export function createHaproxyErrorFile(
+  id: string,
+  payload: HaproxyErrorFileWrite,
+): Promise<HaproxyErrorFile> {
+  return apiFetch(`${base(id)}/error-files`, (data) => HaproxyErrorFileSchema.parse(data), {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export function updateHaproxyErrorFile(
+  id: string,
+  name: string,
+  payload: HaproxyErrorFileWrite,
+): Promise<HaproxyErrorFile> {
+  return apiFetch(
+    `${base(id)}/error-files/${encodeURIComponent(name)}`,
+    (data) => HaproxyErrorFileSchema.parse(data),
+    { method: "PUT", body: payload },
+  );
+}
+
+export function deleteHaproxyErrorFile(id: string, name: string) {
+  return apiFetch(`${base(id)}/error-files/${encodeURIComponent(name)}`, () => undefined, {
     method: "DELETE",
   });
 }

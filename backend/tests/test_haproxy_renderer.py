@@ -130,3 +130,40 @@ def test_render_tls_and_acls() -> None:
     assert "ssl crt /usr/local/etc/haproxy/certs/site.pem" in rendered
     assert "acl is_api path_beg /api" in rendered
     assert "use_backend api if is_api" in rendered
+
+
+def test_render_errorfiles() -> None:
+    config = HaproxyConfig.model_validate(
+        {
+            "mode": "http",
+            "frontends": [
+                {"name": "web", "bind_port": 80, "default_backend": "app", "mode": "http"},
+                {"name": "api", "bind_port": 8080, "default_backend": "app", "mode": "http"},
+            ],
+            "error_files": [
+                {"name": "not-found", "status_code": 404, "filename": "errors/not-found.http"},
+                {
+                    "name": "api-forbidden",
+                    "status_code": 403,
+                    "filename": "errors/api-forbidden.http",
+                    "frontend": "api",
+                },
+            ],
+        }
+    )
+    rendered = render_haproxy_config(config)
+    defaults = rendered.split("frontend stats", 1)[0]
+    assert "errorfile 404 /usr/local/etc/haproxy/errors/not-found.http" in defaults
+    assert "errorfile 403" not in defaults
+    api_section = rendered.split("frontend api", 1)[1].split("backend", 1)[0]
+    assert "errorfile 403 /usr/local/etc/haproxy/errors/api-forbidden.http" in api_section
+
+    tcp = HaproxyConfig.model_validate(
+        {
+            "mode": "tcp",
+            "error_files": [
+                {"name": "not-found", "status_code": 404, "filename": "errors/not-found.http"},
+            ],
+        }
+    )
+    assert "errorfile" not in render_haproxy_config(tcp)

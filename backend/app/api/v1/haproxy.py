@@ -13,9 +13,11 @@ from app.plugins.haproxy.schemas import (
     HaproxyBackend,
     HaproxyCertificate,
     HaproxyConfig,
+    HaproxyErrorFile,
     HaproxyFrontend,
     HaproxyMap,
     HaproxyServer,
+    build_errorfile_content,
 )
 from app.schemas.haproxy import (
     HaproxyAclRead,
@@ -25,6 +27,9 @@ from app.schemas.haproxy import (
     HaproxyClearCountersResult,
     HaproxyConfigPreview,
     HaproxyDefaults,
+    HaproxyErrorFileCreate,
+    HaproxyErrorFileDetail,
+    HaproxyErrorFileRead,
     HaproxyFrontendRead,
     HaproxyMapCreate,
     HaproxyMapDetail,
@@ -514,6 +519,148 @@ def delete_map(
     try:
         editor.delete_map(map_name)
         service.delete_map_file(instance, map_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    _save(service, instance, editor)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+def _resolve_errorfile_content(payload: HaproxyErrorFileCreate) -> str:
+    if payload.content and payload.content.strip():
+        return payload.content
+    return build_errorfile_content(
+        payload.status_code,
+        title=payload.title,
+        body_html=payload.body_html,
+    )
+
+
+@router.get("/error-files", response_model=list[HaproxyErrorFileRead])
+def list_error_files(
+    instance_id: str,
+    service: InstanceService = Depends(get_instance_service),
+) -> list[HaproxyErrorFileRead]:
+    instance = _require_instance(service, instance_id)
+    editor = HaproxyConfigEditor(instance.configuration)
+    return [
+        HaproxyErrorFileRead(
+            name=item.name,
+            status_code=item.status_code,
+            filename=item.filename or f"errors/{item.name}.http",
+            frontend=item.frontend,
+            size_bytes=service.error_file_size(instance, item.name),
+        )
+        for item in editor.list_error_files()
+    ]
+
+
+@router.get("/error-files/{error_name}", response_model=HaproxyErrorFileDetail)
+def get_error_file(
+    instance_id: str,
+    error_name: str,
+    service: InstanceService = Depends(get_instance_service),
+) -> HaproxyErrorFileDetail:
+    instance = _require_instance(service, instance_id)
+    editor = HaproxyConfigEditor(instance.configuration)
+    item = editor.get_error_file(error_name)
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Error file not found")
+    try:
+        content = service.read_error_file(instance, error_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return HaproxyErrorFileDetail(
+        name=item.name,
+        status_code=item.status_code,
+        filename=item.filename or f"errors/{item.name}.http",
+        frontend=item.frontend,
+        size_bytes=service.error_file_size(instance, item.name),
+        content=content,
+    )
+
+
+@router.post("/error-files", response_model=HaproxyErrorFileRead, status_code=status.HTTP_201_CREATED)
+def create_error_file(
+    instance_id: str,
+    payload: HaproxyErrorFileCreate,
+    service: InstanceService = Depends(get_instance_service),
+) -> HaproxyErrorFileRead:
+    instance = _require_instance(service, instance_id)
+    editor = HaproxyConfigEditor(instance.configuration)
+    try:
+        content = _resolve_errorfile_content(payload)
+        service.write_error_file(instance, payload.name, content)
+        item = editor.upsert_error_file(
+            HaproxyErrorFile(
+                name=payload.name,
+                status_code=payload.status_code,
+                filename=f"errors/{payload.name}.http",
+                frontend=payload.frontend,
+            ),
+            create=True,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    _save(service, instance, editor)
+    return HaproxyErrorFileRead(
+        name=item.name,
+        status_code=item.status_code,
+        filename=item.filename,
+        frontend=item.frontend,
+        size_bytes=service.error_file_size(instance, item.name),
+    )
+
+
+@router.put("/error-files/{error_name}", response_model=HaproxyErrorFileRead)
+def update_error_file(
+    instance_id: str,
+    error_name: str,
+    payload: HaproxyErrorFileCreate,
+    service: InstanceService = Depends(get_instance_service),
+) -> HaproxyErrorFileRead:
+    instance = _require_instance(service, instance_id)
+    if payload.name != error_name:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Name mismatch")
+    editor = HaproxyConfigEditor(instance.configuration)
+    try:
+        content = _resolve_errorfile_content(payload)
+        service.write_error_file(instance, payload.name, content)
+        item = editor.upsert_error_file(
+            HaproxyErrorFile(
+                name=payload.name,
+                status_code=payload.status_code,
+                filename=f"errors/{payload.name}.http",
+                frontend=payload.frontend,
+            ),
+            create=False,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    _save(service, instance, editor)
+    return HaproxyErrorFileRead(
+        name=item.name,
+        status_code=item.status_code,
+        filename=item.filename,
+        frontend=item.frontend,
+        size_bytes=service.error_file_size(instance, item.name),
+    )
+
+
+@router.delete(
+    "/error-files/{error_name}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
+def delete_error_file(
+    instance_id: str,
+    error_name: str,
+    service: InstanceService = Depends(get_instance_service),
+) -> Response:
+    instance = _require_instance(service, instance_id)
+    editor = HaproxyConfigEditor(instance.configuration)
+    try:
+        editor.delete_error_file(error_name)
+        service.delete_error_file(instance, error_name)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     _save(service, instance, editor)

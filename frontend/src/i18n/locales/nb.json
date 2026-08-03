@@ -8,6 +8,7 @@
     "save": "Lagre",
     "cancel": "Avbryt",
     "delete": "Slett",
+    "edit": "Rediger",
     "close": "Lukk"
   },
   "nav": {
@@ -324,6 +325,8 @@
       "port": "Port",
       "check": "Health check",
       "weight": "Vekt",
+      "statusCode": "Statuskode",
+      "errorTitle": "Sidetittel",
       "listen": "Listen",
       "issuerUrl": "Issuer-URL",
       "clientId": "Client ID",
@@ -384,6 +387,7 @@
     "applySteps": {
       "createInstance": "Opprett {{label}} ({{type}})",
       "openInstance": "Konfigurer {{label}}",
+      "openErrorPages": "Konfigurer feilsider for {{label}}",
       "openVips": "Se VIP {{label}}",
       "guidanceAuthGateway": "Koble HAProxy-backend til auth-gateway :4180 (se Identity-docs). Ingen ACL auto-genereres ennå."
     }
@@ -899,10 +903,30 @@
       "servers": "Servers",
       "certificates": "Certificates",
       "maps": "Maps",
+      "errors": "Feilsider",
       "acls": "ACLs",
       "status": "Runtime Status",
       "logs": "Logs",
       "revisions": "Revisions"
+    },
+    "errors": {
+      "help": "Egendefinerte HAProxy errorfile-sider (HTTP-statuslinje + body). Lagres under config/errors/ og rendres som errorfile i defaults eller en frontend.",
+      "name": "Navn",
+      "status": "Statuskode",
+      "scope": "Scope",
+      "scopeDefaults": "defaults (alle)",
+      "editorMode": "Editor",
+      "rawMode": "Rediger rå HTTP-respons",
+      "rawContent": "Rått errorfile-innhold",
+      "title": "Sidetittel",
+      "bodyHtml": "HTML-body",
+      "create": "Opprett feilside",
+      "update": "Oppdater feilside",
+      "saveFailed": "Kunne ikke lagre feilside",
+      "colName": "Navn",
+      "colStatus": "Status",
+      "colScope": "Scope",
+      "colFile": "Fil"
     },
     "overviewTitle": "Instans-oversikt",
     "overviewSubtitle": "Helse, live-metrikker og snarveier til config og runtime-grafen.",

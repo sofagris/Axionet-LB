@@ -56,6 +56,15 @@ class HaproxyMap(BaseModel):
     filename: str = ""
 
 
+class HaproxyErrorFile(BaseModel):
+    """Metadata for an errorfile stored under config/errors/<name>.http."""
+
+    name: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    status_code: int = Field(ge=400, le=599)
+    filename: str = ""
+    frontend: str | None = None  # None => defaults section
+
+
 class HaproxyAcl(BaseModel):
     name: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
     frontend: str
@@ -70,6 +79,7 @@ class HaproxyConfig(BaseModel):
     backends: list[HaproxyBackend] = Field(default_factory=lambda: [HaproxyBackend()])
     certificates: list[HaproxyCertificate] = Field(default_factory=list)
     maps: list[HaproxyMap] = Field(default_factory=list)
+    error_files: list[HaproxyErrorFile] = Field(default_factory=list)
     acls: list[HaproxyAcl] = Field(default_factory=list)
     timeout_connect: str = "5s"
     timeout_client: str = "30s"
@@ -90,3 +100,44 @@ class HaproxyConfig(BaseModel):
         if not data:
             return cls()
         return cls.model_validate(data)
+
+
+_HTTP_REASON: dict[int, str] = {
+    400: "Bad Request",
+    401: "Unauthorized",
+    403: "Forbidden",
+    404: "Not Found",
+    405: "Method Not Allowed",
+    408: "Request Timeout",
+    429: "Too Many Requests",
+    500: "Internal Server Error",
+    502: "Bad Gateway",
+    503: "Service Unavailable",
+    504: "Gateway Timeout",
+}
+
+
+def http_reason_for(status_code: int) -> str:
+    return _HTTP_REASON.get(status_code, "Error")
+
+
+def build_errorfile_content(
+    status_code: int,
+    *,
+    title: str | None = None,
+    body_html: str | None = None,
+) -> str:
+    """Build a classic HAProxy errorfile (status line + headers + body)."""
+    reason = http_reason_for(status_code)
+    page_title = (title or f"{status_code} {reason}").strip() or f"{status_code} {reason}"
+    body = (body_html or f"<h1>{page_title}</h1><p>{reason}</p>").strip()
+    return (
+        f"HTTP/1.0 {status_code} {reason}\r\n"
+        "Cache-Control: no-cache\r\n"
+        "Connection: close\r\n"
+        "Content-Type: text/html\r\n"
+        "\r\n"
+        f"<!DOCTYPE html><html><head><title>{page_title}</title></head>"
+        f"<body>{body}</body></html>\n"
+    )
+

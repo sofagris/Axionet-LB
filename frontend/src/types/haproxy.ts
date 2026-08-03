@@ -66,6 +66,18 @@ export const HaproxyMapDetailSchema = HaproxyMapSchema.extend({
   content: z.string(),
 });
 
+export const HaproxyErrorFileSchema = z.object({
+  name: z.string(),
+  status_code: z.number().int(),
+  filename: z.string(),
+  frontend: z.string().nullable().optional(),
+  size_bytes: z.number().int(),
+});
+
+export const HaproxyErrorFileDetailSchema = HaproxyErrorFileSchema.extend({
+  content: z.string(),
+});
+
 export const HaproxyAclSchema = z.object({
   name: z.string(),
   frontend: z.string(),
@@ -108,6 +120,17 @@ export type HaproxyServer = z.infer<typeof HaproxyServerSchema>;
 export type HaproxyCertificate = z.infer<typeof HaproxyCertificateSchema>;
 export type HaproxyMap = z.infer<typeof HaproxyMapSchema>;
 export type HaproxyMapDetail = z.infer<typeof HaproxyMapDetailSchema>;
+export type HaproxyErrorFile = z.infer<typeof HaproxyErrorFileSchema>;
+export type HaproxyErrorFileDetail = z.infer<typeof HaproxyErrorFileDetailSchema>;
 export type HaproxyAcl = z.infer<typeof HaproxyAclSchema>;
 export type HaproxyStatRow = z.infer<typeof HaproxyStatRowSchema>;
 export type HaproxyRuntimeStatus = z.infer<typeof HaproxyRuntimeStatusSchema>;
+
+export type HaproxyErrorFileWrite = {
+  name: string;
+  status_code: number;
+  frontend?: string | null;
+  content?: string | null;
+  title?: string | null;
+  body_html?: string | null;
+};

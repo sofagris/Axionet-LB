@@ -29,16 +29,20 @@ class HaproxyPlugin:
     ) -> ValidationResult:
         cert_files: dict[str, str] = {}
         map_files: dict[str, str] = {}
+        error_files: dict[str, str] = {}
         if extra_files:
             for path, content in extra_files.items():
                 if path.startswith("certs/") and path.endswith(".pem"):
                     cert_files[path.removeprefix("certs/").removesuffix(".pem")] = content
                 elif path.startswith("maps/") and path.endswith(".map"):
                     map_files[path.removeprefix("maps/").removesuffix(".map")] = content
+                elif path.startswith("errors/") and path.endswith(".http"):
+                    error_files[path.removeprefix("errors/").removesuffix(".http")] = content
         return HaproxyConfigValidator(docker, image=image).validate_config_dict(
             configuration,
             cert_files=cert_files or None,
             map_files=map_files or None,
+            error_files=error_files or None,
         )
 
     def container_spec(self, configuration: dict | None = None) -> ContainerSpec:

@@ -119,10 +119,29 @@ export function buildApplySuggestions(
   const suggestions: ApplySuggestion[] = [];
   const instanceById = new Map(instances.map((i) => [i.id, i]));
   const opened = new Set<string>();
+  const errorPagesOpened = new Set<string>();
 
   for (const node of nodes) {
     const data = node.data;
     if (data.comingSoon) continue;
+
+    if (
+      data.kind === "catalog.component" &&
+      data.componentRole === "error-page" &&
+      data.serviceId &&
+      !errorPagesOpened.has(data.serviceId)
+    ) {
+      errorPagesOpened.add(data.serviceId);
+      suggestions.push({
+        id: `errors-${data.serviceId}`,
+        kind: "open-instance",
+        label: data.label,
+        href: `/instances/${data.serviceId}/haproxy?tab=errors`,
+        messageKey: "designer.applySteps.openErrorPages",
+        messageParams: { label: data.label },
+      });
+    }
+
     if (data.kind === "catalog.component") continue;
 
     if (

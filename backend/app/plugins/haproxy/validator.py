@@ -22,6 +22,7 @@ class HaproxyConfigValidator:
         *,
         cert_files: dict[str, str] | None = None,
         map_files: dict[str, str] | None = None,
+        error_files: dict[str, str] | None = None,
     ) -> ValidationResult:
         from app.plugins.haproxy.renderer import render_haproxy_config
 
@@ -33,6 +34,9 @@ class HaproxyConfigValidator:
         if map_files:
             for name, content in map_files.items():
                 files[f"maps/{name}.map"] = content
+        if error_files:
+            for name, content in error_files.items():
+                files[f"errors/{name}.http"] = content
         return self.validate_files(files)
 
     def validate_rendered(self, rendered_config: str) -> ValidationResult:

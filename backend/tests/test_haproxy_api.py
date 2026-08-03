@@ -73,7 +73,9 @@ def docker_adapter(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     monkeypatch.setattr(
         validator_mod.HaproxyConfigValidator,
         "validate_config_dict",
-        lambda self, configuration, cert_files=None, map_files=None: ValidationResult(ok=True, output="ok"),
+        lambda self, configuration, cert_files=None, map_files=None, error_files=None: ValidationResult(
+            ok=True, output="ok"
+        ),
     )
     monkeypatch.setattr(
         HaproxyPlugin,
@@ -287,6 +289,59 @@ def test_haproxy_maps_crud(client: TestClient) -> None:
     deleted = client.delete("/api/v1/instances/inst-1/haproxy/maps/hosts")
     assert deleted.status_code == 204
     assert client.get("/api/v1/instances/inst-1/haproxy/maps").json() == []
+
+
+def test_haproxy_error_files_crud(client: TestClient) -> None:
+    created = client.post(
+        "/api/v1/instances/inst-1/haproxy/error-files",
+        json={
+            "name": "not-found",
+            "status_code": 404,
+            "title": "Page missing",
+            "body_html": "<p>Sorry</p>",
+        },
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["name"] == "not-found"
+    assert created.json()["status_code"] == 404
+    assert created.json()["filename"] == "errors/not-found.http"
+    assert created.json()["frontend"] is None
+    assert created.json()["size_bytes"] > 0
+
+    listed = client.get("/api/v1/instances/inst-1/haproxy/error-files")
+    assert listed.status_code == 200
+    assert any(item["name"] == "not-found" for item in listed.json())
+
+    detail = client.get("/api/v1/instances/inst-1/haproxy/error-files/not-found")
+    assert detail.status_code == 200
+    assert "HTTP/1.0 404" in detail.json()["content"]
+    assert "Page missing" in detail.json()["content"]
+
+    preview = client.get("/api/v1/instances/inst-1/haproxy/config")
+    assert preview.status_code == 200
+    assert "errorfile 404 /usr/local/etc/haproxy/errors/not-found.http" in preview.json()["rendered"]
+
+    updated = client.put(
+        "/api/v1/instances/inst-1/haproxy/error-files/not-found",
+        json={
+            "name": "not-found",
+            "status_code": 404,
+            "content": "HTTP/1.0 404 Not Found\nContent-Type: text/plain\n\nNope\n",
+        },
+    )
+    assert updated.status_code == 200, updated.text
+    detail2 = client.get("/api/v1/instances/inst-1/haproxy/error-files/not-found")
+    assert "Nope" in detail2.json()["content"]
+
+    conflict = client.post(
+        "/api/v1/instances/inst-1/haproxy/error-files",
+        json={"name": "also-404", "status_code": 404, "title": "Dup"},
+    )
+    assert conflict.status_code == 400
+
+    deleted = client.delete("/api/v1/instances/inst-1/haproxy/error-files/not-found")
+    assert deleted.status_code == 204
+    assert client.get("/api/v1/instances/inst-1/haproxy/error-files").json() == []
 
 
 def test_haproxy_clear_counters(client: TestClient, docker_adapter: MagicMock) -> None:

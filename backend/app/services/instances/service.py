@@ -842,6 +842,7 @@ class InstanceService:
         config_dir = self._instance_dir(instance.id) / "config"
         (config_dir / "certs").mkdir(parents=True, exist_ok=True)
         (config_dir / "maps").mkdir(parents=True, exist_ok=True)
+        (config_dir / "errors").mkdir(parents=True, exist_ok=True)
         for relative, content in plugin.render_files(instance.configuration).items():
             path = config_dir / relative
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -873,6 +874,8 @@ class InstanceService:
                 extra_files[f"certs/{name}.pem"] = content
             for name, content in self._load_map_files(instance).items():
                 extra_files[f"maps/{name}.map"] = content
+            for name, content in self._load_error_files(instance).items():
+                extra_files[f"errors/{name}.http"] = content
         return plugin.validate(
             self._docker,
             image=instance.image,
@@ -887,6 +890,11 @@ class InstanceService:
 
     def maps_dir(self, instance_id: str) -> Path:
         path = self._instance_dir(instance_id) / "config" / "maps"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def errors_dir(self, instance_id: str) -> Path:
+        path = self._instance_dir(instance_id) / "config" / "errors"
         path.mkdir(parents=True, exist_ok=True)
         return path
 
@@ -932,6 +940,34 @@ class InstanceService:
         path = self.maps_dir(instance.id) / f"{name}.map"
         return path.stat().st_size if path.exists() else 0
 
+    def write_error_file(self, instance: ServiceInstance, name: str, content: str) -> Path:
+        cleaned = content.replace("\r\n", "\n").strip()
+        if not cleaned:
+            raise ValueError("Error file content cannot be empty")
+        if len(cleaned) > 1_000_000:
+            raise ValueError("Error file content too large (max 1MB)")
+        if not cleaned.upper().startswith("HTTP/"):
+            raise ValueError("Error file must start with an HTTP status line (e.g. HTTP/1.0 404 Not Found)")
+        # HAProxy expects CRLF line endings in errorfiles
+        normalized = cleaned.replace("\n", "\r\n")
+        path = self.errors_dir(instance.id) / f"{name}.http"
+        path.write_text(normalized + "\r\n", encoding="utf-8")
+        return path
+
+    def read_error_file(self, instance: ServiceInstance, name: str) -> str:
+        path = self.errors_dir(instance.id) / f"{name}.http"
+        if not path.exists():
+            raise ValueError(f"Error file not found: {name}")
+        return path.read_text(encoding="utf-8")
+
+    def delete_error_file(self, instance: ServiceInstance, name: str) -> None:
+        path = self.errors_dir(instance.id) / f"{name}.http"
+        path.unlink(missing_ok=True)
+
+    def error_file_size(self, instance: ServiceInstance, name: str) -> int:
+        path = self.errors_dir(instance.id) / f"{name}.http"
+        return path.stat().st_size if path.exists() else 0
+
     def _load_cert_files(self, instance: ServiceInstance) -> dict[str, str]:
         config = HaproxyConfig.from_dict(instance.configuration)
         files: dict[str, str] = {}
@@ -946,6 +982,15 @@ class InstanceService:
         files: dict[str, str] = {}
         for item in config.maps:
             path = self.maps_dir(instance.id) / f"{item.name}.map"
+            if path.exists():
+                files[item.name] = path.read_text(encoding="utf-8")
+        return files
+
+    def _load_error_files(self, instance: ServiceInstance) -> dict[str, str]:
+        config = HaproxyConfig.from_dict(instance.configuration)
+        files: dict[str, str] = {}
+        for item in config.error_files:
+            path = self.errors_dir(instance.id) / f"{item.name}.http"
             if path.exists():
                 files[item.name] = path.read_text(encoding="utf-8")
         return files

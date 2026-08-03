@@ -24,10 +24,12 @@ export const DESIGNER_SERVICE_TREES: DesignerServiceTree[] = [
       { id: "frontend", label: "Frontend", role: "frontend" },
       { id: "backend", label: "Backend", role: "backend" },
       { id: "server", label: "Server", role: "server" },
+      { id: "error-page", label: "Error page", role: "error-page" },
     ],
     chain: [
       { from: "frontend", to: "backend", label: "use_backend" },
       { from: "backend", to: "server", label: "server" },
+      { from: "frontend", to: "error-page", label: "errorfile" },
     ],
   },
   {

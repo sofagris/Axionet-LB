@@ -7,6 +7,7 @@ import {
   useHaproxyCertificates,
   useHaproxyConfig,
   useHaproxyDefaults,
+  useHaproxyErrorFiles,
   useHaproxyFrontends,
   useHaproxyMaps,
   useHaproxyMutations,
@@ -35,6 +36,7 @@ type Tab =
   | "servers"
   | "certificates"
   | "maps"
+  | "errors"
   | "acls"
   | "status"
   | "logs"
@@ -47,11 +49,16 @@ const TAB_IDS: Tab[] = [
   "servers",
   "certificates",
   "maps",
+  "errors",
   "acls",
   "status",
   "logs",
   "revisions",
 ];
+
+const ERROR_STATUS_PRESETS = [400, 403, 404, 500, 502, 503, 504];
+
+const DEFAULT_ERROR_BODY = "<h1>Not Found</h1><p>The requested resource was not found.</p>";
 
 function parseTab(value: string | null): Tab | null {
   if (!value) return null;
@@ -88,6 +95,7 @@ export function HaproxyDetailPage() {
   const backendsQuery = useHaproxyBackends(instanceId);
   const certificatesQuery = useHaproxyCertificates(instanceId);
   const mapsQuery = useHaproxyMaps(instanceId);
+  const errorFilesQuery = useHaproxyErrorFiles(instanceId);
   const aclsQuery = useHaproxyAcls(instanceId);
   const configQuery = useHaproxyConfig(instanceId);
   const defaultsQuery = useHaproxyDefaults(instanceId);
@@ -170,6 +178,15 @@ export function HaproxyDetailPage() {
   const [editingMap, setEditingMap] = useState<string | null>(null);
   const [mapName, setMapName] = useState("hosts");
   const [mapContent, setMapContent] = useState("# key value\nexample.com be1\n");
+
+  const [editingError, setEditingError] = useState<string | null>(null);
+  const [errorName, setErrorName] = useState("not-found");
+  const [errorStatus, setErrorStatus] = useState(404);
+  const [errorFrontend, setErrorFrontend] = useState("");
+  const [errorTitle, setErrorTitle] = useState("Not Found");
+  const [errorBodyHtml, setErrorBodyHtml] = useState(DEFAULT_ERROR_BODY);
+  const [errorRawMode, setErrorRawMode] = useState(false);
+  const [errorContent, setErrorContent] = useState("");
 
   const [editingAcl, setEditingAcl] = useState<string | null>(null);
   const [aclName, setAclName] = useState("is_api");
@@ -1566,6 +1583,193 @@ export function HaproxyDetailPage() {
                   onClick={() => mutations.deleteMap.mutate(item.name)}
                 >
                   Slett
+                </button>
+              </div>,
+            ])}
+          />
+        </section>
+      ) : null}
+
+      {tab === "errors" ? (
+        <section className="space-y-4">
+          <form
+            onSubmit={async (event) => {
+              event.preventDefault();
+              const payload = {
+                name: errorName,
+                status_code: errorStatus,
+                frontend: errorFrontend.trim() || null,
+                ...(errorRawMode
+                  ? { content: errorContent }
+                  : { title: errorTitle, body_html: errorBodyHtml }),
+              };
+              if (editingError) {
+                await mutations.updateErrorFile.mutateAsync({ name: editingError, payload });
+              } else {
+                await mutations.createErrorFile.mutateAsync(payload);
+              }
+              setEditingError(null);
+              setErrorName("not-found");
+              setErrorStatus(404);
+              setErrorFrontend("");
+              setErrorTitle("Not Found");
+              setErrorBodyHtml(DEFAULT_ERROR_BODY);
+              setErrorRawMode(false);
+              setErrorContent("");
+            }}
+            className="space-y-3 border border-line bg-paper-elevated/40 p-4"
+          >
+            <p className="text-sm text-ink-muted">{t("haproxyDetail.errors.help")}</p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <FormField label={t("haproxyDetail.errors.name")}>
+                <input
+                  className="w-full border border-line bg-paper px-3 py-2 font-mono text-sm"
+                  value={errorName}
+                  onChange={(e) => setErrorName(e.target.value)}
+                  required
+                  disabled={Boolean(editingError)}
+                />
+              </FormField>
+              <FormField label={t("haproxyDetail.errors.status")}>
+                <select
+                  className="w-full border border-line bg-paper px-3 py-2 text-sm"
+                  value={errorStatus}
+                  onChange={(e) => setErrorStatus(Number(e.target.value))}
+                >
+                  {ERROR_STATUS_PRESETS.map((code) => (
+                    <option key={code} value={code}>
+                      {code}
+                    </option>
+                  ))}
+                  {!ERROR_STATUS_PRESETS.includes(errorStatus) ? (
+                    <option value={errorStatus}>{errorStatus}</option>
+                  ) : null}
+                </select>
+              </FormField>
+              <FormField label={t("haproxyDetail.errors.scope")}>
+                <select
+                  className="w-full border border-line bg-paper px-3 py-2 text-sm"
+                  value={errorFrontend}
+                  onChange={(e) => setErrorFrontend(e.target.value)}
+                >
+                  <option value="">{t("haproxyDetail.errors.scopeDefaults")}</option>
+                  {(frontendsQuery.data ?? []).map((fe) => (
+                    <option key={fe.name} value={fe.name}>
+                      {fe.name}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+              <FormField label={t("haproxyDetail.errors.editorMode")}>
+                <label className="flex items-center gap-2 text-sm text-ink">
+                  <input
+                    type="checkbox"
+                    checked={errorRawMode}
+                    onChange={(e) => setErrorRawMode(e.target.checked)}
+                  />
+                  {t("haproxyDetail.errors.rawMode")}
+                </label>
+              </FormField>
+            </div>
+            {errorRawMode ? (
+              <FormField label={t("haproxyDetail.errors.rawContent")}>
+                <textarea
+                  className="min-h-40 w-full border border-line bg-paper px-3 py-2 font-mono text-xs"
+                  value={errorContent}
+                  onChange={(e) => setErrorContent(e.target.value)}
+                  required
+                  placeholder={"HTTP/1.0 404 Not Found\nContent-Type: text/html\n\n<html>...</html>"}
+                />
+              </FormField>
+            ) : (
+              <>
+                <FormField label={t("haproxyDetail.errors.title")}>
+                  <input
+                    className="w-full border border-line bg-paper px-3 py-2 text-sm"
+                    value={errorTitle}
+                    onChange={(e) => setErrorTitle(e.target.value)}
+                  />
+                </FormField>
+                <FormField label={t("haproxyDetail.errors.bodyHtml")}>
+                  <textarea
+                    className="min-h-32 w-full border border-line bg-paper px-3 py-2 font-mono text-xs"
+                    value={errorBodyHtml}
+                    onChange={(e) => setErrorBodyHtml(e.target.value)}
+                  />
+                </FormField>
+              </>
+            )}
+            <FormActions>
+              <button type="submit" className="border border-accent bg-accent px-3 py-2 text-sm text-white">
+                {editingError
+                  ? t("haproxyDetail.errors.update")
+                  : t("haproxyDetail.errors.create")}
+              </button>
+              {editingError ? (
+                <button
+                  type="button"
+                  className="border border-line px-3 py-2 text-sm"
+                  onClick={() => {
+                    setEditingError(null);
+                    setErrorName("not-found");
+                    setErrorStatus(404);
+                    setErrorFrontend("");
+                    setErrorTitle("Not Found");
+                    setErrorBodyHtml(DEFAULT_ERROR_BODY);
+                    setErrorRawMode(false);
+                    setErrorContent("");
+                  }}
+                >
+                  {t("common.cancel")}
+                </button>
+              ) : null}
+            </FormActions>
+            {mutations.createErrorFile.isError || mutations.updateErrorFile.isError ? (
+              <p className="text-sm text-danger">
+                {(mutations.createErrorFile.error || mutations.updateErrorFile.error) instanceof
+                Error
+                  ? (
+                      (mutations.createErrorFile.error || mutations.updateErrorFile.error) as Error
+                    ).message
+                  : t("haproxyDetail.errors.saveFailed")}
+              </p>
+            ) : null}
+          </form>
+          <EntityTable
+            headers={[
+              t("haproxyDetail.errors.colName"),
+              t("haproxyDetail.errors.colStatus"),
+              t("haproxyDetail.errors.colScope"),
+              t("haproxyDetail.errors.colFile"),
+              "",
+            ]}
+            rows={(errorFilesQuery.data ?? []).map((item) => [
+              item.name,
+              String(item.status_code),
+              item.frontend || t("haproxyDetail.errors.scopeDefaults"),
+              item.filename,
+              <div key={`err-${item.name}`} className="flex gap-3">
+                <button
+                  type="button"
+                  className="text-accent hover:underline"
+                  onClick={async () => {
+                    const detail = await mutations.loadErrorFile.mutateAsync(item.name);
+                    setEditingError(detail.name);
+                    setErrorName(detail.name);
+                    setErrorStatus(detail.status_code);
+                    setErrorFrontend(detail.frontend ?? "");
+                    setErrorRawMode(true);
+                    setErrorContent(detail.content);
+                  }}
+                >
+                  {t("common.edit")}
+                </button>
+                <button
+                  type="button"
+                  className="text-danger hover:underline"
+                  onClick={() => mutations.deleteErrorFile.mutate(item.name)}
+                >
+                  {t("common.delete")}
                 </button>
               </div>,
             ])}

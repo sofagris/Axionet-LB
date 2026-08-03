@@ -8,6 +8,7 @@ from app.plugins.haproxy.schemas import (
     HaproxyBackend,
     HaproxyCertificate,
     HaproxyConfig,
+    HaproxyErrorFile,
     HaproxyFrontend,
     HaproxyMap,
     HaproxyServer,
@@ -98,6 +99,9 @@ class HaproxyConfigEditor:
             raise ValueError(f"Frontend not found: {name}")
         self._config.frontends = [item for item in self._config.frontends if item.name != name]
         self._config.acls = [item for item in self._config.acls if item.frontend != name]
+        self._config.error_files = [
+            item for item in self._config.error_files if item.frontend != name
+        ]
 
     # Backends
     def list_backends(self) -> list[HaproxyBackend]:
@@ -237,6 +241,44 @@ class HaproxyConfigEditor:
         if self.get_map(name) is None:
             raise ValueError(f"Map not found: {name}")
         self._config.maps = [item for item in self._config.maps if item.name != name]
+
+    # Error files
+    def list_error_files(self) -> list[HaproxyErrorFile]:
+        return list(self._config.error_files)
+
+    def get_error_file(self, name: str) -> HaproxyErrorFile | None:
+        return next((item for item in self._config.error_files if item.name == name), None)
+
+    def upsert_error_file(self, error_file: HaproxyErrorFile, *, create: bool) -> HaproxyErrorFile:
+        existing = self.get_error_file(error_file.name)
+        if create and existing is not None:
+            raise ValueError(f"Error file already exists: {error_file.name}")
+        if not create and existing is None:
+            raise ValueError(f"Error file not found: {error_file.name}")
+        if error_file.frontend and self.get_frontend(error_file.frontend) is None:
+            raise ValueError(f"Frontend not found: {error_file.frontend}")
+        for other in self._config.error_files:
+            if other.name == error_file.name:
+                continue
+            if other.status_code == error_file.status_code and other.frontend == error_file.frontend:
+                scope = error_file.frontend or "defaults"
+                raise ValueError(
+                    f"Status {error_file.status_code} already has an error file in {scope}"
+                )
+        filename = error_file.filename or f"errors/{error_file.name}.http"
+        item = error_file.model_copy(update={"filename": filename})
+        if existing is None:
+            self._config.error_files.append(item)
+        else:
+            self._config.error_files = [
+                item if entry.name == item.name else entry for entry in self._config.error_files
+            ]
+        return item
+
+    def delete_error_file(self, name: str) -> None:
+        if self.get_error_file(name) is None:
+            raise ValueError(f"Error file not found: {name}")
+        self._config.error_files = [item for item in self._config.error_files if item.name != name]
 
     # ACLs
     def list_acls(self) -> list[HaproxyAcl]:

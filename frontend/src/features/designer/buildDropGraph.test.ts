@@ -9,7 +9,7 @@ import {
 import type { DesignerNode } from "./types";
 
 describe("buildDropGraph", () => {
-  it("drops HAProxy parent as a group containing FE/BE/server", () => {
+  it("drops HAProxy parent as a group containing FE/BE/server/error-page", () => {
     const { nodes, edges } = buildDropGraph(
       { x: 10, y: 20 },
       {
@@ -24,7 +24,7 @@ describe("buildDropGraph", () => {
         dropMode: "tree",
       },
     );
-    expect(nodes).toHaveLength(4);
+    expect(nodes).toHaveLength(5);
     expect(nodes[0]?.data.kind).toBe("group.frame");
     expect(nodes[0]?.type).toBe("designerGroup");
     const children = nodes.slice(1);
@@ -33,9 +33,11 @@ describe("buildDropGraph", () => {
       "frontend",
       "backend",
       "server",
+      "error-page",
     ]);
     expect(children[0]?.data.props?.bind).toBe("*:443");
-    expect(edges).toHaveLength(2);
+    expect(children[3]?.data.props?.status_code).toBe("404");
+    expect(edges).toHaveLength(3);
   });
 
   it("drops a single Frontend component with default props", () => {

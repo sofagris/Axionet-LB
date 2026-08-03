@@ -4,12 +4,14 @@ import {
   createHaproxyAcl,
   createHaproxyBackend,
   createHaproxyCertificate,
+  createHaproxyErrorFile,
   createHaproxyFrontend,
   createHaproxyMap,
   createHaproxyServer,
   deleteHaproxyAcl,
   deleteHaproxyBackend,
   deleteHaproxyCertificate,
+  deleteHaproxyErrorFile,
   deleteHaproxyFrontend,
   deleteHaproxyMap,
   deleteHaproxyServer,
@@ -18,6 +20,8 @@ import {
   fetchHaproxyCertificates,
   fetchHaproxyConfig,
   fetchHaproxyDefaults,
+  fetchHaproxyErrorFile,
+  fetchHaproxyErrorFiles,
   fetchHaproxyFrontends,
   fetchHaproxyMap,
   fetchHaproxyMaps,
@@ -26,6 +30,7 @@ import {
   updateHaproxyAcl,
   updateHaproxyBackend,
   updateHaproxyDefaults,
+  updateHaproxyErrorFile,
   updateHaproxyFrontend,
   updateHaproxyMap,
   updateHaproxyServer,
@@ -35,6 +40,7 @@ import type {
   HaproxyAcl,
   HaproxyBackend,
   HaproxyDefaults,
+  HaproxyErrorFileWrite,
   HaproxyFrontend,
   HaproxyServer,
 } from "../../types/haproxy";
@@ -66,6 +72,13 @@ export function useHaproxyMaps(id: string) {
   return useQuery({
     queryKey: ["haproxy", id, "maps"],
     queryFn: () => fetchHaproxyMaps(id),
+  });
+}
+
+export function useHaproxyErrorFiles(id: string) {
+  return useQuery({
+    queryKey: ["haproxy", id, "error-files"],
+    queryFn: () => fetchHaproxyErrorFiles(id),
   });
 }
 
@@ -187,6 +200,22 @@ export function useHaproxyMutations(id: string) {
     }),
     loadMap: useMutation({
       mutationFn: (name: string) => fetchHaproxyMap(id, name),
+    }),
+    createErrorFile: useMutation({
+      mutationFn: (payload: HaproxyErrorFileWrite) => createHaproxyErrorFile(id, payload),
+      onSuccess: invalidate,
+    }),
+    updateErrorFile: useMutation({
+      mutationFn: ({ name, payload }: { name: string; payload: HaproxyErrorFileWrite }) =>
+        updateHaproxyErrorFile(id, name, payload),
+      onSuccess: invalidate,
+    }),
+    deleteErrorFile: useMutation({
+      mutationFn: (name: string) => deleteHaproxyErrorFile(id, name),
+      onSuccess: invalidate,
+    }),
+    loadErrorFile: useMutation({
+      mutationFn: (name: string) => fetchHaproxyErrorFile(id, name),
     }),
     createAcl: useMutation({
       mutationFn: (payload: HaproxyAcl) => createHaproxyAcl(id, payload),

@@ -23,6 +23,11 @@ defaults
     compression algo {{ config.compression_algo }}
     compression type {{ config.compression_type }}
 {% endif %}
+{% if config.mode == "http" %}
+{% for err in config.error_files if not err.frontend %}
+    errorfile {{ err.status_code }} /usr/local/etc/haproxy/errors/{{ err.name }}.http
+{% endfor %}
+{% endif %}
 
 frontend stats
     bind *:{{ config.stats_port }}
@@ -41,6 +46,11 @@ frontend {{ frontend.name }}
     bind {{ frontend.bind_address }}:{{ frontend.bind_port }}
 {% endif %}
     mode {{ frontend.mode }}
+{% if frontend.mode == "http" %}
+{% for err in config.error_files if err.frontend == frontend.name %}
+    errorfile {{ err.status_code }} /usr/local/etc/haproxy/errors/{{ err.name }}.http
+{% endfor %}
+{% endif %}
 {% for acl in config.acls if acl.frontend == frontend.name %}
     acl {{ acl.name }} {{ acl.expression }}
 {% endfor %}

@@ -90,6 +90,27 @@ class HaproxyMapDetail(HaproxyMapRead):
     content: str
 
 
+class HaproxyErrorFileCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    status_code: int = Field(ge=400, le=599)
+    frontend: str | None = None
+    content: str | None = Field(default=None, max_length=1_000_000)
+    title: str | None = Field(default=None, max_length=256)
+    body_html: str | None = Field(default=None, max_length=500_000)
+
+
+class HaproxyErrorFileRead(BaseModel):
+    name: str
+    status_code: int
+    filename: str
+    frontend: str | None = None
+    size_bytes: int = 0
+
+
+class HaproxyErrorFileDetail(HaproxyErrorFileRead):
+    content: str
+
+
 class HaproxyAclRead(BaseModel):
     name: str
     frontend: str
