@@ -109,10 +109,12 @@ export function buildApplySuggestions(
 ): ApplySuggestion[] {
   const suggestions: ApplySuggestion[] = [];
   const instanceById = new Map(instances.map((i) => [i.id, i]));
+  const opened = new Set<string>();
 
   for (const node of nodes) {
     const data = node.data;
     if (data.comingSoon) continue;
+    if (data.kind === "catalog.component") continue;
 
     if (data.kind === "catalog.service" && data.serviceType && !data.serviceId) {
       suggestions.push({
@@ -127,13 +129,14 @@ export function buildApplySuggestions(
     }
 
     const serviceId = data.serviceId;
-    if (serviceId) {
+    if (serviceId && !opened.has(serviceId)) {
+      opened.add(serviceId);
       const inst = instanceById.get(serviceId);
       const serviceType = data.serviceType ?? inst?.service_type;
       if (serviceType) {
         const known = ["haproxy", "frr", "keycloak-mgmt", "keycloak-apps", "auth-gateway"];
         suggestions.push({
-          id: `open-${node.id}`,
+          id: `open-${serviceId}`,
           kind: "open-instance",
           label: data.label,
           href: known.includes(serviceType)
@@ -158,9 +161,7 @@ export function buildApplySuggestions(
   }
 
   const types = new Set(
-    nodes
-      .map((n) => n.data.serviceType)
-      .filter((t): t is string => Boolean(t)),
+    nodes.map((n) => n.data.serviceType).filter((t): t is string => Boolean(t)),
   );
   if (types.has("haproxy") && types.has("auth-gateway")) {
     suggestions.push({

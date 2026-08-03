@@ -295,6 +295,10 @@
       "vips": "VIPs",
       "comingSoon": "Coming soon",
       "dragHint": "Drag onto canvas",
+      "dragTreeHint": "Drag service — components come along",
+      "dragComponentHint": "Drag this component alone",
+      "toggleComponents": "Show or hide components",
+      "withComponents": "{{count}} components",
       "noInstances": "No instances yet.",
       "noVips": "No VIPs yet."
     },
@@ -307,6 +311,7 @@
       "label": "Label",
       "kind": "Kind",
       "serviceType": "Service type",
+      "componentRole": "Component",
       "protocol": "Protocol",
       "note": "Note",
       "linkInstance": "Linked instance",

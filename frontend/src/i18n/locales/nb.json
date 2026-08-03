@@ -296,6 +296,10 @@
       "vips": "VIPs",
       "comingSoon": "Kommer",
       "dragHint": "Dra inn på canvas",
+      "dragTreeHint": "Dra tjeneste — komponenter følger med",
+      "dragComponentHint": "Dra bare denne komponenten",
+      "toggleComponents": "Vis eller skjul komponenter",
+      "withComponents": "{{count}} komponenter",
       "noInstances": "Ingen instanser ennå.",
       "noVips": "Ingen VIP-er ennå."
     },
@@ -308,6 +312,7 @@
       "label": "Etikett",
       "kind": "Type",
       "serviceType": "Tjenestetype",
+      "componentRole": "Komponent",
       "protocol": "Protokoll",
       "note": "Notat",
       "linkInstance": "Koblet instans",

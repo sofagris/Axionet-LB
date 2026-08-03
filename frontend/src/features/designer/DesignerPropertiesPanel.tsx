@@ -127,13 +127,24 @@ export function DesignerPropertiesPanel({
             <p className="mt-1 font-mono text-xs text-ink">{data.serviceType}</p>
           </div>
         ) : null}
+        {data.kind === "catalog.component" ? (
+          <div>
+            <p className="text-ink-muted">{t("designer.properties.componentRole")}</p>
+            <p className="mt-1 font-mono text-xs text-ink">
+              {data.componentRole ?? data.componentId ?? "—"}
+            </p>
+          </div>
+        ) : null}
         {data.comingSoon ? (
           <p className="rounded border border-warn/40 bg-warn/10 px-2 py-1.5 text-xs text-warn">
             {t("designer.properties.comingSoonHint")}
           </p>
         ) : null}
 
-        {(data.kind === "catalog.service" || data.kind === "instance.ref") && !data.comingSoon ? (
+        {(data.kind === "catalog.service" ||
+          data.kind === "instance.ref" ||
+          data.kind === "catalog.component") &&
+        !data.comingSoon ? (
           <label className="block">
             <span className="text-ink-muted">{t("designer.properties.linkInstance")}</span>
             <select
@@ -142,6 +153,13 @@ export function DesignerPropertiesPanel({
               onChange={(e) => {
                 const id = e.target.value || undefined;
                 const inst = instances.find((i) => i.id === id);
+                if (data.kind === "catalog.component") {
+                  onUpdateNode(node.id, {
+                    serviceId: id,
+                    serviceType: inst?.service_type ?? data.serviceType,
+                  });
+                  return;
+                }
                 onUpdateNode(node.id, {
                   serviceId: id,
                   kind: id ? "instance.ref" : "catalog.service",
@@ -196,7 +214,10 @@ export function DesignerPropertiesPanel({
         </label>
 
         <div className="space-y-1.5 border-t border-line pt-3">
-          {data.serviceType && !data.serviceId && !data.comingSoon ? (
+          {data.kind !== "catalog.component" &&
+          data.serviceType &&
+          !data.serviceId &&
+          !data.comingSoon ? (
             <Link
               to={createWizardPath(data.serviceType)}
               className="block border border-accent bg-accent px-2 py-1.5 text-center text-xs font-medium text-white"

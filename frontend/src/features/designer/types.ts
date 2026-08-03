@@ -1,7 +1,11 @@
 import type { Edge, Node, Viewport } from "@xyflow/react";
 import type { CatalogBrand, CatalogStatus } from "../catalog/catalogTypes";
 
-export type DesignerNodeKind = "catalog.service" | "instance.ref" | "vip.ref";
+export type DesignerNodeKind =
+  | "catalog.service"
+  | "catalog.component"
+  | "instance.ref"
+  | "vip.ref";
 
 export type DesignerNodeData = {
   kind: DesignerNodeKind;
@@ -16,6 +20,9 @@ export type DesignerNodeData = {
   note?: string;
   /** Mark planned/concept drops that cannot be applied */
   comingSoon?: boolean;
+  /** Component within a service tree (Frontend / Backend / …) */
+  componentId?: string;
+  componentRole?: string;
 };
 
 export type DesignerEdgeData = {
@@ -42,6 +49,20 @@ export type PaletteDragPayload =
       catalogStatus: CatalogStatus;
       brand: CatalogBrand;
       comingSoon: boolean;
+      /** When "tree", drop parent + all palette components. */
+      dropMode?: "single" | "tree";
+    }
+  | {
+      source: "catalog.component";
+      catalogId: string;
+      catalogSlug: string;
+      label: string;
+      serviceType?: string;
+      catalogStatus: CatalogStatus;
+      brand: CatalogBrand;
+      comingSoon: boolean;
+      componentId: string;
+      componentRole: string;
     }
   | {
       source: "instance";
@@ -50,6 +71,18 @@ export type PaletteDragPayload =
       serviceType: string;
       catalogSlug?: string;
       brand?: CatalogBrand;
+      dropMode?: "single" | "tree";
+    }
+  | {
+      source: "instance.component";
+      serviceId: string;
+      label: string;
+      serviceType: string;
+      catalogId: string;
+      catalogSlug?: string;
+      brand?: CatalogBrand;
+      componentId: string;
+      componentRole: string;
     }
   | {
       source: "vip";

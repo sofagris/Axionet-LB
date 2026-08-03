@@ -17,10 +17,10 @@ import {
 import "@xyflow/react/dist/style.css";
 import { useReactFlow } from "@xyflow/react";
 import { DesignerFlowNode } from "./DesignerNode";
+import { buildDropGraph } from "./buildDropGraph";
 import {
   DESIGNER_DND_MIME,
   newEdgeId,
-  newNodeId,
   type DesignerEdge,
   type DesignerNode,
   type DesignerNodeData,
@@ -100,44 +100,13 @@ function DesignerCanvasInner({
         return;
       }
       const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
-      let data: DesignerNodeData;
-      if (payload.source === "catalog") {
-        data = {
-          kind: "catalog.service",
-          label: payload.label,
-          catalogId: payload.catalogId,
-          catalogSlug: payload.catalogSlug,
-          serviceType: payload.serviceType,
-          catalogStatus: payload.catalogStatus,
-          brand: payload.brand,
-          comingSoon: payload.comingSoon,
-        };
-      } else if (payload.source === "instance") {
-        data = {
-          kind: "instance.ref",
-          label: payload.label,
-          serviceId: payload.serviceId,
-          serviceType: payload.serviceType,
-          catalogSlug: payload.catalogSlug,
-          brand: payload.brand,
-        };
-      } else {
-        data = {
-          kind: "vip.ref",
-          label: payload.label,
-          vipId: payload.vipId,
-          note: payload.address,
-        };
+      const drop = buildDropGraph(position, payload);
+      onNodes([...nodes, ...drop.nodes]);
+      if (drop.edges.length > 0) {
+        onEdges((eds) => [...eds, ...drop.edges]);
       }
-      const node: DesignerNode = {
-        id: newNodeId(),
-        type: "designer",
-        position,
-        data,
-      };
-      onNodes([...nodes, node]);
     },
-    [nodes, onNodes, screenToFlowPosition],
+    [nodes, onEdges, onNodes, screenToFlowPosition],
   );
 
   const defaultEdgeOptions = useMemo(
