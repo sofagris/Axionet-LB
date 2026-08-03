@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode, type SVGProps } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { usePermissions } from "../features/auth/usePermissions";
@@ -14,6 +14,94 @@ import { InventorySettings } from "../features/settings/InventorySettings";
 import { TenancySettings } from "../features/settings/TenancySettings";
 import type { ComponentHealth, OrphanReport } from "../types/system";
 
+type SettingsTab = "system" | "sites" | "orphans" | "tenancy" | "front-panel";
+
+const TAB_IDS: SettingsTab[] = ["system", "sites", "orphans", "tenancy", "front-panel"];
+
+function parseTab(value: string | null): SettingsTab | null {
+  if (!value) return null;
+  return TAB_IDS.includes(value as SettingsTab) ? (value as SettingsTab) : null;
+}
+
+/** Map legacy ?section= anchors to tabs. */
+function tabFromSection(section: string | null): SettingsTab | null {
+  if (section === "sites" || section === "tenancy" || section === "front-panel") return section;
+  return null;
+}
+
+type IconProps = SVGProps<SVGSVGElement>;
+
+function iconBase(props: IconProps) {
+  return {
+    width: 16,
+    height: 16,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.75,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true as const,
+    ...props,
+  };
+}
+
+function IconSystem(props: IconProps) {
+  return (
+    <svg {...iconBase(props)}>
+      <rect x="3" y="4" width="18" height="14" rx="1.5" />
+      <path d="M8 20h8M12 18v2" />
+    </svg>
+  );
+}
+
+function IconSites(props: IconProps) {
+  return (
+    <svg {...iconBase(props)}>
+      <path d="M4 20V9l8-5 8 5v11" />
+      <path d="M9 20v-6h6v6" />
+    </svg>
+  );
+}
+
+function IconOrphans(props: IconProps) {
+  return (
+    <svg {...iconBase(props)}>
+      <path d="M4 7h16" />
+      <path d="M9 7V5h6v2" />
+      <path d="M6 7l1 12h10l1-12" />
+    </svg>
+  );
+}
+
+function IconTenancy(props: IconProps) {
+  return (
+    <svg {...iconBase(props)}>
+      <circle cx="9" cy="8" r="3" />
+      <circle cx="16" cy="9" r="2.5" />
+      <path d="M3 19c0-2.5 2.5-4.5 6-4.5s6 2 6 4.5" />
+      <path d="M14 14.5c2.2.3 4 1.8 4 4" />
+    </svg>
+  );
+}
+
+function IconFrontPanel(props: IconProps) {
+  return (
+    <svg {...iconBase(props)}>
+      <rect x="3" y="5" width="18" height="12" rx="1.5" />
+      <path d="M8 21h8M7 9h4M7 12h6" />
+    </svg>
+  );
+}
+
+const TAB_ICONS: Record<SettingsTab, (props: IconProps) => ReactNode> = {
+  system: IconSystem,
+  sites: IconSites,
+  orphans: IconOrphans,
+  tenancy: IconTenancy,
+  "front-panel": IconFrontPanel,
+};
+
 function statusTone(status: string): string {
   if (status === "ok") return "text-ok";
   if (status === "degraded" || status === "unavailable") return "text-warn";
@@ -24,24 +112,38 @@ function statusTone(status: string): string {
 export function SettingsPage() {
   const { t } = useTranslation();
   const { isAdmin } = usePermissions();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const infoQuery = useSystemInfo();
   const healthQuery = useSystemHealth();
   const capsQuery = useCapabilities();
   const orphansQuery = useOrphans();
   const pruneMutation = usePruneOrphans();
 
+  const [tab, setTab] = useState<SettingsTab>(
+    () =>
+      parseTab(searchParams.get("tab")) ??
+      tabFromSection(searchParams.get("section")) ??
+      "system",
+  );
+
   const [selectedContainers, setSelectedContainers] = useState<Set<string>>(new Set());
   const [selectedNetworks, setSelectedNetworks] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const section = searchParams.get("section");
-    if (section !== "front-panel" && section !== "tenancy" && section !== "sites") return;
-    const el = document.getElementById(section);
-    if (el && typeof el.scrollIntoView === "function") {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+    const fromUrl =
+      parseTab(searchParams.get("tab")) ??
+      tabFromSection(searchParams.get("section")) ??
+      "system";
+    setTab((current) => (current === fromUrl ? current : fromUrl));
   }, [searchParams]);
+
+  const selectTab = (next: SettingsTab) => {
+    setTab(next);
+    const params = new URLSearchParams(searchParams);
+    params.set("tab", next);
+    params.delete("section");
+    setSearchParams(params, { replace: true });
+  };
 
   const info = infoQuery.data;
   const health = healthQuery.data;
@@ -94,240 +196,280 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <section>
         <h2 className="text-xl font-semibold tracking-tight text-ink">{t("settings.title")}</h2>
         <p className="mt-1 max-w-2xl text-ink-muted">{t("settings.subtitle")}</p>
       </section>
 
-      <section className="border border-line bg-paper-elevated p-5 shadow-sm">
-        <h3 className="font-semibold text-ink">{t("settings.systemInfo")}</h3>
-        {infoQuery.isLoading ? <p className="mt-3 text-ink-muted">{t("common.loading")}</p> : null}
-        {infoQuery.isError ? (
-          <p className="mt-3 text-sm text-danger">
-            {infoQuery.error instanceof Error ? infoQuery.error.message : t("common.unknownError")}
-          </p>
-        ) : null}
-        {info ? (
-          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-            <InfoRow label={t("settings.name")} value={info.name} />
-            <InfoRow label={t("settings.version")} value={info.version} />
-            <InfoRow label={t("settings.apiPrefix")} value={info.api_prefix} mono />
-            <InfoRow label={t("settings.dataDir")} value={info.data_dir} mono />
-            <InfoRow
-              label={t("settings.database")}
-              value={info.database_configured ? t("settings.configured") : t("settings.missing")}
-            />
-            <InfoRow
-              label={t("settings.docker")}
-              value={info.docker_configured ? t("settings.configured") : t("settings.missing")}
-            />
-            <InfoRow
-              label={t("settings.mgmtInterface")}
-              value={info.management_interface ?? "—"}
-              mono
-            />
-            <InfoRow
-              label={t("settings.mgmtBindIp")}
-              value={info.management_bind_ip ?? "—"}
-              mono
-            />
-          </dl>
-        ) : null}
-        <p className="mt-4 text-sm text-ink-muted">
-          {t("settings.mgmtHint")}{" "}
-          <Link to="/interfaces" className="text-accent hover:underline">
-            {t("nav.interfaces")}
-          </Link>
-        </p>
-      </section>
-
-      <section className="border border-line bg-paper-elevated p-5 shadow-sm">
-        <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <h3 className="font-semibold text-ink">{t("settings.health")}</h3>
-          {health ? (
-            <span className={`font-mono text-sm uppercase ${statusTone(health.status)}`}>
-              {health.status}
-            </span>
-          ) : null}
-        </div>
-        {healthQuery.isLoading ? <p className="mt-3 text-ink-muted">{t("common.loading")}</p> : null}
-        {health ? (
-          <div className="mt-4 space-y-0">
-            {Object.entries(health.components).map(([name, component]) => (
-              <ComponentRow key={name} name={name} component={component} />
-            ))}
-            <p className="mt-3 font-mono text-xs text-ink-muted">
-              {t("settings.checkedAt", { time: new Date(health.checked_at).toLocaleString() })}
-            </p>
-          </div>
-        ) : null}
-      </section>
-
-      <section className="border border-line bg-paper-elevated p-5 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h3 className="font-semibold text-ink">{t("settings.orphans")}</h3>
-            <p className="mt-1 max-w-2xl text-sm text-ink-muted">{t("settings.orphansHint")}</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
+      <nav
+        className="flex flex-wrap gap-1 border-b border-line pb-2"
+        aria-label={t("settings.tabsLabel")}
+      >
+        {TAB_IDS.map((id) => {
+          const Icon = TAB_ICONS[id];
+          const active = tab === id;
+          return (
             <button
+              key={id}
               type="button"
-              className="border border-line px-3 py-1.5 text-sm text-ink hover:bg-paper"
-              onClick={() => void orphansQuery.refetch()}
-              disabled={orphansQuery.isFetching}
+              onClick={() => selectTab(id)}
+              className={[
+                "inline-flex items-center gap-2 px-3 py-1.5 text-sm",
+                active
+                  ? "border-b-2 border-domain-system font-medium text-domain-system"
+                  : "text-ink-muted hover:text-ink",
+              ].join(" ")}
             >
-              {t("settings.orphansRefresh")}
+              <Icon />
+              {t(`settings.tabs.${id}`)}
             </button>
-            {isAdmin && orphans && orphanCount > 0 ? (
+          );
+        })}
+      </nav>
+
+      {tab === "system" ? (
+        <div className="space-y-6">
+          <section className="border border-line bg-paper-elevated p-5 shadow-sm">
+            <h3 className="font-semibold text-ink">{t("settings.systemInfo")}</h3>
+            {infoQuery.isLoading ? <p className="mt-3 text-ink-muted">{t("common.loading")}</p> : null}
+            {infoQuery.isError ? (
+              <p className="mt-3 text-sm text-danger">
+                {infoQuery.error instanceof Error
+                  ? infoQuery.error.message
+                  : t("common.unknownError")}
+              </p>
+            ) : null}
+            {info ? (
+              <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                <InfoRow label={t("settings.name")} value={info.name} />
+                <InfoRow label={t("settings.version")} value={info.version} />
+                <InfoRow label={t("settings.apiPrefix")} value={info.api_prefix} mono />
+                <InfoRow label={t("settings.dataDir")} value={info.data_dir} mono />
+                <InfoRow
+                  label={t("settings.database")}
+                  value={info.database_configured ? t("settings.configured") : t("settings.missing")}
+                />
+                <InfoRow
+                  label={t("settings.docker")}
+                  value={info.docker_configured ? t("settings.configured") : t("settings.missing")}
+                />
+                <InfoRow
+                  label={t("settings.mgmtInterface")}
+                  value={info.management_interface ?? "—"}
+                  mono
+                />
+                <InfoRow
+                  label={t("settings.mgmtBindIp")}
+                  value={info.management_bind_ip ?? "—"}
+                  mono
+                />
+              </dl>
+            ) : null}
+            <p className="mt-4 text-sm text-ink-muted">
+              {t("settings.mgmtHint")}{" "}
+              <Link to="/interfaces" className="text-accent hover:underline">
+                {t("nav.interfaces")}
+              </Link>
+            </p>
+          </section>
+
+          <section className="border border-line bg-paper-elevated p-5 shadow-sm">
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <h3 className="font-semibold text-ink">{t("settings.health")}</h3>
+              {health ? (
+                <span className={`font-mono text-sm uppercase ${statusTone(health.status)}`}>
+                  {health.status}
+                </span>
+              ) : null}
+            </div>
+            {healthQuery.isLoading ? (
+              <p className="mt-3 text-ink-muted">{t("common.loading")}</p>
+            ) : null}
+            {health ? (
+              <div className="mt-4 space-y-0">
+                {Object.entries(health.components).map(([name, component]) => (
+                  <ComponentRow key={name} name={name} component={component} />
+                ))}
+                <p className="mt-3 font-mono text-xs text-ink-muted">
+                  {t("settings.checkedAt", {
+                    time: new Date(health.checked_at).toLocaleString(),
+                  })}
+                </p>
+              </div>
+            ) : null}
+          </section>
+
+          <section className="border border-line bg-paper-elevated p-5 shadow-sm">
+            <h3 className="font-semibold text-ink">{t("settings.capabilities")}</h3>
+            {capsQuery.isLoading ? (
+              <p className="mt-3 text-ink-muted">{t("common.loading")}</p>
+            ) : null}
+            {caps ? (
+              <div className="mt-4 grid gap-6 md:grid-cols-2">
+                <div>
+                  <p className="text-xs tracking-wide text-ink-muted uppercase">
+                    {t("settings.features")}
+                  </p>
+                  <ul className="mt-2 max-h-64 space-y-1 overflow-auto font-mono text-xs text-ink">
+                    {caps.features.map((feature) => (
+                      <li key={feature}>{feature}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <p className="text-xs tracking-wide text-ink-muted uppercase">
+                    {t("settings.dataplane")}
+                  </p>
+                  <ul className="mt-2 space-y-1 font-mono text-xs text-ink">
+                    {caps.dataplane_services.map((service) => (
+                      <li key={service}>{service}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ) : null}
+          </section>
+        </div>
+      ) : null}
+
+      {tab === "sites" ? <InventorySettings /> : null}
+
+      {tab === "orphans" ? (
+        <section className="border border-line bg-paper-elevated p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="font-semibold text-ink">{t("settings.orphans")}</h3>
+              <p className="mt-1 max-w-2xl text-sm text-ink-muted">{t("settings.orphansHint")}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 className="border border-line px-3 py-1.5 text-sm text-ink hover:bg-paper"
-                onClick={() => selectAllPrunable(orphans)}
+                onClick={() => void orphansQuery.refetch()}
+                disabled={orphansQuery.isFetching}
               >
-                {t("settings.orphansSelectAll")}
+                {t("settings.orphansRefresh")}
               </button>
-            ) : null}
-            {isAdmin ? (
-              <button
-                type="button"
-                className="border border-danger/40 bg-danger/10 px-3 py-1.5 text-sm text-danger disabled:opacity-40"
-                onClick={() => void handlePrune()}
-                disabled={
-                  pruneMutation.isPending ||
-                  (selectedContainers.size === 0 && selectedNetworks.size === 0)
-                }
-              >
-                {pruneMutation.isPending ? t("settings.orphansPruning") : t("settings.orphansPrune")}
-              </button>
-            ) : null}
+              {isAdmin && orphans && orphanCount > 0 ? (
+                <button
+                  type="button"
+                  className="border border-line px-3 py-1.5 text-sm text-ink hover:bg-paper"
+                  onClick={() => selectAllPrunable(orphans)}
+                >
+                  {t("settings.orphansSelectAll")}
+                </button>
+              ) : null}
+              {isAdmin ? (
+                <button
+                  type="button"
+                  className="border border-danger/40 bg-danger/10 px-3 py-1.5 text-sm text-danger disabled:opacity-40"
+                  onClick={() => void handlePrune()}
+                  disabled={
+                    pruneMutation.isPending ||
+                    (selectedContainers.size === 0 && selectedNetworks.size === 0)
+                  }
+                >
+                  {pruneMutation.isPending
+                    ? t("settings.orphansPruning")
+                    : t("settings.orphansPrune")}
+                </button>
+              ) : null}
+            </div>
           </div>
-        </div>
 
-        {orphansQuery.isLoading ? <p className="mt-3 text-ink-muted">{t("common.loading")}</p> : null}
-        {orphansQuery.isError ? (
-          <p className="mt-3 text-sm text-danger">
-            {orphansQuery.error instanceof Error
-              ? orphansQuery.error.message
-              : t("common.unknownError")}
-          </p>
-        ) : null}
-        {pruneMutation.isError ? (
-          <p className="mt-3 text-sm text-danger">
-            {pruneMutation.error instanceof Error
-              ? pruneMutation.error.message
-              : t("common.unknownError")}
-          </p>
-        ) : null}
-        {pruneMutation.isSuccess && pruneMutation.data ? (
-          <p className="mt-3 text-sm text-ok">
-            {t("settings.orphansPruneResult", {
-              containers: pruneMutation.data.removed_containers.length,
-              networks: pruneMutation.data.removed_networks.length,
-            })}
-            {pruneMutation.data.errors.length > 0
-              ? ` — ${pruneMutation.data.errors.join("; ")}`
-              : null}
-          </p>
-        ) : null}
+          {orphansQuery.isLoading ? (
+            <p className="mt-3 text-ink-muted">{t("common.loading")}</p>
+          ) : null}
+          {orphansQuery.isError ? (
+            <p className="mt-3 text-sm text-danger">
+              {orphansQuery.error instanceof Error
+                ? orphansQuery.error.message
+                : t("common.unknownError")}
+            </p>
+          ) : null}
+          {pruneMutation.isError ? (
+            <p className="mt-3 text-sm text-danger">
+              {pruneMutation.error instanceof Error
+                ? pruneMutation.error.message
+                : t("common.unknownError")}
+            </p>
+          ) : null}
+          {pruneMutation.isSuccess && pruneMutation.data ? (
+            <p className="mt-3 text-sm text-ok">
+              {t("settings.orphansPruneResult", {
+                containers: pruneMutation.data.removed_containers.length,
+                networks: pruneMutation.data.removed_networks.length,
+              })}
+              {pruneMutation.data.errors.length > 0
+                ? ` — ${pruneMutation.data.errors.join("; ")}`
+                : null}
+            </p>
+          ) : null}
 
-        {orphans ? (
-          <div className="mt-4 space-y-4">
-            {!orphans.docker_ok ? (
-              <p className="text-sm text-warn">
-                {t("settings.orphansDockerError", {
-                  detail: orphans.docker_error ?? t("common.unknownError"),
+          {orphans ? (
+            <div className="mt-4 space-y-4">
+              {!orphans.docker_ok ? (
+                <p className="text-sm text-warn">
+                  {t("settings.orphansDockerError", {
+                    detail: orphans.docker_error ?? t("common.unknownError"),
+                  })}
+                </p>
+              ) : null}
+
+              <p className="font-mono text-xs text-ink-muted">
+                {t("settings.orphansSummary", {
+                  orphans: orphanCount,
+                  missing: missingCount,
+                  time: new Date(orphans.collected_at).toLocaleString(),
                 })}
               </p>
-            ) : null}
 
-            <p className="font-mono text-xs text-ink-muted">
-              {t("settings.orphansSummary", {
-                orphans: orphanCount,
-                missing: missingCount,
-                time: new Date(orphans.collected_at).toLocaleString(),
-              })}
-            </p>
+              <OrphanGroup
+                title={t("settings.orphanContainers")}
+                empty={t("settings.orphansNone")}
+                items={orphans.orphan_containers}
+                selected={selectedContainers}
+                onToggle={toggleContainer}
+                renderMeta={(item) =>
+                  `${item.status}${item.service_type ? ` · ${item.service_type}` : ""} · ${item.reason}`
+                }
+              />
 
-            <OrphanGroup
-              title={t("settings.orphanContainers")}
-              empty={t("settings.orphansNone")}
-              items={orphans.orphan_containers}
-              selected={selectedContainers}
-              onToggle={toggleContainer}
-              renderMeta={(item) =>
-                `${item.status}${item.service_type ? ` · ${item.service_type}` : ""} · ${item.reason}`
-              }
-            />
+              <OrphanGroup
+                title={t("settings.orphanNetworks")}
+                empty={t("settings.orphansNone")}
+                items={orphans.orphan_networks}
+                selected={selectedNetworks}
+                onToggle={toggleNetwork}
+                renderMeta={(item) =>
+                  `${item.driver || "—"}${item.network_type ? ` · ${item.network_type}` : ""} · ${item.reason}`
+                }
+              />
 
-            <OrphanGroup
-              title={t("settings.orphanNetworks")}
-              empty={t("settings.orphansNone")}
-              items={orphans.orphan_networks}
-              selected={selectedNetworks}
-              onToggle={toggleNetwork}
-              renderMeta={(item) =>
-                `${item.driver || "—"}${item.network_type ? ` · ${item.network_type}` : ""} · ${item.reason}`
-              }
-            />
+              <OrphanGroup
+                title={t("settings.missingContainers")}
+                empty={t("settings.orphansNone")}
+                items={orphans.missing_containers}
+                selectable={false}
+                renderMeta={(item) => `${item.instance_id ?? "—"} · ${item.reason}`}
+              />
 
-            <OrphanGroup
-              title={t("settings.missingContainers")}
-              empty={t("settings.orphansNone")}
-              items={orphans.missing_containers}
-              selectable={false}
-              renderMeta={(item) =>
-                `${item.instance_id ?? "—"} · ${item.reason}`
-              }
-            />
-
-            <OrphanGroup
-              title={t("settings.missingNetworks")}
-              empty={t("settings.orphansNone")}
-              items={orphans.missing_networks}
-              selectable={false}
-              renderMeta={(item) =>
-                `${item.network_id ?? "—"} · ${item.reason}`
-              }
-            />
-          </div>
-        ) : null}
-      </section>
-
-      <section className="border border-line bg-paper-elevated p-5 shadow-sm">
-        <h3 className="font-semibold text-ink">{t("settings.capabilities")}</h3>
-        {capsQuery.isLoading ? <p className="mt-3 text-ink-muted">{t("common.loading")}</p> : null}
-        {caps ? (
-          <div className="mt-4 grid gap-6 md:grid-cols-2">
-            <div>
-              <p className="text-xs tracking-wide text-ink-muted uppercase">
-                {t("settings.features")}
-              </p>
-              <ul className="mt-2 max-h-64 space-y-1 overflow-auto font-mono text-xs text-ink">
-                {caps.features.map((feature) => (
-                  <li key={feature}>{feature}</li>
-                ))}
-              </ul>
+              <OrphanGroup
+                title={t("settings.missingNetworks")}
+                empty={t("settings.orphansNone")}
+                items={orphans.missing_networks}
+                selectable={false}
+                renderMeta={(item) => `${item.network_id ?? "—"} · ${item.reason}`}
+              />
             </div>
-            <div>
-              <p className="text-xs tracking-wide text-ink-muted uppercase">
-                {t("settings.dataplane")}
-              </p>
-              <ul className="mt-2 space-y-1 font-mono text-xs text-ink">
-                {caps.dataplane_services.map((service) => (
-                  <li key={service}>{service}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        ) : null}
-      </section>
+          ) : null}
+        </section>
+      ) : null}
 
-      <InventorySettings />
+      {tab === "tenancy" ? <TenancySettings /> : null}
 
-      <TenancySettings />
-
-      <FrontPanelSettings />
+      {tab === "front-panel" ? <FrontPanelSettings /> : null}
     </div>
   );
 }

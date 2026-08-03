@@ -242,7 +242,7 @@ describe("Front panel settings mockup", () => {
   });
 
   it("shows LCD section with experimental EEPROM and no write button there", async () => {
-    renderAt("/settings?section=front-panel");
+    renderAt("/settings?tab=front-panel");
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: /Front panel \/ LCD|Frontpanel \/ LCD/i })).toBeInTheDocument();
     });

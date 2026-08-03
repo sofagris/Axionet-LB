@@ -775,6 +775,14 @@
   "settings": {
     "title": "Settings",
     "subtitle": "Control-plane info, health, and capabilities. Change the management NIC under Interfaces.",
+    "tabsLabel": "Settings sections",
+    "tabs": {
+      "system": "System",
+      "sites": "Sites & LB",
+      "orphans": "Orphans",
+      "tenancy": "Tenancy",
+      "front-panel": "Front panel"
+    },
     "systemInfo": "System info",
     "name": "Name",
     "version": "Version",

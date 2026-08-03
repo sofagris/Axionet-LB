@@ -777,6 +777,14 @@
   "settings": {
     "title": "Settings",
     "subtitle": "Kontrollplan-informasjon, health og capabilities. Management-NIC endres under Interfaces.",
+    "tabsLabel": "Settings-seksjoner",
+    "tabs": {
+      "system": "System",
+      "sites": "Sites & LB",
+      "orphans": "Orphans",
+      "tenancy": "Tenancy",
+      "front-panel": "Front panel"
+    },
     "systemInfo": "Systeminfo",
     "name": "Navn",
     "version": "Versjon",

@@ -14,7 +14,7 @@ export function CustomersPage() {
       <div className="space-y-4">
         <h2 className="text-xl font-semibold tracking-tight text-ink">{t("customers.title")}</h2>
         <p className="max-w-2xl text-ink-muted">{t("tenancy.disabledHint")}</p>
-        <Link to="/settings?section=tenancy" className="inline-block text-sm text-accent hover:underline">
+        <Link to="/settings?tab=tenancy" className="inline-block text-sm text-accent hover:underline">
           {t("tenancy.openSettings")}
         </Link>
       </div>
