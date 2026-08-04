@@ -177,7 +177,6 @@ export function DesignerPage() {
   const [savedFingerprint, setSavedFingerprint] = useState<string | null>(null);
   const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
   const [applySuggestions, setApplySuggestions] = useState<ApplySuggestion[]>([]);
-  const [showPreview, setShowPreview] = useState(false);
   const [canvasKey, setCanvasKey] = useState(0);
   const [groupDeletePrompt, setGroupDeletePrompt] = useState<{
     groupIds: string[];
@@ -816,7 +815,6 @@ export function DesignerPage() {
     const issues = validateDesignerGraph({ nodes, edges, instances, vips });
     setValidationIssues(issues);
     setApplySuggestions([]);
-    setShowPreview(false);
     if (issues.length === 0) {
       setMessage(t("designer.messages.validateOk"));
     } else {
@@ -825,8 +823,18 @@ export function DesignerPage() {
   };
 
   const onPreview = () => {
-    setShowPreview(true);
     setApplySuggestions([]);
+    const catalog = nodes.filter((n) => n.data.kind === "catalog.service").length;
+    const refs = nodes.filter((n) => n.data.kind === "instance.ref").length;
+    const vipCount = nodes.filter((n) => n.data.kind === "vip.ref").length;
+    setMessage(
+      t("designer.previewSummary", {
+        catalog,
+        refs,
+        vips: vipCount,
+        edges: edges.length,
+      }),
+    );
   };
 
   const onApply = async () => {
@@ -854,7 +862,6 @@ export function DesignerPage() {
     }
     const suggestions = buildApplySuggestions(nodes, instances);
     setApplySuggestions(suggestions);
-    setShowPreview(false);
     setSavedFingerprint(designFingerprint(name, nodes, edges, placementDomains));
     setMessage(t("designer.messages.applyReady"));
   };
@@ -868,6 +875,31 @@ export function DesignerPage() {
     setMessage(null);
     setError(null);
   }, []);
+
+  const dismissFeedbackPanel = useCallback(() => {
+    setValidationIssues([]);
+    setApplySuggestions([]);
+  }, []);
+
+  useEffect(() => {
+    if (validationIssues.length === 0 && applySuggestions.length === 0) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest("[data-designer-feedback-panel]")) {
+        return;
+      }
+      dismissFeedbackPanel();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") dismissFeedbackPanel();
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [validationIssues.length, applySuggestions.length, dismissFeedbackPanel]);
 
   const toast =
     error != null
@@ -885,13 +917,6 @@ export function DesignerPage() {
                   : ("info" as const),
           }
         : null;
-
-  const previewSummary = useMemo(() => {
-    const catalog = nodes.filter((n) => n.data.kind === "catalog.service").length;
-    const refs = nodes.filter((n) => n.data.kind === "instance.ref").length;
-    const vipCount = nodes.filter((n) => n.data.kind === "vip.ref").length;
-    return { catalog, refs, vipCount, edges: edges.length };
-  }, [nodes, edges]);
 
   return (
     <div className="flex h-[calc(100vh-5.5rem)] flex-col gap-3">
@@ -991,38 +1016,43 @@ export function DesignerPage() {
                 onDismiss={dismissToast}
               />
             ) : null}
-            {(validationIssues.length > 0 || applySuggestions.length > 0 || showPreview) && (
-              <div className="absolute top-12 right-3 left-3 z-[30] max-h-36 space-y-2 overflow-y-auto border border-line bg-paper-elevated p-3 text-sm shadow-lg sm:left-auto sm:w-[28rem]">
-                {showPreview ? (
-                  <p className="text-ink-muted">
-                    {t("designer.previewSummary", {
-                      catalog: previewSummary.catalog,
-                      refs: previewSummary.refs,
-                      vips: previewSummary.vipCount,
-                      edges: previewSummary.edges,
-                    })}
-                  </p>
-                ) : null}
-                {validationIssues.map((issue) => (
-                  <p
-                    key={issue.id}
-                    className={issue.severity === "error" ? "text-danger" : "text-warn"}
-                  >
-                    {t(issue.messageKey, issue.messageParams)}
-                  </p>
-                ))}
-                {applySuggestions.map((s) => (
-                  <div key={s.id} className="flex flex-wrap items-center gap-2 text-ink">
-                    <span>{t(s.messageKey, s.messageParams)}</span>
-                    {s.href ? (
-                      <Link to={s.href} className="text-accent underline">
-                        {s.kind === "create-instance"
-                          ? t("designer.properties.createInstance")
-                          : t("designer.openLink")}
-                      </Link>
-                    ) : null}
+            {(validationIssues.length > 0 || applySuggestions.length > 0) && (
+              <div
+                data-designer-feedback-panel
+                className="absolute top-12 right-3 left-3 z-[30] max-h-36 space-y-2 overflow-y-auto border border-line bg-paper-elevated p-3 text-sm shadow-lg sm:left-auto sm:w-[28rem]"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1 space-y-2">
+                    {validationIssues.map((issue) => (
+                      <p
+                        key={issue.id}
+                        className={issue.severity === "error" ? "text-danger" : "text-warn"}
+                      >
+                        {t(issue.messageKey, issue.messageParams)}
+                      </p>
+                    ))}
+                    {applySuggestions.map((s) => (
+                      <div key={s.id} className="flex flex-wrap items-center gap-2 text-ink">
+                        <span>{t(s.messageKey, s.messageParams)}</span>
+                        {s.href ? (
+                          <Link to={s.href} className="text-accent underline">
+                            {s.kind === "create-instance"
+                              ? t("designer.properties.createInstance")
+                              : t("designer.openLink")}
+                          </Link>
+                        ) : null}
+                      </div>
+                    ))}
                   </div>
-                ))}
+                  <button
+                    type="button"
+                    className="shrink-0 px-1 text-lg leading-none text-ink-muted hover:text-ink"
+                    onClick={dismissFeedbackPanel}
+                    aria-label={t("common.close")}
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
             )}
             <CatalogPalette instances={instances} vips={vips} />
