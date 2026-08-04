@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode, type SVGProps } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode, type SVGProps } from "react";
 import { useTranslation } from "react-i18next";
 import type { ElkLayoutKind } from "./layoutPrefs";
 import type { DesignerLayoutPrefs } from "./layoutPrefs";
+import type { PlacementDomain } from "./types";
 
 type IconProps = SVGProps<SVGSVGElement>;
 
@@ -179,8 +180,10 @@ type Props = {
   onUngroup: () => void;
   onApply: () => void;
   onDelete: () => void;
-  onAddSiteLane?: () => void;
-  onAddSharedLane?: () => void;
+  /** Domains that can still receive a lane (not already on canvas). */
+  availableLaneDomains?: PlacementDomain[];
+  onAddLaneFromDomain?: (domain: PlacementDomain) => void;
+  onCreateLaneDomain?: (kind: "site" | "shared") => void;
 };
 
 export function DesignerToolbar({
@@ -198,29 +201,45 @@ export function DesignerToolbar({
   onUngroup,
   onApply,
   onDelete,
-  onAddSiteLane,
-  onAddSharedLane,
+  availableLaneDomains = [],
+  onAddLaneFromDomain,
+  onCreateLaneDomain,
 }: Props) {
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [optsOpen, setOptsOpen] = useState(false);
+  const [laneMenuOpen, setLaneMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const laneMenuRef = useRef<HTMLDivElement>(null);
+
+  const siteDomains = useMemo(
+    () => availableLaneDomains.filter((d) => d.kind === "site"),
+    [availableLaneDomains],
+  );
+  const sharedDomains = useMemo(
+    () => availableLaneDomains.filter((d) => d.kind === "shared"),
+    [availableLaneDomains],
+  );
 
   useEffect(() => {
-    if (!menuOpen && !optsOpen) return;
+    if (!menuOpen && !optsOpen && !laneMenuOpen) return;
     const onDoc = (e: MouseEvent) => {
-      if (!menuRef.current?.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (!menuRef.current?.contains(target) && !laneMenuRef.current?.contains(target)) {
         setMenuOpen(false);
         setOptsOpen(false);
+        setLaneMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
-  }, [menuOpen, optsOpen]);
+  }, [menuOpen, optsOpen, laneMenuOpen]);
 
   const patchPrefs = (patch: Partial<DesignerLayoutPrefs>) => {
     onLayoutPrefsChange({ ...layoutPrefs, ...patch });
   };
+
+  const canAddLane = Boolean(onAddLaneFromDomain || onCreateLaneDomain);
 
   return (
     <div
@@ -254,31 +273,108 @@ export function DesignerToolbar({
       >
         <IconUngroup />
       </ToolBtn>
-      {onAddSiteLane ? (
-        <ToolBtn
-          label={t("designer.placement.addSiteLane")}
-          title={t("designer.placement.addSiteLaneHint")}
-          onClick={onAddSiteLane}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
-            <path d="M4 20V9l8-5 8 5v11" />
-            <path d="M9 20v-6h6v6" />
-            <path d="M12 11v4M10 13h4" />
-          </svg>
-        </ToolBtn>
-      ) : null}
-      {onAddSharedLane ? (
-        <ToolBtn
-          label={t("designer.placement.addSharedLane")}
-          title={t("designer.placement.addSharedLaneHint")}
-          onClick={onAddSharedLane}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
-            <circle cx="8" cy="10" r="3" />
-            <circle cx="16" cy="10" r="3" />
-            <path d="M4 18c0-2 2-4 4-4M16 14c2 0 4 2 4 4M12 11v5M10 13h4" />
-          </svg>
-        </ToolBtn>
+      {canAddLane ? (
+        <div className="relative" ref={laneMenuRef}>
+          <ToolBtn
+            label={t("designer.placement.addLane")}
+            title={t("designer.placement.addLaneHint")}
+            onClick={() => {
+              setLaneMenuOpen((o) => !o);
+              setMenuOpen(false);
+              setOptsOpen(false);
+            }}
+            pressed={laneMenuOpen}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+              <path d="M4 20V9l8-5 8 5v11" />
+              <path d="M9 20v-6h6v6" />
+              <path d="M12 11v4M10 13h4" />
+            </svg>
+          </ToolBtn>
+          {laneMenuOpen ? (
+            <div
+              className="absolute top-full left-0 z-[30] mt-1 max-h-72 min-w-[14rem] overflow-y-auto border border-line bg-paper-elevated py-1 shadow-lg"
+              role="menu"
+            >
+              {siteDomains.length > 0 ? (
+                <>
+                  <p className="px-3 py-1 font-mono text-[10px] tracking-wide text-ink-muted uppercase">
+                    {t("designer.placement.kindSite")}
+                  </p>
+                  {siteDomains.map((d) => (
+                    <button
+                      key={d.id}
+                      type="button"
+                      role="menuitem"
+                      className="block w-full px-3 py-1.5 text-left text-sm text-ink hover:bg-paper"
+                      onClick={() => {
+                        setLaneMenuOpen(false);
+                        onAddLaneFromDomain?.(d);
+                      }}
+                    >
+                      {d.name}
+                    </button>
+                  ))}
+                </>
+              ) : null}
+              {sharedDomains.length > 0 ? (
+                <>
+                  <p className="px-3 py-1 font-mono text-[10px] tracking-wide text-ink-muted uppercase">
+                    {t("designer.placement.kindShared")}
+                  </p>
+                  {sharedDomains.map((d) => (
+                    <button
+                      key={d.id}
+                      type="button"
+                      role="menuitem"
+                      className="block w-full px-3 py-1.5 text-left text-sm text-ink hover:bg-paper"
+                      onClick={() => {
+                        setLaneMenuOpen(false);
+                        onAddLaneFromDomain?.(d);
+                      }}
+                    >
+                      {d.name}
+                    </button>
+                  ))}
+                </>
+              ) : null}
+              {availableLaneDomains.length === 0 ? (
+                <p className="px-3 py-2 text-xs text-ink-muted">
+                  {t("designer.placement.noAvailableDomains")}
+                </p>
+              ) : null}
+              {onCreateLaneDomain ? (
+                <div className="mt-1 border-t border-line pt-1">
+                  <p className="px-3 py-1 font-mono text-[10px] tracking-wide text-ink-muted uppercase">
+                    {t("designer.placement.createNew")}
+                  </p>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="block w-full px-3 py-1.5 text-left text-sm text-ink hover:bg-paper"
+                    onClick={() => {
+                      setLaneMenuOpen(false);
+                      onCreateLaneDomain("site");
+                    }}
+                  >
+                    {t("designer.placement.createSiteDomain")}
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="block w-full px-3 py-1.5 text-left text-sm text-ink hover:bg-paper"
+                    onClick={() => {
+                      setLaneMenuOpen(false);
+                      onCreateLaneDomain("shared");
+                    }}
+                  >
+                    {t("designer.placement.createSharedDomain")}
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       ) : null}
       <Divider />
       <div className="relative flex items-center gap-0.5" ref={menuRef}>
@@ -288,6 +384,7 @@ export function DesignerToolbar({
           onClick={() => {
             setMenuOpen((o) => !o);
             setOptsOpen(false);
+            setLaneMenuOpen(false);
           }}
           disabled={layoutBusy}
           pressed={menuOpen}
@@ -300,6 +397,7 @@ export function DesignerToolbar({
           onClick={() => {
             setOptsOpen((o) => !o);
             setMenuOpen(false);
+            setLaneMenuOpen(false);
           }}
           aria-expanded={optsOpen}
           aria-label={t("designer.layout.options")}

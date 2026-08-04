@@ -42,6 +42,7 @@ import {
 import {
   createLaneNode,
   domainForLocalLbSite,
+  domainsWithoutLane,
   fromPlatformRecord,
   migratePlacementDomains,
   remapNodesToPlatformDomains,
@@ -389,14 +390,58 @@ export function DesignerPage() {
     [edges, layoutPrefs, nodes, placementDomains, selectedNode, selectedNodes, t],
   );
 
-  const onAddLane = useCallback(
+  const onPlaceLane = useCallback(
+    (domain: PlacementDomain) => {
+      const already = nodes.some(
+        (n) =>
+          n.data.kind === "placement.lane" &&
+          (n.data.placementDomainId === domain.id ||
+            (n.data.placementDomain ?? n.data.label).trim().toLowerCase() ===
+              domain.name.trim().toLowerCase()),
+      );
+      if (already) {
+        setMessage(t("designer.messages.laneAlreadyPresent", { name: domain.name }));
+        return;
+      }
+      const y =
+        nodes
+          .filter((n) => n.data.kind === "placement.lane")
+          .reduce((max, n) => {
+            const h = typeof n.style?.height === "number" ? n.style.height : 220;
+            return Math.max(max, n.position.y + h + 40);
+          }, 0) || 40;
+      setPlacementDomains((ds) =>
+        ds.some((d) => d.id === domain.id) ? ds : [...ds, domain],
+      );
+      setNodes((nds) =>
+        attachGroupsToMatchingLanes([...nds, createLaneNode(domain, { x: 24, y })]),
+      );
+      setMessage(t("designer.messages.laneAdded", { name: domain.name }));
+      setError(null);
+    },
+    [nodes, t],
+  );
+
+  const onCreateLaneDomain = useCallback(
     async (kind: "site" | "shared") => {
-      const name =
+      const suggested =
         kind === "shared"
           ? t("designer.placement.defaultShared")
           : t("designer.placement.defaultSite", {
               n: placementDomains.filter((d) => d.kind === "site").length + 1,
             });
+      const raw = window.prompt(t("designer.placement.createDomainPrompt"), suggested);
+      const name = raw?.trim();
+      if (!name) return;
+
+      const existing = placementDomains.find(
+        (d) => d.name.trim().toLowerCase() === name.toLowerCase(),
+      );
+      if (existing) {
+        onPlaceLane(existing);
+        return;
+      }
+
       try {
         const created = await inventoryMutations.createPlacementDomain.mutateAsync({
           name,
@@ -406,26 +451,41 @@ export function DesignerPage() {
               ? t("designer.placement.sharedDescription")
               : t("designer.placement.siteDescription", { name }),
         });
-        const domain = fromPlatformRecord(created);
-        const y =
-          nodes
-            .filter((n) => n.data.kind === "placement.lane")
-            .reduce((max, n) => {
-              const h = typeof n.style?.height === "number" ? n.style.height : 220;
-              return Math.max(max, n.position.y + h + 40);
-            }, 0) || 40;
-        setPlacementDomains((ds) =>
-          ds.some((d) => d.id === domain.id) ? ds : [...ds, domain],
-        );
-        setNodes((nds) =>
-          attachGroupsToMatchingLanes([...nds, createLaneNode(domain, { x: 24, y })]),
-        );
-        setMessage(t("designer.messages.laneAdded", { name: domain.name }));
+        onPlaceLane(fromPlatformRecord(created));
       } catch (err) {
+        // Name clash on platform — refetch and place the existing domain.
+        const message = err instanceof Error ? err.message : "";
+        if (/already exists/i.test(message)) {
+          try {
+            const refreshed =
+              (await platformDomainsQuery.refetch()).data?.map(fromPlatformRecord) ?? [];
+            setPlacementDomains(refreshed);
+            const match = refreshed.find(
+              (d) => d.name.trim().toLowerCase() === name.toLowerCase(),
+            );
+            if (match) {
+              onPlaceLane(match);
+              return;
+            }
+          } catch {
+            // fall through
+          }
+        }
         setError(err instanceof Error ? err.message : t("designer.messages.laneAddFailed"));
       }
     },
-    [inventoryMutations.createPlacementDomain, nodes, placementDomains, t],
+    [
+      inventoryMutations.createPlacementDomain,
+      onPlaceLane,
+      placementDomains,
+      platformDomainsQuery,
+      t,
+    ],
+  );
+
+  const availableLaneDomains = useMemo(
+    () => domainsWithoutLane(placementDomains, nodes),
+    [placementDomains, nodes],
   );
 
   const graphRef = useRef({ nodes, edges });
@@ -905,8 +965,9 @@ export function DesignerPage() {
                   onUngroup={onUngroup}
                   onApply={() => void onApply()}
                   onDelete={() => void onDelete()}
-                  onAddSiteLane={() => onAddLane("site")}
-                  onAddSharedLane={() => onAddLane("shared")}
+                  availableLaneDomains={availableLaneDomains}
+                  onAddLaneFromDomain={onPlaceLane}
+                  onCreateLaneDomain={(kind) => void onCreateLaneDomain(kind)}
                 />
               </MutationGate>
               <div className="min-h-0 flex-1">

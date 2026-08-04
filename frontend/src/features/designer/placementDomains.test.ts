@@ -3,6 +3,7 @@ import {
   createLaneNode,
   createPlacementDomain,
   domainForLocalLbSite,
+  domainsWithoutLane,
   ensureSiteDomain,
   migratePlacementDomains,
   remapNodesToPlatformDomains,
@@ -70,6 +71,19 @@ describe("placementDomains registry", () => {
     expect(lane.data.placementDomain).toBe("Trondheim");
     expect(lane.position).toEqual({ x: 10, y: 20 });
     expect(lane.parentId).toBeUndefined();
+  });
+
+  it("domainsWithoutLane skips domains that already have a lane", () => {
+    const oslo = createPlacementDomain({ id: "pd_oslo", name: "Oslo", kind: "site" });
+    const bergen = createPlacementDomain({ id: "pd_bergen", name: "Bergen", kind: "site" });
+    const shared = createPlacementDomain({
+      id: "pd_shared",
+      name: "Shared Services",
+      kind: "shared",
+    });
+    const nodes = [createLaneNode(oslo, { x: 0, y: 0 })];
+    const available = domainsWithoutLane([oslo, bergen, shared], nodes);
+    expect(available.map((d) => d.id)).toEqual(["pd_bergen", "pd_shared"]);
   });
 
   it("maps site name to domain via ensureSiteDomain (drop path)", () => {

@@ -50,6 +50,30 @@ export function findDomainById(
   return domains.find((d) => d.id === id);
 }
 
+/** Placement domains that do not yet have a lane on the canvas. */
+export function domainsWithoutLane(
+  domains: PlacementDomain[],
+  nodes: DesignerNode[],
+): PlacementDomain[] {
+  const used = new Set(
+    nodes
+      .filter((n) => n.data.kind === "placement.lane")
+      .map((n) => n.data.placementDomainId)
+      .filter((id): id is string => Boolean(id)),
+  );
+  const usedNames = new Set(
+    nodes
+      .filter((n) => n.data.kind === "placement.lane")
+      .map((n) => (n.data.placementDomain ?? n.data.label).trim().toLowerCase())
+      .filter(Boolean),
+  );
+  return domains.filter((d) => {
+    if (used.has(d.id)) return false;
+    if (usedNames.has(d.name.trim().toLowerCase())) return false;
+    return true;
+  });
+}
+
 /** Ensure a domain exists for a site name; returns updated list + domain. */
 export function ensureSiteDomain(
   domains: PlacementDomain[],
