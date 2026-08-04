@@ -39,6 +39,15 @@ export function CatalogAppStore({ onOpenDetails }: Props) {
           {t("catalog.appStore.title")}
         </h3>
         <p className="mt-1 text-sm text-ink-muted">{t("catalog.appStore.hint")}</p>
+        {storeQuery.data ? (
+          <p className="mt-1 font-mono text-[10px] text-ink-muted">
+            {storeQuery.data.indexSource === "remote"
+              ? t("catalog.appStore.indexRemote", {
+                  url: storeQuery.data.indexUrl ?? "",
+                })
+              : t("catalog.appStore.indexBundled")}
+          </p>
+        ) : null}
       </div>
 
       {storeQuery.isError ? (

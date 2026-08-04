@@ -10,7 +10,7 @@ import tarfile
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import urlparse
 
 from app.app_packages.contract import repo_root_from_backend, validate_app_package
@@ -59,14 +59,66 @@ def ensure_apps_seeded(apps_dir: Path, seed_dir: Path) -> None:
         shutil.copytree(package_dir, dest)
 
 
-def load_store_index(index_path: Path) -> dict[str, Any]:
-    with index_path.open(encoding="utf-8") as handle:
-        data = json.load(handle)
+def load_store_index_data(data: dict[str, Any]) -> dict[str, Any]:
     if data.get("apiVersion") != "axionet.store/v1":
         raise ValueError("Unsupported store apiVersion")
     if not isinstance(data.get("packages"), list):
         raise ValueError("Store index packages must be a list")
     return data
+
+
+def load_store_index(index_path: Path) -> dict[str, Any]:
+    with index_path.open(encoding="utf-8") as handle:
+        data = json.load(handle)
+    return load_store_index_data(data)
+
+
+def _safe_https_url(url: str) -> str:
+    parsed = urlparse(url)
+    if parsed.scheme != "https" or not parsed.netloc:
+        raise ValueError("archiveUrl must be an https URL")
+    return url
+
+
+def fetch_store_index_url(url: str) -> dict[str, Any]:
+    import httpx
+
+    safe = _safe_https_url(url)
+    with httpx.Client(timeout=15.0, follow_redirects=True) as client:
+        response = client.get(safe)
+        response.raise_for_status()
+        data = response.json()
+    if not isinstance(data, dict):
+        raise ValueError("Store index URL must return a JSON object")
+    return load_store_index_data(data)
+
+
+def resolve_store_document(
+    *,
+    store_index: str | None = None,
+    store_index_url: str | None = None,
+    repo_root: Path | None = None,
+) -> tuple[dict[str, Any], Literal["remote", "bundled"], str | None]:
+    """
+    Prefer AXIONET_STORE_INDEX_URL (GitHub raw / CDN). Fall back to bundled file.
+    Returns (index, source, url_or_none).
+    """
+    url = (store_index_url or os.environ.get("AXIONET_STORE_INDEX_URL") or "").strip()
+    if url:
+        try:
+            return fetch_store_index_url(url), "remote", url
+        except Exception:
+            # Fall back to bundled index when GitHub/CDN is unreachable.
+            pass
+
+    index_path = resolve_store_index_path(store_index=store_index, repo_root=repo_root)
+    if not index_path.is_file():
+        return (
+            {"apiVersion": "axionet.store/v1", "name": "Axionet App Store", "packages": []},
+            "bundled",
+            None,
+        )
+    return load_store_index(index_path), "bundled", None
 
 
 def store_entries_with_status(
@@ -75,6 +127,7 @@ def store_entries_with_status(
     apps_dir: str | None = None,
     schemas_dir: str | None = None,
     store_index: str | None = None,
+    store_index_url: str | None = None,
     seed_dir: str | None = None,
     repo_root: Path | None = None,
 ) -> dict[str, Any]:
@@ -82,11 +135,11 @@ def store_entries_with_status(
     seed = resolve_seed_dir(seed_dir=seed_dir, repo_root=repo_root)
     ensure_apps_seeded(paths.root, seed)
 
-    index_path = resolve_store_index_path(store_index=store_index, repo_root=repo_root)
-    if not index_path.is_file():
-        return {"apiVersion": "axionet.store/v1", "name": "Axionet App Store", "packages": []}
-
-    index = load_store_index(index_path)
+    index, index_source, index_url = resolve_store_document(
+        store_index=store_index,
+        store_index_url=store_index_url,
+        repo_root=repo_root,
+    )
     installed = {
         package.id: package
         for package in list_loaded_packages(
@@ -112,6 +165,8 @@ def store_entries_with_status(
     return {
         "apiVersion": index.get("apiVersion", "axionet.store/v1"),
         "name": index.get("name", "Axionet App Store"),
+        "indexSource": index_source,
+        "indexUrl": index_url,
         "packages": packages_out,
     }
 
@@ -154,13 +209,6 @@ def _extract_archive(payload: bytes, suffix: str, dest: Path) -> Path:
                 extract_kwargs["filter"] = "data"
             archive.extractall(dest, **extract_kwargs)
     return _find_package_root(dest)
-
-
-def _safe_https_url(url: str) -> str:
-    parsed = urlparse(url)
-    if parsed.scheme != "https" or not parsed.netloc:
-        raise ValueError("archiveUrl must be an https URL")
-    return url
 
 
 def install_from_archive_url(
@@ -214,6 +262,7 @@ def install_from_store(
     apps_dir: str | None = None,
     schemas_dir: str | None = None,
     store_index: str | None = None,
+    store_index_url: str | None = None,
     seed_dir: str | None = None,
     repo_root: Path | None = None,
 ) -> dict[str, Any]:
@@ -221,10 +270,11 @@ def install_from_store(
     seed = resolve_seed_dir(seed_dir=seed_dir, repo_root=repo_root)
     ensure_apps_seeded(paths.root, seed)
 
-    index_path = resolve_store_index_path(store_index=store_index, repo_root=repo_root)
-    if not index_path.is_file():
-        raise KeyError("Store index not found")
-    index = load_store_index(index_path)
+    index, _source, _url = resolve_store_document(
+        store_index=store_index,
+        store_index_url=store_index_url,
+        repo_root=repo_root,
+    )
     entry = next(
         (
             item

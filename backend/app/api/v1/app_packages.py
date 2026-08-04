@@ -46,6 +46,7 @@ def _store_kwargs() -> dict[str, str | None]:
     return {
         **_path_kwargs(),
         "store_index": settings.axionet_store_index or None,
+        "store_index_url": settings.axionet_store_index_url or None,
         "seed_dir": settings.axionet_apps_seed_dir or None,
     }
 

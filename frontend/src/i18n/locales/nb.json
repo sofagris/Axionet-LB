@@ -567,7 +567,9 @@
       "statusInstalled": "installert",
       "statusAvailable": "tilgjengelig",
       "installed": "Installerte {{name}} {{version}}.",
-      "alreadyInstalled": "{{name}} er allerede installert."
+      "alreadyInstalled": "{{name}} er allerede installert.",
+      "indexBundled": "Indeks: bundled (offline-fallback)",
+      "indexRemote": "Indeks: GitHub ({{url}})"
     },
     "empty": "Ingen katalogelementer matcher filtrene.",
     "details": "Detaljer",

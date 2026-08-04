@@ -102,6 +102,11 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("AXIONET_STORE_INDEX"),
         description="Path to axionet.store/v1 index JSON.",
     )
+    axionet_store_index_url: str = Field(
+        default="",
+        validation_alias=AliasChoices("AXIONET_STORE_INDEX_URL"),
+        description="HTTPS URL to axionet.store/v1 index (GitHub raw). Empty = bundled file only.",
+    )
 
 
 @lru_cache

@@ -88,7 +88,8 @@ The same directory layout is the release artifact. A future index repo or org ma
 - Catalog overlays package cards from `GET /api/v1/app-packages/catalog` (`mergeCatalogWithPackages`) so listing/detail flow comes from the package.
 - First real package: `packages/apps/varnish` (Designer + schema only; runtime still stub/`enabled: false`).
 - App Store index: [ADR-app-store-github.md](ADR-app-store-github.md) (`GET /store`, `POST /install`); Catalog shows installable packages.
-- Next: GitHub-hosted index/releases as primary source; optional Varnish control-plane adapter.
+- Store index can be loaded from GitHub raw via `AXIONET_STORE_INDEX_URL` with bundled offline fallback.
+- Next: optional Varnish control-plane adapter; dedicated apps GitHub org if the monorepo index outgrows the product repo.
 
 ## References
 

@@ -565,7 +565,9 @@
       "statusInstalled": "installed",
       "statusAvailable": "available",
       "installed": "Installed {{name}} {{version}}.",
-      "alreadyInstalled": "{{name}} is already installed."
+      "alreadyInstalled": "{{name}} is already installed.",
+      "indexBundled": "Index: bundled (offline fallback)",
+      "indexRemote": "Index: GitHub ({{url}})"
     },
     "empty": "No catalog items match the current filters.",
     "details": "Details",

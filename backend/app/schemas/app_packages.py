@@ -93,6 +93,8 @@ class AppStoreIndexRead(BaseModel):
 
     apiVersion: str
     name: str
+    indexSource: Literal["remote", "bundled"] = "bundled"
+    indexUrl: str | None = None
     packages: list[AppStorePackage] = Field(default_factory=list)
 
 

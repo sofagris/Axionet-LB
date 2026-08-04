@@ -13,10 +13,55 @@ def test_store_index_lists_varnish_installed() -> None:
     root = repo_root_from_backend()
     payload = store_entries_with_status(repo_root=root)
     assert payload["apiVersion"] == "axionet.store/v1"
+    assert payload["indexSource"] == "bundled"
     by_id = {item["id"]: item for item in payload["packages"]}
     assert "varnish" in by_id
     assert by_id["varnish"]["installed"] is True
     assert by_id["varnish"]["installedVersion"] == "0.1.0"
+
+
+def test_store_prefers_remote_index(monkeypatch) -> None:
+    from app.app_packages import store as store_mod
+
+    remote = {
+        "apiVersion": "axionet.store/v1",
+        "name": "Remote Store",
+        "packages": [
+            {
+                "id": "varnish",
+                "version": "9.9.9",
+                "name": "Varnish Remote",
+                "summary": "from url",
+                "source": "bundled",
+                "path": "varnish",
+            }
+        ],
+    }
+    monkeypatch.setattr(store_mod, "fetch_store_index_url", lambda _url: remote)
+    root = repo_root_from_backend()
+    payload = store_entries_with_status(
+        repo_root=root,
+        store_index_url="https://example.com/index.v1.json",
+    )
+    assert payload["indexSource"] == "remote"
+    assert payload["indexUrl"] == "https://example.com/index.v1.json"
+    assert payload["packages"][0]["version"] == "9.9.9"
+
+
+def test_store_falls_back_when_remote_fails(monkeypatch) -> None:
+    from app.app_packages import store as store_mod
+
+    def _boom(_url: str):
+        raise RuntimeError("network down")
+
+    monkeypatch.setattr(store_mod, "fetch_store_index_url", _boom)
+    root = repo_root_from_backend()
+    payload = store_entries_with_status(
+        repo_root=root,
+        store_index_url="https://example.com/down.json",
+    )
+    assert payload["indexSource"] == "bundled"
+    assert any(item["id"] == "varnish" for item in payload["packages"])
 
 
 def test_install_bundled_already_installed() -> None:

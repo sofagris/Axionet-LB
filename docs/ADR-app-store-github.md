@@ -11,7 +11,11 @@ App packages use [ADR-app-package-contract.md](ADR-app-package-contract.md) (`ax
 
 ### Index document
 
-Published as `packages/store/index.v1.json` (bundled with the control plane) and later mirrored from a GitHub App Store repo/release.
+Published as `packages/store/index.v1.json` in this monorepo and served from GitHub raw:
+
+`https://raw.githubusercontent.com/sofagris/Axionet-LB/main/packages/store/index.v1.json`
+
+Control plane loads the index via `AXIONET_STORE_INDEX_URL` when set; on failure it falls back to the bundled file (`AXIONET_STORE_INDEX` / `packages/store/index.v1.json`).
 
 ```text
 apiVersion: axionet.store/v1
@@ -41,11 +45,12 @@ packages[]:
 ## Consequences
 
 - Schema: `docs/schemas/axionet-store-v1.schema.json`
-- API: `GET /api/v1/app-packages/store`, `POST /api/v1/app-packages/install`
-- Catalog UI lists store entries with install status
-- Dedicated GitHub apps org/repo can later replace the bundled index without changing package layout
+- API: `GET /api/v1/app-packages/store` (includes `indexSource` / `indexUrl`), `POST /api/v1/app-packages/install`
+- Catalog UI lists store entries with install status and shows whether the index came from GitHub or the offline bundle
+- A dedicated apps org/repo can replace the monorepo raw URL without changing package layout
 
 ## References
 
 - Package contract: [ADR-app-package-contract.md](ADR-app-package-contract.md)
 - Index: `packages/store/index.v1.json`
+- Env: `AXIONET_STORE_INDEX_URL`, `AXIONET_STORE_INDEX`

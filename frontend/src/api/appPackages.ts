@@ -157,6 +157,8 @@ const AppStorePackageSchema = z.object({
 const AppStoreIndexSchema = z.object({
   apiVersion: z.string(),
   name: z.string(),
+  indexSource: z.enum(["remote", "bundled"]).optional().default("bundled"),
+  indexUrl: z.string().nullable().optional(),
   packages: z.array(AppStorePackageSchema),
 });
 

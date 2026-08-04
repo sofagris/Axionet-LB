@@ -7,6 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     AXIONET_APPS_DIR=/var/lib/ax-lb/packages/apps \
     AXIONET_APPS_SEED_DIR=/opt/axionet/packages/apps \
     AXIONET_STORE_INDEX=/opt/axionet/packages/store/index.v1.json \
+    AXIONET_STORE_INDEX_URL=https://raw.githubusercontent.com/sofagris/Axionet-LB/main/packages/store/index.v1.json \
     AXIONET_SCHEMAS_DIR=/opt/axionet/docs/schemas
 
 WORKDIR /app

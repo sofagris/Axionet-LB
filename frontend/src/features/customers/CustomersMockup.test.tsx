@@ -20,6 +20,8 @@ vi.mock("../../api/appPackages", () => ({
   fetchAppStore: vi.fn(async () => ({
     apiVersion: "axionet.store/v1",
     name: "Axionet App Store",
+    indexSource: "bundled",
+    indexUrl: null,
     packages: [],
   })),
   installAppPackage: vi.fn(),
