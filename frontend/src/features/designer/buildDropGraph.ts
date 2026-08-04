@@ -253,6 +253,24 @@ export function buildDropGraph(
     };
   }
 
+  if (payload.source === "visual") {
+    return {
+      nodes: [
+        {
+          id: newNodeId(),
+          type: "designer",
+          position,
+          data: {
+            kind: "visual.annotation",
+            label: payload.label,
+            visualId: payload.visualId,
+          },
+        },
+      ],
+      edges: [],
+    };
+  }
+
   return {
     nodes: [
       {

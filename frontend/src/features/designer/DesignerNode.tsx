@@ -1,7 +1,10 @@
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { useTranslation } from "react-i18next";
 import { CatalogBrandIcon } from "../catalog/CatalogBrandIcon";
 import type { DesignerNode } from "./types";
+import { visualPaletteItem } from "./visualPalette";
+import { VisualAnnotationIcon } from "./VisualAnnotationIcon";
 
 const kindLabel: Record<string, string> = {
   "catalog.service": "SERVICE",
@@ -9,10 +12,14 @@ const kindLabel: Record<string, string> = {
   "instance.ref": "INSTANCE",
   "vip.ref": "VIP",
   "group.frame": "GROUP",
+  "visual.annotation": "VISUAL",
 };
 
 function DesignerNodeComponent({ data, selected }: NodeProps<DesignerNode>) {
+  const { t } = useTranslation();
   const muted = Boolean(data.comingSoon);
+  const isVisual = data.kind === "visual.annotation";
+  const visualMeta = data.visualId ? visualPaletteItem(data.visualId) : undefined;
   const propSummary =
     data.kind === "catalog.component" && data.props
       ? Object.entries(data.props)
@@ -21,8 +28,10 @@ function DesignerNodeComponent({ data, selected }: NodeProps<DesignerNode>) {
           .map(([k, v]) => `${k}=${v}`)
           .join(" · ")
       : "";
-  const subtitle =
-    data.kind === "catalog.component"
+  const subtitle = isVisual
+    ? data.note?.trim() ||
+      (visualMeta ? t(visualMeta.descriptionKey) : t("designer.palette.visualHint"))
+    : data.kind === "catalog.component"
       ? propSummary || data.componentRole || data.componentId || "—"
       : (data.serviceType ?? data.catalogSlug ?? data.vipId?.slice(0, 8) ?? "—");
 
@@ -33,11 +42,14 @@ function DesignerNodeComponent({ data, selected }: NodeProps<DesignerNode>) {
         selected ? "ring-2 ring-accent" : "border-line",
         muted ? "opacity-60" : "",
         data.kind === "catalog.component" ? "border-dashed" : "",
+        isVisual ? "border-dashed border-ink-muted/50" : "",
       ].join(" ")}
     >
       <Handle type="target" position={Position.Left} className="!h-2 !w-2 !bg-accent" />
       <div className="flex items-start gap-2">
-        {data.brand ? (
+        {isVisual && data.visualId ? (
+          <VisualAnnotationIcon visualId={data.visualId} size="sm" />
+        ) : data.brand ? (
           <CatalogBrandIcon
             brand={data.brand}
             name={data.label}
@@ -56,9 +68,11 @@ function DesignerNodeComponent({ data, selected }: NodeProps<DesignerNode>) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
             <span className="font-mono text-[10px] tracking-wide text-ink-muted uppercase">
-              {data.kind === "catalog.component" && data.componentRole
-                ? data.componentRole
-                : (kindLabel[data.kind] ?? data.kind)}
+              {isVisual && visualMeta
+                ? t(visualMeta.labelKey)
+                : data.kind === "catalog.component" && data.componentRole
+                  ? data.componentRole
+                  : (kindLabel[data.kind] ?? data.kind)}
             </span>
             <span className="flex items-center gap-1">
               {data.pinned ? (

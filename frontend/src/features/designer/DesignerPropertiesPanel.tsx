@@ -164,6 +164,11 @@ export function DesignerPropertiesPanel({
             {t("designer.properties.comingSoonHint")}
           </p>
         ) : null}
+        {data.kind === "visual.annotation" ? (
+          <p className="rounded border border-line bg-paper px-2 py-1.5 text-xs text-ink-muted">
+            {t("designer.properties.visualHint")}
+          </p>
+        ) : null}
 
         {data.kind === "placement.lane" ? (
           <div className="space-y-2 border-t border-line pt-3">

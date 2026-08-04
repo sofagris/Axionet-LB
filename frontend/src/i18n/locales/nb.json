@@ -399,6 +399,8 @@
     },
     "palette": {
       "title": "Palett",
+      "visuals": "Visuals",
+      "visualHint": "Kun illustrasjon",
       "catalog": "Catalog",
       "instances": "Instances",
       "vips": "VIPs",
@@ -410,6 +412,16 @@
       "withComponents": "{{count}} komponenter",
       "noInstances": "Ingen instanser ennå.",
       "noVips": "Ingen VIP-er ennå."
+    },
+    "visuals": {
+      "internetCloud": "Internett",
+      "internetCloudHint": "Illustrerer ekstern trafikkopprinnelse",
+      "user": "Bruker",
+      "userHint": "Identitetsaktor (Keycloak senere)",
+      "group": "Gruppe",
+      "groupHint": "Identitetsgruppe (Keycloak senere)",
+      "client": "Client",
+      "clientHint": "App / OIDC-client (Keycloak senere)"
     },
     "properties": {
       "title": "Egenskaper",
@@ -424,6 +436,7 @@
       "componentProps": "Komponentinnstillinger",
       "protocol": "Protokoll",
       "note": "Notat",
+      "visualHint": "Visuell annotasjon — inngår ikke i runtime-konfigurasjon.",
       "linkInstance": "Koblet instans",
       "noInstance": "Ingen (blueprint)",
       "linkVip": "Koblet VIP",

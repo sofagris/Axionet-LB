@@ -38,4 +38,21 @@ describe("validateDesignerGraph", () => {
     const issues = validateDesignerGraph({ nodes, edges: [], instances: [], vips: [] });
     expect(issues.some((i) => i.messageKey === "designer.validation.brokenInstance")).toBe(true);
   });
+
+  it("ignores visual annotations in validation", () => {
+    const nodes: DesignerNode[] = [
+      {
+        id: "v1",
+        type: "designer",
+        position: { x: 0, y: 0 },
+        data: {
+          kind: "visual.annotation",
+          label: "Internet",
+          visualId: "internet-cloud",
+        },
+      },
+    ];
+    const issues = validateDesignerGraph({ nodes, edges: [], instances: [], vips: [] });
+    expect(issues).toHaveLength(0);
+  });
 });

@@ -62,6 +62,26 @@ describe("buildDropGraph", () => {
     expect(nodes[0]?.data.kind).toBe("catalog.component");
     expect(nodes[0]?.data.props?.mode).toBe("http");
   });
+
+  it("drops a visual annotation without config fields", () => {
+    const { nodes, edges } = buildDropGraph(
+      { x: 40, y: 50 },
+      {
+        source: "visual",
+        visualId: "internet-cloud",
+        label: "Internet",
+      },
+    );
+    expect(edges).toHaveLength(0);
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0]?.data).toMatchObject({
+      kind: "visual.annotation",
+      visualId: "internet-cloud",
+      label: "Internet",
+    });
+    expect(nodes[0]?.data.serviceType).toBeUndefined();
+    expect(nodes[0]?.data.serviceId).toBeUndefined();
+  });
 });
 
 describe("grouping", () => {

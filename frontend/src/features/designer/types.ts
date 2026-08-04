@@ -7,7 +7,14 @@ export type DesignerNodeKind =
   | "instance.ref"
   | "vip.ref"
   | "group.frame"
-  | "placement.lane";
+  | "placement.lane"
+  | "visual.annotation";
+
+export type VisualAnnotationId =
+  | "internet-cloud"
+  | "user"
+  | "group"
+  | "client";
 
 export type DesignerNodeData = {
   kind: DesignerNodeKind;
@@ -46,6 +53,8 @@ export type DesignerNodeData = {
   fillColor?: string;
   /** Fill opacity 0–1 (default ~0.28 when fillColor is set) */
   fillOpacity?: number;
+  /** Visual-only annotation identity (no runtime config). */
+  visualId?: VisualAnnotationId;
 };
 
 export type DesignerEdgeData = {
@@ -124,6 +133,11 @@ export type PaletteDragPayload =
       vipId: string;
       label: string;
       address: string;
+    }
+  | {
+      source: "visual";
+      visualId: VisualAnnotationId;
+      label: string;
     };
 
 export const DESIGNER_DND_MIME = "application/axionet-designer";

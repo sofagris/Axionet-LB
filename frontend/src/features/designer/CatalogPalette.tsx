@@ -13,6 +13,8 @@ import {
   type PaletteDragPayload,
 } from "./types";
 import { setActivePaletteDrag } from "./paletteDrag";
+import { VISUAL_PALETTE_ITEMS } from "./visualPalette";
+import { VisualAnnotationIcon } from "./VisualAnnotationIcon";
 
 type Props = {
   instances: Instance[];
@@ -69,6 +71,43 @@ export function CatalogPalette({ instances, vips }: Props) {
         </p>
       </div>
       <div className="flex-1 space-y-4 overflow-y-auto px-2 py-3">
+        <section>
+          <h3 className="mb-1.5 px-1 font-mono text-[10px] tracking-wide text-ink-muted uppercase">
+            {t("designer.palette.visuals")}
+          </h3>
+          <ul className="space-y-1">
+            {VISUAL_PALETTE_ITEMS.map((item) => {
+              const label = t(item.labelKey);
+              return (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    draggable
+                    onDragEnd={clearDragData}
+                    onDragStart={(event) =>
+                      setDragData(event, {
+                        source: "visual",
+                        visualId: item.id,
+                        label,
+                      })
+                    }
+                    className="flex w-full cursor-grab items-center gap-2 rounded-md border border-transparent px-1.5 py-1.5 text-left text-sm hover:border-accent hover:bg-paper"
+                    title={t(item.descriptionKey)}
+                  >
+                    <VisualAnnotationIcon visualId={item.id} size="sm" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium text-ink">{label}</span>
+                      <span className="block truncate font-mono text-[10px] text-ink-muted">
+                        {t("designer.palette.visualHint")}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
         <section>
           <h3 className="mb-1.5 px-1 font-mono text-[10px] tracking-wide text-ink-muted uppercase">
             {t("designer.palette.catalog")}

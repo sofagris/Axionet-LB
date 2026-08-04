@@ -398,6 +398,8 @@
     },
     "palette": {
       "title": "Palette",
+      "visuals": "Visuals",
+      "visualHint": "Illustration only",
       "catalog": "Catalog",
       "instances": "Instances",
       "vips": "VIPs",
@@ -409,6 +411,16 @@
       "withComponents": "{{count}} components",
       "noInstances": "No instances yet.",
       "noVips": "No VIPs yet."
+    },
+    "visuals": {
+      "internetCloud": "Internet",
+      "internetCloudHint": "Illustrate external traffic origin",
+      "user": "User",
+      "userHint": "Identity actor (Keycloak later)",
+      "group": "Group",
+      "groupHint": "Identity group (Keycloak later)",
+      "client": "Client",
+      "clientHint": "App / OIDC client (Keycloak later)"
     },
     "properties": {
       "title": "Properties",
@@ -423,6 +435,7 @@
       "componentProps": "Component settings",
       "protocol": "Protocol",
       "note": "Note",
+      "visualHint": "Visual annotation — not part of runtime configuration.",
       "linkInstance": "Linked instance",
       "noInstance": "None (blueprint)",
       "linkVip": "Linked VIP",
