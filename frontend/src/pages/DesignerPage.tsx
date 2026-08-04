@@ -27,6 +27,7 @@ import {
 } from "../features/designer/DesignerCanvas";
 import { DesignerPropertiesPanel } from "../features/designer/DesignerPropertiesPanel";
 import { DesignerToolbar } from "../features/designer/DesignerToolbar";
+import { DesignerToast } from "../features/designer/DesignerToast";
 import {
   DESIGNER_FULL_WIDTH_EVENT,
   readDesignerFullWidth,
@@ -47,7 +48,15 @@ import {
   migratePlacementDomains,
   remapNodesToPlatformDomains,
 } from "../features/designer/placementDomains";
-import type { PlacementDomain } from "../features/designer/types";
+import {
+  emptyDesignerGraph,
+  parseGraphDocument,
+  serializeGraphDocument,
+  type DesignerEdge,
+  type DesignerGraphDocument,
+  type DesignerNode,
+  type PlacementDomain,
+} from "../features/designer/types";
 import {
   useInventoryMutations,
   useLoadBalancers,
@@ -73,18 +82,32 @@ import {
   ungroupNode,
 } from "../features/designer/grouping";
 import {
-  emptyDesignerGraph,
-  parseGraphDocument,
-  serializeGraphDocument,
-  type DesignerEdge,
-  type DesignerNode,
-} from "../features/designer/types";
-import {
   buildApplySuggestions,
   validateDesignerGraph,
   type ApplySuggestion,
   type ValidationIssue,
 } from "../features/designer/validate";
+
+/** Stable hash of design content for dirty detection (ignore viewport / measured size). */
+function designFingerprint(
+  name: string,
+  nodes: DesignerNode[],
+  edges: DesignerEdge[],
+  placementDomains: PlacementDomain[],
+): string {
+  const graph: DesignerGraphDocument = serializeGraphDocument({
+    nodes,
+    edges,
+    viewport: { x: 0, y: 0, zoom: 1 },
+    placementDomains,
+  });
+  return JSON.stringify({
+    name: name.trim(),
+    nodes: graph.nodes.map(({ width: _w, height: _h, ...rest }) => rest),
+    edges: graph.edges,
+    placementDomains: graph.placementDomains,
+  });
+}
 
 type IconProps = SVGProps<SVGSVGElement>;
 
@@ -151,6 +174,7 @@ export function DesignerPage() {
   const [createName, setCreateName] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [savedFingerprint, setSavedFingerprint] = useState<string | null>(null);
   const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
   const [applySuggestions, setApplySuggestions] = useState<ApplySuggestion[]>([]);
   const [showPreview, setShowPreview] = useState(false);
@@ -219,6 +243,7 @@ export function DesignerPage() {
       fingerprintsRef.current.clear();
       inFlightRef.current.clear();
       preserveLocalGraphRef.current = false;
+      setSavedFingerprint(null);
       return;
     }
     if (!flowQuery.data || flowQuery.data.id !== flowId) return;
@@ -235,9 +260,12 @@ export function DesignerPage() {
     inFlightRef.current.clear();
     const doc = parseGraphDocument(flowQuery.data.graph_json);
     const migrated = migratePlacementDomains(doc.nodes, doc.placementDomains ?? []);
-    setName(flowQuery.data.name);
-    setNodes(attachGroupsToMatchingLanes(migrated.nodes));
-    setEdges(doc.edges);
+    const loadedName = flowQuery.data.name;
+    const loadedNodes = attachGroupsToMatchingLanes(migrated.nodes);
+    const loadedEdges = doc.edges;
+    setName(loadedName);
+    setNodes(loadedNodes);
+    setEdges(loadedEdges);
     setViewport(doc.viewport);
     setSelectedNode(null);
     setSelectedNodes([]);
@@ -245,6 +273,9 @@ export function DesignerPage() {
     setValidationIssues([]);
     setApplySuggestions([]);
     setCanvasKey((k) => k + 1);
+    setSavedFingerprint(
+      designFingerprint(loadedName, loadedNodes, loadedEdges, migrated.placementDomains),
+    );
 
     // Ensure design-local domains exist on the platform, then remap node ids.
     void (async () => {
@@ -263,11 +294,25 @@ export function DesignerPage() {
           });
         }
         platform = (await platformDomainsQuery.refetch()).data?.map(fromPlatformRecord) ?? [];
+        const remapped = attachGroupsToMatchingLanes(
+          remapNodesToPlatformDomains(loadedNodes, platform),
+        );
         setPlacementDomains(platform);
-        setNodes((nds) => attachGroupsToMatchingLanes(remapNodesToPlatformDomains(nds, platform)));
+        setNodes(remapped);
+        setSavedFingerprint(
+          designFingerprint(loadedName, remapped, loadedEdges, platform),
+        );
       } catch {
         // Keep design-local registry if platform sync fails.
         setPlacementDomains(migrated.placementDomains);
+        setSavedFingerprint(
+          designFingerprint(
+            loadedName,
+            loadedNodes,
+            loadedEdges,
+            migrated.placementDomains,
+          ),
+        );
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run on flow stamp change
@@ -740,6 +785,7 @@ export function DesignerPage() {
         graph_json: serializeGraphDocument({ nodes, edges, viewport, placementDomains }),
       });
       loadedStampRef.current = `${updated.id}:${updated.updated_at}`;
+      setSavedFingerprint(designFingerprint(name, nodes, edges, placementDomains));
       setMessage(t("designer.messages.saved"));
     } catch (err) {
       preserveLocalGraphRef.current = false;
@@ -802,8 +848,26 @@ export function DesignerPage() {
     const suggestions = buildApplySuggestions(nodes, instances);
     setApplySuggestions(suggestions);
     setShowPreview(false);
+    setSavedFingerprint(designFingerprint(name, nodes, edges, placementDomains));
     setMessage(t("designer.messages.applyReady"));
   };
+
+  const dirty = useMemo(() => {
+    if (!flowId || savedFingerprint == null) return false;
+    return designFingerprint(name, nodes, edges, placementDomains) !== savedFingerprint;
+  }, [flowId, savedFingerprint, name, nodes, edges, placementDomains]);
+
+  const dismissToast = useCallback(() => {
+    setMessage(null);
+    setError(null);
+  }, []);
+
+  const toast =
+    error != null
+      ? { message: error, tone: "error" as const }
+      : message != null
+        ? { message, tone: "ok" as const }
+        : null;
 
   const previewSummary = useMemo(() => {
     const catalog = nodes.filter((n) => n.data.kind === "catalog.service").length;
@@ -901,57 +965,56 @@ export function DesignerPage() {
         <p className="text-sm text-ink-muted">{t("common.loading")}</p>
       ) : (
         <>
-          <input
-            className="min-w-[12rem] max-w-md border border-line bg-paper px-2 py-1.5 text-sm text-ink"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            aria-label={t("designer.name")}
-          />
-
-          {message ? <p className="text-sm text-ok">{message}</p> : null}
-          {error ? <p className="text-sm text-danger">{error}</p> : null}
-
-          {(validationIssues.length > 0 || applySuggestions.length > 0 || showPreview) && (
-            <div className="max-h-36 space-y-2 overflow-y-auto border border-line bg-paper-elevated/50 p-3 text-sm">
-              {showPreview ? (
-                <p className="text-ink-muted">
-                  {t("designer.previewSummary", {
-                    catalog: previewSummary.catalog,
-                    refs: previewSummary.refs,
-                    vips: previewSummary.vipCount,
-                    edges: previewSummary.edges,
-                  })}
-                </p>
-              ) : null}
-              {validationIssues.map((issue) => (
-                <p
-                  key={issue.id}
-                  className={issue.severity === "error" ? "text-danger" : "text-warn"}
-                >
-                  {t(issue.messageKey, issue.messageParams)}
-                </p>
-              ))}
-              {applySuggestions.map((s) => (
-                <div key={s.id} className="flex flex-wrap items-center gap-2 text-ink">
-                  <span>{t(s.messageKey, s.messageParams)}</span>
-                  {s.href ? (
-                    <Link to={s.href} className="text-accent underline">
-                      {s.kind === "create-instance"
-                        ? t("designer.properties.createInstance")
-                        : t("designer.openLink")}
-                    </Link>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="flex min-h-0 flex-1 overflow-hidden rounded-md border border-line">
+          <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-md border border-line">
+            {toast ? (
+              <DesignerToast
+                message={toast.message}
+                tone={toast.tone}
+                onDismiss={dismissToast}
+              />
+            ) : null}
+            {(validationIssues.length > 0 || applySuggestions.length > 0 || showPreview) && (
+              <div className="absolute top-12 right-3 left-3 z-[30] max-h-36 space-y-2 overflow-y-auto border border-line bg-paper-elevated p-3 text-sm shadow-lg sm:left-auto sm:w-[28rem]">
+                {showPreview ? (
+                  <p className="text-ink-muted">
+                    {t("designer.previewSummary", {
+                      catalog: previewSummary.catalog,
+                      refs: previewSummary.refs,
+                      vips: previewSummary.vipCount,
+                      edges: previewSummary.edges,
+                    })}
+                  </p>
+                ) : null}
+                {validationIssues.map((issue) => (
+                  <p
+                    key={issue.id}
+                    className={issue.severity === "error" ? "text-danger" : "text-warn"}
+                  >
+                    {t(issue.messageKey, issue.messageParams)}
+                  </p>
+                ))}
+                {applySuggestions.map((s) => (
+                  <div key={s.id} className="flex flex-wrap items-center gap-2 text-ink">
+                    <span>{t(s.messageKey, s.messageParams)}</span>
+                    {s.href ? (
+                      <Link to={s.href} className="text-accent underline">
+                        {s.kind === "create-instance"
+                          ? t("designer.properties.createInstance")
+                          : t("designer.openLink")}
+                      </Link>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
             <CatalogPalette instances={instances} vips={vips} />
             <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-paper">
               <MutationGate hide className="w-full shrink-0">
                 <DesignerToolbar
                   saving={updateMutation.isPending}
+                  dirty={dirty}
+                  designName={name}
+                  onDesignNameChange={setName}
                   canGroup={canGroup}
                   canUngroup={canUngroup}
                   layoutPrefs={layoutPrefs}

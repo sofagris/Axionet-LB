@@ -273,6 +273,7 @@
     "name": "Name",
     "empty": "Create or select a design to open the canvas.",
     "save": "Save",
+    "saveUnsaved": "Save (unsaved changes)",
     "validate": "Validate",
     "preview": "Preview",
     "apply": "Apply",

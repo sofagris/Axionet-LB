@@ -274,6 +274,7 @@
     "name": "Navn",
     "empty": "Opprett eller velg et design for å åpne canvas.",
     "save": "Lagre",
+    "saveUnsaved": "Lagre (ulagrede endringer)",
     "validate": "Valider",
     "preview": "Forhåndsvis",
     "apply": "Apply",

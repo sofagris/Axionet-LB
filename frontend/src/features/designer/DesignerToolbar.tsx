@@ -125,6 +125,8 @@ type ToolBtnProps = {
   disabled?: boolean;
   variant?: "default" | "primary" | "danger";
   pressed?: boolean;
+  /** Visual cue for unsaved changes (e.g. Save). */
+  dirty?: boolean;
   children: ReactNode;
 };
 
@@ -135,6 +137,7 @@ function ToolBtn({
   disabled,
   variant = "default",
   pressed,
+  dirty,
   children,
 }: ToolBtnProps) {
   const tone =
@@ -144,12 +147,14 @@ function ToolBtn({
         ? "text-danger hover:bg-danger/15 hover:ring-1 hover:ring-danger/30 active:bg-danger/25"
         : pressed
           ? "bg-accent/15 text-accent ring-1 ring-accent/40"
-          : "text-ink hover:bg-ink/10 hover:text-accent hover:ring-1 hover:ring-accent/25 active:bg-ink/15";
+          : dirty
+            ? "text-warn ring-1 ring-warn/50 hover:bg-warn/10"
+            : "text-ink hover:bg-ink/10 hover:text-accent hover:ring-1 hover:ring-accent/25 active:bg-ink/15";
 
   return (
     <button
       type="button"
-      className={`inline-flex size-9 items-center justify-center rounded-sm transition-[color,background-color,box-shadow,transform,filter] duration-150 ease-out hover:scale-105 active:scale-95 disabled:pointer-events-none disabled:opacity-40 disabled:hover:scale-100 ${tone}`}
+      className={`relative inline-flex size-9 items-center justify-center rounded-sm transition-[color,background-color,box-shadow,transform,filter] duration-150 ease-out hover:scale-105 active:scale-95 disabled:pointer-events-none disabled:opacity-40 disabled:hover:scale-100 ${tone}`}
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
@@ -157,6 +162,12 @@ function ToolBtn({
       aria-pressed={pressed}
     >
       {children}
+      {dirty ? (
+        <span
+          className="absolute top-1 right-1 size-1.5 rounded-full bg-warn"
+          aria-hidden
+        />
+      ) : null}
     </button>
   );
 }
@@ -167,6 +178,7 @@ function Divider() {
 
 type Props = {
   saving?: boolean;
+  dirty?: boolean;
   canGroup: boolean;
   canUngroup: boolean;
   layoutPrefs: DesignerLayoutPrefs;
@@ -184,10 +196,13 @@ type Props = {
   availableLaneDomains?: PlacementDomain[];
   onAddLaneFromDomain?: (domain: PlacementDomain) => void;
   onCreateLaneDomain?: (kind: "site" | "shared") => void;
+  designName?: string;
+  onDesignNameChange?: (name: string) => void;
 };
 
 export function DesignerToolbar({
   saving,
+  dirty,
   canGroup,
   canUngroup,
   layoutPrefs,
@@ -204,6 +219,8 @@ export function DesignerToolbar({
   availableLaneDomains = [],
   onAddLaneFromDomain,
   onCreateLaneDomain,
+  designName,
+  onDesignNameChange,
 }: Props) {
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -247,7 +264,13 @@ export function DesignerToolbar({
       role="toolbar"
       aria-label={t("designer.title")}
     >
-      <ToolBtn label={t("designer.save")} onClick={onSave} disabled={saving}>
+      <ToolBtn
+        label={dirty ? t("designer.saveUnsaved") : t("designer.save")}
+        title={dirty ? t("designer.saveUnsaved") : t("designer.save")}
+        onClick={onSave}
+        disabled={saving}
+        dirty={dirty}
+      >
         <IconSave />
       </ToolBtn>
       <Divider />
@@ -470,6 +493,14 @@ export function DesignerToolbar({
       <ToolBtn label={t("designer.delete")} onClick={onDelete} variant="danger">
         <IconDelete />
       </ToolBtn>
+      {onDesignNameChange != null && designName != null ? (
+        <input
+          className="ml-auto min-w-[8rem] max-w-xs border border-line bg-paper px-2 py-1 text-sm text-ink"
+          value={designName}
+          onChange={(e) => onDesignNameChange(e.target.value)}
+          aria-label={t("designer.name")}
+        />
+      ) : null}
     </div>
   );
 }
