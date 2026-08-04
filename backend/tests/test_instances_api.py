@@ -283,7 +283,7 @@ def test_service_definitions(client: TestClient) -> None:
     by_type = {item["service_type"]: item for item in response.json()}
     assert by_type["haproxy"]["enabled"] is True
     assert by_type["frr"]["enabled"] is True
-    assert by_type["varnish"]["enabled"] is False
+    assert by_type["varnish"]["enabled"] is True
     assert by_type["nginx"]["enabled"] is False
 
 

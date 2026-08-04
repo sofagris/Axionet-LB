@@ -4,6 +4,7 @@ from app.plugins.auth_gateway.plugin import AuthGatewayPlugin
 from app.plugins.haproxy.plugin import HaproxyPlugin
 from app.plugins.frr.plugin import FrrPlugin
 from app.plugins.keycloak.plugin import KeycloakAppsPlugin, KeycloakMgmtPlugin
+from app.plugins.varnish.plugin import VarnishPlugin
 from app.plugins.base import ServicePlugin
 
 _PLUGINS: dict[str, ServicePlugin] = {
@@ -12,6 +13,7 @@ _PLUGINS: dict[str, ServicePlugin] = {
     KeycloakMgmtPlugin.service_type: KeycloakMgmtPlugin(),
     KeycloakAppsPlugin.service_type: KeycloakAppsPlugin(),
     AuthGatewayPlugin.service_type: AuthGatewayPlugin(),
+    VarnishPlugin.service_type: VarnishPlugin(),
 }
 
 

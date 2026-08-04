@@ -6,17 +6,9 @@ from app.plugins.auth_gateway.definition import AUTH_GATEWAY_SERVICE
 from app.plugins.frr.definition import FRR_SERVICE
 from app.plugins.haproxy.definition import HAPROXY_SERVICE
 from app.plugins.keycloak.definition import KEYCLOAK_APPS_SERVICE, KEYCLOAK_MGMT_SERVICE
+from app.plugins.varnish.definition import VARNISH_SERVICE
 
 STUB_SERVICES: list[dict] = [
-    {
-        "service_type": "varnish",
-        "display_name": "Varnish",
-        "description": "HTTP cache / reverse proxy (kommer snart)",
-        "container_image": "varnish",
-        "default_version": "7.6",
-        "enabled": False,
-        "supported_actions": [],
-    },
     {
         "service_type": "nginx",
         "display_name": "Nginx",
@@ -54,6 +46,7 @@ def list_service_definitions() -> list[dict]:
         KEYCLOAK_MGMT_SERVICE,
         KEYCLOAK_APPS_SERVICE,
         AUTH_GATEWAY_SERVICE,
+        VARNISH_SERVICE,
         *STUB_SERVICES,
     ]
 

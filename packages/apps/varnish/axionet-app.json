@@ -2,9 +2,9 @@
   "apiVersion": "axionet.app/v1",
   "id": "varnish",
   "serviceType": "varnish",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "capabilities": {
     "hydrate": "none",
-    "actions": ["start", "stop", "restart", "logs"]
+    "actions": ["start", "stop", "restart", "validate", "reconcile", "logs"]
   }
 }
