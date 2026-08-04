@@ -63,4 +63,37 @@ describe("paletteDropTarget", () => {
     });
     expect(resolvePaletteDropTarget(nodes, { x: 50, y: 50 }, componentPayload)).toBeNull();
   });
+
+  it("prefers the lane of the group under the cursor when sibling lanes overlap", () => {
+    const topLane: DesignerNode = {
+      id: "lane-top",
+      type: "designerLane",
+      position: { x: 0, y: 0 },
+      // Oversized — covers the lower lane's Y range
+      style: { width: 900, height: 1200 },
+      data: { kind: "placement.lane", label: "Shared", placementDomainId: "pd-top" },
+    };
+    const bottomLane: DesignerNode = {
+      id: "lane-bottom",
+      type: "designerLane",
+      position: { x: 0, y: 700 },
+      style: { width: 900, height: 300 },
+      data: { kind: "placement.lane", label: "Oslo", placementDomainId: "pd-bottom" },
+    };
+    const bottomGroup: DesignerNode = {
+      id: "g-bottom",
+      type: "designerGroup",
+      parentId: "lane-bottom",
+      extent: "parent",
+      position: { x: 220, y: 40 },
+      style: { width: 280, height: 160 },
+      data: { kind: "group.frame", label: "edge" },
+    };
+    const nodes = [topLane, bottomLane, bottomGroup];
+    // Flow point inside bottom group (and also inside the oversized top lane)
+    expect(resolvePaletteDropTarget(nodes, { x: 300, y: 760 }, treePayload)).toEqual({
+      id: "lane-bottom",
+      kind: "lane",
+    });
+  });
 });

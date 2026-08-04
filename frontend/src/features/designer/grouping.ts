@@ -44,8 +44,12 @@ export function listGroups(allNodes: DesignerNode[]): DesignerNode[] {
 
 export function groupSize(group: DesignerNode): { width: number; height: number } {
   return {
-    width: Number(group.style?.width ?? group.width ?? 280),
-    height: Number(group.style?.height ?? group.height ?? 160),
+    width: Number(
+      group.measured?.width ?? group.width ?? group.style?.width ?? 280,
+    ),
+    height: Number(
+      group.measured?.height ?? group.height ?? group.style?.height ?? 160,
+    ),
   };
 }
 
@@ -59,55 +63,106 @@ export function listLanes(allNodes: DesignerNode[]): DesignerNode[] {
 
 export function laneSize(lane: DesignerNode): { width: number; height: number } {
   return {
-    width: Number(lane.style?.width ?? lane.width ?? 720),
-    height: Number(lane.style?.height ?? lane.height ?? 220),
+    width: Number(
+      lane.measured?.width ?? lane.width ?? lane.style?.width ?? 720,
+    ),
+    height: Number(
+      lane.measured?.height ?? lane.height ?? lane.style?.height ?? 220,
+    ),
   };
 }
 
-/** Find the topmost group whose absolute bounds contain the flow position. */
+function nodeContainsFlowPos(
+  abs: XYPosition,
+  size: { width: number; height: number },
+  flowPos: XYPosition,
+): boolean {
+  return (
+    flowPos.x >= abs.x &&
+    flowPos.x <= abs.x + size.width &&
+    flowPos.y >= abs.y &&
+    flowPos.y <= abs.y + size.height
+  );
+}
+
+/** Among overlapping candidates, prefer the tightest bounds (avoids oversized parents stealing hits). */
+function pickTightestContaining<T extends DesignerNode>(
+  candidates: Array<{ node: T; abs: XYPosition; area: number; cx: number; cy: number }>,
+  flowPos: XYPosition,
+): T | null {
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => {
+    if (a.area !== b.area) return a.area - b.area;
+    const da = (flowPos.x - a.cx) ** 2 + (flowPos.y - a.cy) ** 2;
+    const db = (flowPos.x - b.cx) ** 2 + (flowPos.y - b.cy) ** 2;
+    return da - db;
+  });
+  return candidates[0]!.node;
+}
+
+/** Find the group whose absolute bounds contain the flow position (tightest match). */
 export function findGroupAtFlowPosition(
   allNodes: DesignerNode[],
   flowPos: XYPosition,
 ): DesignerNode | null {
   const byId = new Map(allNodes.map((n) => [n.id, n]));
-  const groups = listGroups(allNodes);
-  for (let i = groups.length - 1; i >= 0; i -= 1) {
-    const g = groups[i]!;
+  const candidates: Array<{
+    node: DesignerNode;
+    abs: XYPosition;
+    area: number;
+    cx: number;
+    cy: number;
+  }> = [];
+  for (const g of listGroups(allNodes)) {
     const abs = absolutePosition(g, byId);
-    const { width, height } = groupSize(g);
-    if (
-      flowPos.x >= abs.x &&
-      flowPos.x <= abs.x + width &&
-      flowPos.y >= abs.y &&
-      flowPos.y <= abs.y + height
-    ) {
-      return g;
-    }
+    const size = groupSize(g);
+    if (!nodeContainsFlowPos(abs, size, flowPos)) continue;
+    candidates.push({
+      node: g,
+      abs,
+      area: size.width * size.height,
+      cx: abs.x + size.width / 2,
+      cy: abs.y + size.height / 2,
+    });
   }
-  return null;
+  return pickTightestContaining(candidates, flowPos);
 }
 
-/** Find the topmost lane whose absolute bounds contain the flow position. */
+/** Find the lane whose absolute bounds contain the flow position (tightest match). */
 export function findLaneAtFlowPosition(
   allNodes: DesignerNode[],
   flowPos: XYPosition,
 ): DesignerNode | null {
   const byId = new Map(allNodes.map((n) => [n.id, n]));
-  const lanes = listLanes(allNodes);
-  for (let i = lanes.length - 1; i >= 0; i -= 1) {
-    const lane = lanes[i]!;
-    const abs = absolutePosition(lane, byId);
-    const { width, height } = laneSize(lane);
-    if (
-      flowPos.x >= abs.x &&
-      flowPos.x <= abs.x + width &&
-      flowPos.y >= abs.y &&
-      flowPos.y <= abs.y + height
-    ) {
-      return lane;
-    }
+
+  // Prefer the lane that owns the tightest group under the cursor. Oversized
+  // sibling lanes often still contain the same flow point and would otherwise win.
+  const group = findGroupAtFlowPosition(allNodes, flowPos);
+  if (group?.parentId) {
+    const parent = byId.get(group.parentId);
+    if (parent && isLaneNode(parent)) return parent;
   }
-  return null;
+
+  const candidates: Array<{
+    node: DesignerNode;
+    abs: XYPosition;
+    area: number;
+    cx: number;
+    cy: number;
+  }> = [];
+  for (const lane of listLanes(allNodes)) {
+    const abs = absolutePosition(lane, byId);
+    const size = laneSize(lane);
+    if (!nodeContainsFlowPos(abs, size, flowPos)) continue;
+    candidates.push({
+      node: lane,
+      abs,
+      area: size.width * size.height,
+      cx: abs.x + size.width / 2,
+      cy: abs.y + size.height / 2,
+    });
+  }
+  return pickTightestContaining(candidates, flowPos);
 }
 
 export function findLaneByDomain(
