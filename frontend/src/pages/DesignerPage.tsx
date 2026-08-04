@@ -864,9 +864,19 @@ export function DesignerPage() {
 
   const toast =
     error != null
-      ? { message: error, tone: "error" as const }
+      ? { message: error, tone: "error" as const, icon: "error" as const }
       : message != null
-        ? { message, tone: "ok" as const }
+        ? {
+            message,
+            tone: "ok" as const,
+            icon:
+              message === t("designer.messages.saved") ||
+              message === t("designer.messages.applyReady")
+                ? ("save" as const)
+                : message === t("designer.messages.validateOk")
+                  ? ("success" as const)
+                  : ("info" as const),
+          }
         : null;
 
   const previewSummary = useMemo(() => {
@@ -970,6 +980,7 @@ export function DesignerPage() {
               <DesignerToast
                 message={toast.message}
                 tone={toast.tone}
+                icon={toast.icon}
                 onDismiss={dismissToast}
               />
             ) : null}
