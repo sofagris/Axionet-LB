@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axionet.local/schemas/axionet-store-v1.schema.json",
+  "title": "Axionet App Store index",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "name", "packages"],
+  "properties": {
+    "apiVersion": {
+      "type": "string",
+      "const": "axionet.store/v1"
+    },
+    "name": { "type": "string", "minLength": 1 },
+    "packages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "version", "name", "summary", "source"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": { "type": "string", "minLength": 1 },
+          "summary": { "type": "string", "minLength": 1 },
+          "source": {
+            "type": "string",
+            "enum": ["bundled", "github"]
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Directory name under packages/apps for bundled installs"
+          },
+          "archiveUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "HTTPS URL to a zip/tarball containing one axionet.app/v1 package"
+          },
+          "repository": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      }
+    }
+  }
+}

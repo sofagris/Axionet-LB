@@ -19,7 +19,9 @@ services:
       HOST_SYSFS_ROOT: /host/sys
       HOST_PROC_ROOT: /host/proc
       HOST_NET_NSENTER: "true"
-      AXIONET_APPS_DIR: /opt/axionet/packages/apps
+      AXIONET_APPS_DIR: /var/lib/ax-lb/packages/apps
+      AXIONET_APPS_SEED_DIR: /opt/axionet/packages/apps
+      AXIONET_STORE_INDEX: /opt/axionet/packages/store/index.v1.json
       AXIONET_SCHEMAS_DIR: /opt/axionet/docs/schemas
       AX_GUI_PUBLIC_URL: ${AX_GUI_PUBLIC_URL:-http://192.168.50.195}
       AX_AUTH_SECRET_KEY: ${AX_AUTH_SECRET_KEY:-axionet-lb-dev-secret-change-me}

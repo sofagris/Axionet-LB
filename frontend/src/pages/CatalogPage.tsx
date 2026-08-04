@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useServiceDefinitions, useAppPackageCatalog } from "../features/catalog/hooks";
+import { CatalogAppStore } from "../features/catalog/CatalogAppStore";
 import { CatalogDetailDrawer } from "../features/catalog/CatalogDetailDrawer";
 import { CatalogFeatured } from "../features/catalog/CatalogFeatured";
 import { CatalogFilters, parseCategoryParam, parseKindParam } from "../features/catalog/CatalogFilters";
@@ -85,6 +86,8 @@ export function CatalogPage() {
       ) : null}
 
       <CatalogFeatured items={items} onOpenDetails={openDetails} />
+
+      <CatalogAppStore onOpenDetails={openDetails} />
 
       <CatalogFilters
         filters={filters}

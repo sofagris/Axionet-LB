@@ -1,0 +1,15 @@
+{
+  "apiVersion": "axionet.store/v1",
+  "name": "Axionet App Store",
+  "packages": [
+    {
+      "id": "varnish",
+      "version": "0.1.0",
+      "name": "Varnish",
+      "summary": "HTTP reverse proxy cache (Designer package pilot).",
+      "source": "bundled",
+      "path": "varnish",
+      "repository": "https://github.com/sofagris/Axionet-LB"
+    }
+  ]
+}

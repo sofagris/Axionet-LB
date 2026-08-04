@@ -71,3 +71,41 @@ class AppPackageCatalogCard(BaseModel):
     notes: list[str] = Field(default_factory=list)
     flowNodes: list[dict[str, Any]] = Field(default_factory=list)
     flowEdges: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class AppStorePackage(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    id: str
+    version: str
+    name: str
+    summary: str
+    source: Literal["bundled", "github"]
+    path: str | None = None
+    archiveUrl: str | None = None
+    repository: str | None = None
+    installed: bool = False
+    installedVersion: str | None = None
+
+
+class AppStoreIndexRead(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    apiVersion: str
+    name: str
+    packages: list[AppStorePackage] = Field(default_factory=list)
+
+
+class AppPackageInstallRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    packageId: str | None = None
+    archiveUrl: str | None = None
+
+
+class AppPackageInstallResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    version: str
+    status: Literal["installed", "already_installed"]

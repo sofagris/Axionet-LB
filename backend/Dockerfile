@@ -4,7 +4,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     AX_LB_DATA_DIR=/var/lib/ax-lb \
-    AXIONET_APPS_DIR=/opt/axionet/packages/apps \
+    AXIONET_APPS_DIR=/var/lib/ax-lb/packages/apps \
+    AXIONET_APPS_SEED_DIR=/opt/axionet/packages/apps \
+    AXIONET_STORE_INDEX=/opt/axionet/packages/store/index.v1.json \
     AXIONET_SCHEMAS_DIR=/opt/axionet/docs/schemas
 
 WORKDIR /app
@@ -18,6 +20,7 @@ COPY backend/app ./app
 COPY backend/alembic.ini ./
 COPY backend/alembic ./alembic
 COPY packages/apps /opt/axionet/packages/apps
+COPY packages/store /opt/axionet/packages/store
 COPY docs/schemas /opt/axionet/docs/schemas
 
 RUN pip install --upgrade pip \

@@ -555,6 +555,18 @@
     "kindAll": "All types",
     "featured": "Featured",
     "featuredHint": "Highlighted platform directions and blueprints.",
+    "appStore": {
+      "title": "App Store",
+      "hint": "Install declarative service packages into Catalog and Designer. Bundled packages ship with the control plane; GitHub archives come later.",
+      "empty": "No packages in the store index.",
+      "loadFailed": "Could not load App Store: {{message}}",
+      "install": "Install",
+      "installedLabel": "Installed",
+      "statusInstalled": "installed",
+      "statusAvailable": "available",
+      "installed": "Installed {{name}} {{version}}.",
+      "alreadyInstalled": "{{name}} is already installed."
+    },
     "empty": "No catalog items match the current filters.",
     "details": "Details",
     "componentCount": "{{count}} components",

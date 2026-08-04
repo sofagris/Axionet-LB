@@ -140,3 +140,58 @@ export function fetchAppPackageCatalog(options?: {
     z.array(AppPackageCatalogCardSchema).parse(data),
   );
 }
+
+const AppStorePackageSchema = z.object({
+  id: z.string(),
+  version: z.string(),
+  name: z.string(),
+  summary: z.string(),
+  source: z.enum(["bundled", "github"]),
+  path: z.string().optional().nullable(),
+  archiveUrl: z.string().optional().nullable(),
+  repository: z.string().optional().nullable(),
+  installed: z.boolean(),
+  installedVersion: z.string().optional().nullable(),
+});
+
+const AppStoreIndexSchema = z.object({
+  apiVersion: z.string(),
+  name: z.string(),
+  packages: z.array(AppStorePackageSchema),
+});
+
+export type AppStoreIndex = z.infer<typeof AppStoreIndexSchema>;
+export type AppStorePackage = z.infer<typeof AppStorePackageSchema>;
+
+const AppPackageInstallResultSchema = z.object({
+  id: z.string(),
+  version: z.string(),
+  status: z.enum(["installed", "already_installed"]),
+});
+
+export type AppPackageInstallResult = z.infer<typeof AppPackageInstallResultSchema>;
+
+export function fetchAppStore(options?: {
+  includeReference?: boolean;
+}): Promise<AppStoreIndex> {
+  const params = new URLSearchParams();
+  if (options?.includeReference) params.set("includeReference", "true");
+  const qs = params.toString();
+  return apiFetch(`/api/v1/app-packages/store${qs ? `?${qs}` : ""}`, (data) =>
+    AppStoreIndexSchema.parse(data),
+  );
+}
+
+export function installAppPackage(payload: {
+  packageId?: string;
+  archiveUrl?: string;
+}): Promise<AppPackageInstallResult> {
+  return apiFetch(
+    "/api/v1/app-packages/install",
+    (data) => AppPackageInstallResultSchema.parse(data),
+    {
+      method: "POST",
+      body: payload,
+    },
+  );
+}

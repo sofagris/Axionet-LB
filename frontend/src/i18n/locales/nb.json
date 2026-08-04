@@ -557,6 +557,18 @@
     "kindAll": "Alle typer",
     "featured": "Fremhevet",
     "featuredHint": "Utvalgte plattformretninger og blueprints.",
+    "appStore": {
+      "title": "App Store",
+      "hint": "Installer deklarative tjenestepakker i Catalog og Designer. Bundled pakker følger med control plane; GitHub-arkiv kommer senere.",
+      "empty": "Ingen pakker i store-indeksen.",
+      "loadFailed": "Kunne ikke hente App Store: {{message}}",
+      "install": "Installer",
+      "installedLabel": "Installert",
+      "statusInstalled": "installert",
+      "statusAvailable": "tilgjengelig",
+      "installed": "Installerte {{name}} {{version}}.",
+      "alreadyInstalled": "{{name}} er allerede installert."
+    },
     "empty": "Ingen katalogelementer matcher filtrene.",
     "details": "Detaljer",
     "componentCount": "{{count}} komponenter",

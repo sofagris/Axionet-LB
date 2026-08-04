@@ -24,6 +24,23 @@ def test_app_packages_catalog_cards(client) -> None:
     assert "example" not in by_id
 
 
+def test_app_store_index(client) -> None:
+    response = client.get("/api/v1/app-packages/store")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["apiVersion"] == "axionet.store/v1"
+    by_id = {item["id"]: item for item in body["packages"]}
+    assert by_id["varnish"]["installed"] is True
+
+
+def test_app_store_install_already_present(client) -> None:
+    response = client.post("/api/v1/app-packages/install", json={"packageId": "varnish"})
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["id"] == "varnish"
+    assert body["status"] == "already_installed"
+
+
 def test_app_packages_designer_manifests_with_reference(client) -> None:
     response = client.get("/api/v1/app-packages/designer-manifests?includeReference=true")
     assert response.status_code == 200, response.text

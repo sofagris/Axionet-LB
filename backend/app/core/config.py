@@ -92,6 +92,16 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("AXIONET_SCHEMAS_DIR"),
         description="Directory of axionet.app JSON schemas. Empty = resolve from repo.",
     )
+    axionet_apps_seed_dir: str = Field(
+        default="",
+        validation_alias=AliasChoices("AXIONET_APPS_SEED_DIR"),
+        description="Read-only bundled packages used to seed AXIONET_APPS_DIR.",
+    )
+    axionet_store_index: str = Field(
+        default="",
+        validation_alias=AliasChoices("AXIONET_STORE_INDEX"),
+        description="Path to axionet.store/v1 index JSON.",
+    )
 
 
 @lru_cache
