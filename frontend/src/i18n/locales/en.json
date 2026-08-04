@@ -1184,6 +1184,25 @@
     "networksHint": "Attach to an app / dataplane network (same L2 as Keycloak-apps when possible)."
   },
 
+  "varnish": {
+    "tabs": {
+      "overview": "Overview",
+      "networks": "Networks",
+      "logs": "Logs"
+    },
+    "label": "Varnish",
+    "configTitle": "Cache",
+    "configHint": "Desired state used to render default.vcl for this instance.",
+    "bind": "Listen bind",
+    "storage": "Storage size",
+    "ttl": "Default TTL",
+    "originTitle": "Origin",
+    "originAddress": "Address",
+    "originPort": "Port",
+    "hostHeader": "Host header",
+    "networksHint": "Attach dataplane networks so clients and the origin can reach this cache."
+  },
+
   "revisions": {
     "restore": "Restore",
     "pick": "Pick a revision"

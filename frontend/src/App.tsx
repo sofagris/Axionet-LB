@@ -22,6 +22,7 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { SystemLogsPage } from "./pages/SystemLogsPage";
 import { IdentityPage } from "./pages/IdentityPage";
 import { UsersPage } from "./pages/UsersPage";
+import { VarnishDetailPage } from "./pages/VarnishDetailPage";
 import { VipsPage } from "./pages/VipsPage";
 
 export function App() {
@@ -47,6 +48,7 @@ export function App() {
           <Route path="instances/:instanceId/keycloak-mgmt" element={<KeycloakDetailPage />} />
           <Route path="instances/:instanceId/keycloak-apps" element={<KeycloakDetailPage />} />
           <Route path="instances/:instanceId/auth-gateway" element={<AuthGatewayDetailPage />} />
+          <Route path="instances/:instanceId/varnish" element={<VarnishDetailPage />} />
           <Route path="vips" element={<VipsPage />} />
           <Route path="logs" element={<SystemLogsPage />} />
           <Route path="users" element={<UsersPage />} />

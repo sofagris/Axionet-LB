@@ -1186,6 +1186,25 @@
     "networksHint": "Knytt til app-/dataplane-nett (samme L2 som Keycloak-apps når mulig)."
   },
 
+  "varnish": {
+    "tabs": {
+      "overview": "Oversikt",
+      "networks": "Nettverk",
+      "logs": "Logger"
+    },
+    "label": "Varnish",
+    "configTitle": "Cache",
+    "configHint": "Desired state som brukes til å generere default.vcl for denne instansen.",
+    "bind": "Lytte-bind",
+    "storage": "Lagringsstørrelse",
+    "ttl": "Standard-TTL",
+    "originTitle": "Origin",
+    "originAddress": "Adresse",
+    "originPort": "Port",
+    "hostHeader": "Host-header",
+    "networksHint": "Knytt dataplane-nett slik at klienter og origin når cachen."
+  },
+
   "revisions": {
     "restore": "Gjenopprett",
     "pick": "Velg en revision"
