@@ -258,7 +258,10 @@ function DesignerCanvasInner({
   const onNodeContextMenu = useCallback((event: MouseEvent, node: Node) => {
     event.preventDefault();
     // Lanes are containers only — no group membership actions apply.
-    if (isLaneNode(node as DesignerNode)) return;
+    if (isLaneNode(node as DesignerNode)) {
+      setContextMenu(null);
+      return;
+    }
     setContextMenu({
       x: event.clientX,
       y: event.clientY,
@@ -267,6 +270,27 @@ function DesignerCanvasInner({
   }, []);
 
   const closeMenu = useCallback(() => setContextMenu(null), []);
+
+  // Dismiss on any pointer outside the menu (nodes, edges, chrome, outside canvas).
+  useEffect(() => {
+    if (!contextMenu) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest("[data-designer-context-menu]")) {
+        return;
+      }
+      setContextMenu(null);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setContextMenu(null);
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [contextMenu]);
 
   const groups = useMemo(() => listGroups(nodes), [nodes]);
   const lanes = useMemo(() => listLanes(nodes), [nodes]);
@@ -317,6 +341,8 @@ function DesignerCanvasInner({
           onSelectionChange={onSelectionChangeInternal}
           onNodeContextMenu={onNodeContextMenu}
           onPaneClick={closeMenu}
+          onNodeClick={closeMenu}
+          onEdgeClick={closeMenu}
           onMoveStart={closeMenu}
           onMoveEnd={(_, vp) => onViewportChange(vp)}
           nodeTypes={nodeTypes}
@@ -347,6 +373,7 @@ function DesignerCanvasInner({
 
         {contextMenu && menuNode ? (
           <div
+            data-designer-context-menu
             className="fixed z-[2000] min-w-[11rem] border border-line bg-paper-elevated py-1 text-sm shadow-lg"
             style={{ left: contextMenu.x, top: contextMenu.y }}
             role="menu"
