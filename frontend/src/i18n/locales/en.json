@@ -567,7 +567,10 @@
       "installed": "Installed {{name}} {{version}}.",
       "alreadyInstalled": "{{name}} is already installed.",
       "indexBundled": "Index: bundled (offline fallback)",
-      "indexRemote": "Index: GitHub ({{url}})"
+      "indexRemote": "Index: GitHub ({{url}})",
+      "fromStore": "Store: {{name}}",
+      "signingRequired": "signed archive",
+      "signingBundled": "bundled"
     },
     "empty": "No catalog items match the current filters.",
     "details": "Details",
@@ -826,7 +829,8 @@
       "sites": "Sites & LB",
       "orphans": "Orphans",
       "tenancy": "Tenancy",
-      "front-panel": "Front panel"
+      "front-panel": "Front panel",
+      "app-stores": "App Stores"
     },
     "systemInfo": "System info",
     "name": "Name",
@@ -860,6 +864,22 @@
     "missingContainers": "DB containers missing in Docker",
     "missingNetworks": "DB networks missing in Docker",
     "orphansNone": "None.",
+    "appStores": {
+      "sourcesTitle": "Store indexes",
+      "sourcesHint": "HTTPS index.v1.json URLs. Higher priority wins when package ids collide.",
+      "noSources": "No custom sources yet (official URL from env is used when present).",
+      "namePlaceholder": "Store name",
+      "priority": "Priority",
+      "addSource": "Add store",
+      "disabled": "disabled",
+      "trustTitle": "Package trust",
+      "trustHint": "Ed25519: require signatures for HTTPS archives unless unsigned packages are allowed.",
+      "allowUnsigned": "Allow unsigned packages",
+      "noKeys": "No trusted public keys.",
+      "keyNamePlaceholder": "Key name",
+      "publicKeyPlaceholder": "Base64 Ed25519 public key (32 bytes)",
+      "addKey": "Add trusted key"
+    },
     "inventory": {
       "title": "Sites, Placement Domains, and LB inventory",
       "subtitle": "A Site is the physical location of an Axionet-LB appliance. Placement Domains are used in Designer (and later deploy). The LB table is inventory only — no remote API calls yet.",

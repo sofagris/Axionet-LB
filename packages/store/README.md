@@ -6,6 +6,8 @@ This folder holds the **axionet.store/v1** index consumed by Catalog.
 - GitHub (default remote):  
   `https://raw.githubusercontent.com/sofagris/Axionet-LB/main/packages/store/index.v1.json`
 
-Set `AXIONET_STORE_INDEX_URL` on the API to point at a raw JSON index. If the URL is unreachable, the control plane falls back to the bundled file.
+Operators can add more HTTPS indexes under **Settings → App Stores** (`{data_dir}/app-store/sources.json`). Higher priority wins on package id collisions.
 
-See [ADR-app-store-github.md](../../docs/ADR-app-store-github.md).
+HTTPS archives may include `signatureUrl` (Ed25519 detached). Trust policy lives in Settings (`allowUnsignedPackages` + trusted public keys).
+
+See [ADR-app-store-github.md](../../docs/ADR-app-store-github.md) and [ADR-app-package-runtime.md](../../docs/ADR-app-package-runtime.md).

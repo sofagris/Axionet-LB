@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from app.app_packages.loader import list_loaded_packages
 from app.plugins.auth_gateway.definition import AUTH_GATEWAY_SERVICE
 from app.plugins.frr.definition import FRR_SERVICE
+from app.plugins.generic.plugin import definition_from_package
 from app.plugins.haproxy.definition import HAPROXY_SERVICE
 from app.plugins.keycloak.definition import KEYCLOAK_APPS_SERVICE, KEYCLOAK_MGMT_SERVICE
 from app.plugins.varnish.definition import VARNISH_SERVICE
@@ -39,7 +41,7 @@ STUB_SERVICES: list[dict] = [
 ]
 
 
-def list_service_definitions() -> list[dict]:
+def _builtin_definitions() -> list[dict]:
     return [
         HAPROXY_SERVICE,
         FRR_SERVICE,
@@ -49,6 +51,32 @@ def list_service_definitions() -> list[dict]:
         VARNISH_SERVICE,
         *STUB_SERVICES,
     ]
+
+
+def list_service_definitions() -> list[dict]:
+    builtins = _builtin_definitions()
+    by_type = {item["service_type"]: item for item in builtins}
+    # Overlay / add package-driven definitions when runtime is declared and no builtin exists,
+    # or when builtin is a disabled stub. Named enabled builtins always win.
+    for package in list_loaded_packages(include_reference=False):
+        runtime = package.root.get("runtime")
+        if not isinstance(runtime, dict):
+            continue
+        existing = by_type.get(package.service_type)
+        if existing is not None and existing.get("enabled"):
+            continue
+        by_type[package.service_type] = definition_from_package(package)
+    # Preserve builtin order, then append remaining package-only types.
+    ordered: list[dict] = []
+    seen: set[str] = set()
+    for item in builtins:
+        st = item["service_type"]
+        ordered.append(by_type[st])
+        seen.add(st)
+    for st, item in by_type.items():
+        if st not in seen:
+            ordered.append(item)
+    return ordered
 
 
 def get_service_definition(service_type: str) -> dict | None:

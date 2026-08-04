@@ -2,9 +2,25 @@
   "apiVersion": "axionet.app/v1",
   "id": "varnish",
   "serviceType": "varnish",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "capabilities": {
     "hydrate": "none",
     "actions": ["start", "stop", "restart", "validate", "reconcile", "logs"]
+  },
+  "runtime": {
+    "image": "varnish",
+    "defaultVersion": "7.6",
+    "configBind": "/etc/varnish",
+    "volumeMode": "ro",
+    "entrypoint": ["varnishd"],
+    "command": [
+      "-F",
+      "-a",
+      "{bind}",
+      "-f",
+      "/etc/varnish/default.vcl",
+      "-s",
+      "malloc,{storage_size}"
+    ]
   }
 }

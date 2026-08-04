@@ -569,7 +569,10 @@
       "installed": "Installerte {{name}} {{version}}.",
       "alreadyInstalled": "{{name}} er allerede installert.",
       "indexBundled": "Indeks: bundled (offline-fallback)",
-      "indexRemote": "Indeks: GitHub ({{url}})"
+      "indexRemote": "Indeks: GitHub ({{url}})",
+      "fromStore": "Store: {{name}}",
+      "signingRequired": "signert arkiv",
+      "signingBundled": "bundlet"
     },
     "empty": "Ingen katalogelementer matcher filtrene.",
     "details": "Detaljer",
@@ -828,7 +831,8 @@
       "sites": "Sites & LB",
       "orphans": "Orphans",
       "tenancy": "Tenancy",
-      "front-panel": "Front panel"
+      "front-panel": "Front panel",
+      "app-stores": "App Stores"
     },
     "systemInfo": "Systeminfo",
     "name": "Navn",
@@ -862,6 +866,22 @@
     "missingContainers": "DB-containere mangler i Docker",
     "missingNetworks": "DB-nettverk mangler i Docker",
     "orphansNone": "Ingen.",
+    "appStores": {
+      "sourcesTitle": "Store-indekser",
+      "sourcesHint": "HTTPS index.v1.json-URLer. Høyere prioritet vinner ved kolliderende package-id.",
+      "noSources": "Ingen egendefinerte kilder ennå (offisiell URL fra env brukes når den finnes).",
+      "namePlaceholder": "Store-navn",
+      "priority": "Prioritet",
+      "addSource": "Legg til store",
+      "disabled": "deaktivert",
+      "trustTitle": "Pakke-tillit",
+      "trustHint": "Ed25519: krev signatur for HTTPS-arkiv med mindre usignerte pakker er tillatt.",
+      "allowUnsigned": "Tillat usignerte pakker",
+      "noKeys": "Ingen betrodd public keys.",
+      "keyNamePlaceholder": "Nøkkelnavn",
+      "publicKeyPlaceholder": "Base64 Ed25519 public key (32 bytes)",
+      "addKey": "Legg til betrodd nøkkel"
+    },
     "inventory": {
       "title": "Sites, Placement Domains og LB-inventar",
       "subtitle": "Site er fysisk sted for en Axionet-LB-boks. Placement Domains brukes i Designer (og senere deploy). LB-tabellen er inventar — ingen remote API-kall ennå.",

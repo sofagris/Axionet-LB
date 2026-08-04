@@ -87,9 +87,9 @@ The same directory layout is the release artifact. A future index repo or org ma
 - Frontend merges remote designer manifests into the local registry (`setRemoteDesignerManifests`); built-in manifests win on id conflicts.
 - Catalog overlays package cards from `GET /api/v1/app-packages/catalog` (`mergeCatalogWithPackages`) so listing/detail flow comes from the package.
 - First real package: `packages/apps/varnish` (Designer + enabled control-plane `VarnishPlugin`).
-- App Store index: [ADR-app-store-github.md](ADR-app-store-github.md) (`GET /store`, `POST /install`); Catalog shows installable packages.
-- Store index can be loaded from GitHub raw via `AXIONET_STORE_INDEX_URL` with bundled offline fallback.
-- Next: optional Designer hydrate for Varnish; dedicated apps GitHub org if the monorepo index outgrows the product repo.
+- Optional declarative `runtime` for third-party packages: [ADR-app-package-runtime.md](ADR-app-package-runtime.md).
+- App Store index: [ADR-app-store-github.md](ADR-app-store-github.md) (multi-source, Ed25519 trust, `GET /store`, `POST /install`).
+- Next: image allowlist / registry pinning if needed; Cosign later.
 
 ## References
 

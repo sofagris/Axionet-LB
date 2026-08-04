@@ -48,6 +48,7 @@ def _store_kwargs() -> dict[str, str | None]:
         "store_index": settings.axionet_store_index or None,
         "store_index_url": settings.axionet_store_index_url or None,
         "seed_dir": settings.axionet_apps_seed_dir or None,
+        "data_dir": settings.data_dir,
     }
 
 
@@ -157,7 +158,12 @@ def install_app_package(payload: AppPackageInstallRequest) -> AppPackageInstallR
         )
     try:
         if payload.archiveUrl:
-            result = install_from_archive_url(payload.archiveUrl, **_path_kwargs())
+            result = install_from_archive_url(
+                payload.archiveUrl,
+                signature_url=payload.signatureUrl,
+                data_dir=get_settings().data_dir,
+                **_path_kwargs(),
+            )
         else:
             assert payload.packageId is not None
             result = install_from_store(payload.packageId, **_store_kwargs())

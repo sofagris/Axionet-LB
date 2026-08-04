@@ -42,6 +42,11 @@
             "format": "uri",
             "description": "HTTPS URL to a zip/tarball containing one axionet.app/v1 package"
           },
+          "signatureUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "HTTPS URL to detached Ed25519 signature over the archive bytes (base64 or raw 64 bytes). If omitted, installers may try archiveUrl + '.sig'."
+          },
           "repository": {
             "type": "string",
             "format": "uri"

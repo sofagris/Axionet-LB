@@ -149,9 +149,21 @@ const AppStorePackageSchema = z.object({
   source: z.enum(["bundled", "github"]),
   path: z.string().optional().nullable(),
   archiveUrl: z.string().optional().nullable(),
+  signatureUrl: z.string().optional().nullable(),
   repository: z.string().optional().nullable(),
+  storeId: z.string().optional().nullable(),
+  storeName: z.string().optional().nullable(),
   installed: z.boolean(),
   installedVersion: z.string().optional().nullable(),
+  signing: z.enum(["required", "not_applicable", "signed", "unsigned"]).optional().nullable(),
+});
+
+const AppStoreSourceMetaSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  indexUrl: z.string().nullable().optional(),
+  indexSource: z.enum(["remote", "bundled"]).optional().default("bundled"),
+  priority: z.number().optional().default(0),
 });
 
 const AppStoreIndexSchema = z.object({
@@ -159,6 +171,7 @@ const AppStoreIndexSchema = z.object({
   name: z.string(),
   indexSource: z.enum(["remote", "bundled"]).optional().default("bundled"),
   indexUrl: z.string().nullable().optional(),
+  sources: z.array(AppStoreSourceMetaSchema).optional().default([]),
   packages: z.array(AppStorePackageSchema),
 });
 
@@ -187,6 +200,7 @@ export function fetchAppStore(options?: {
 export function installAppPackage(payload: {
   packageId?: string;
   archiveUrl?: string;
+  signatureUrl?: string;
 }): Promise<AppPackageInstallResult> {
   return apiFetch(
     "/api/v1/app-packages/install",
@@ -196,4 +210,90 @@ export function installAppPackage(payload: {
       body: payload,
     },
   );
+}
+
+const AppStoreSourceSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  indexUrl: z.string(),
+  enabled: z.boolean(),
+  priority: z.number(),
+});
+
+const AppStoreTrustKeySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  publicKey: z.string(),
+});
+
+const AppStoreTrustSchema = z.object({
+  allowUnsignedPackages: z.boolean(),
+  keys: z.array(AppStoreTrustKeySchema),
+});
+
+export type AppStoreSource = z.infer<typeof AppStoreSourceSchema>;
+export type AppStoreTrust = z.infer<typeof AppStoreTrustSchema>;
+export type AppStoreTrustKey = z.infer<typeof AppStoreTrustKeySchema>;
+
+export function fetchAppStoreSources(): Promise<AppStoreSource[]> {
+  return apiFetch("/api/v1/app-store/sources", (data) =>
+    z.array(AppStoreSourceSchema).parse(data),
+  );
+}
+
+export function replaceAppStoreSources(sources: AppStoreSource[]): Promise<AppStoreSource[]> {
+  return apiFetch("/api/v1/app-store/sources", (data) => z.array(AppStoreSourceSchema).parse(data), {
+    method: "PUT",
+    body: { sources },
+  });
+}
+
+export function createAppStoreSource(payload: {
+  id?: string;
+  name: string;
+  indexUrl: string;
+  enabled?: boolean;
+  priority?: number;
+}): Promise<AppStoreSource> {
+  return apiFetch("/api/v1/app-store/sources", (data) => AppStoreSourceSchema.parse(data), {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export function deleteAppStoreSource(sourceId: string): Promise<void> {
+  return apiFetch(`/api/v1/app-store/sources/${encodeURIComponent(sourceId)}`, () => undefined, {
+    method: "DELETE",
+  });
+}
+
+export function fetchAppStoreTrust(): Promise<AppStoreTrust> {
+  return apiFetch("/api/v1/app-store/trust", (data) => AppStoreTrustSchema.parse(data));
+}
+
+export function updateAppStoreTrust(payload: {
+  allowUnsignedPackages: boolean;
+  keys?: AppStoreTrustKey[];
+}): Promise<AppStoreTrust> {
+  return apiFetch("/api/v1/app-store/trust", (data) => AppStoreTrustSchema.parse(data), {
+    method: "PUT",
+    body: payload,
+  });
+}
+
+export function createAppStoreTrustKey(payload: {
+  id?: string;
+  name: string;
+  publicKey: string;
+}): Promise<AppStoreTrustKey> {
+  return apiFetch("/api/v1/app-store/trust/keys", (data) => AppStoreTrustKeySchema.parse(data), {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export function deleteAppStoreTrustKey(keyId: string): Promise<void> {
+  return apiFetch(`/api/v1/app-store/trust/keys/${encodeURIComponent(keyId)}`, () => undefined, {
+    method: "DELETE",
+  });
 }

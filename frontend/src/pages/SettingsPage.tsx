@@ -9,14 +9,15 @@ import {
   useSystemHealth,
   useSystemInfo,
 } from "../features/system/hooks";
+import { AppStoreSettings } from "../features/settings/AppStoreSettings";
 import { FrontPanelSettings } from "../features/settings/front-panel/FrontPanelSettings";
 import { InventorySettings } from "../features/settings/InventorySettings";
 import { TenancySettings } from "../features/settings/TenancySettings";
 import type { ComponentHealth, OrphanReport } from "../types/system";
 
-type SettingsTab = "system" | "sites" | "orphans" | "tenancy" | "front-panel";
+type SettingsTab = "system" | "sites" | "orphans" | "tenancy" | "front-panel" | "app-stores";
 
-const TAB_IDS: SettingsTab[] = ["system", "sites", "orphans", "tenancy", "front-panel"];
+const TAB_IDS: SettingsTab[] = ["system", "sites", "orphans", "tenancy", "front-panel", "app-stores"];
 
 function parseTab(value: string | null): SettingsTab | null {
   if (!value) return null;
@@ -94,12 +95,23 @@ function IconFrontPanel(props: IconProps) {
   );
 }
 
+function IconAppStores(props: IconProps) {
+  return (
+    <svg {...iconBase(props)}>
+      <path d="M4 7h16v12H4z" />
+      <path d="M8 7V5h8v2" />
+      <path d="M9 12h6M9 15h4" />
+    </svg>
+  );
+}
+
 const TAB_ICONS: Record<SettingsTab, (props: IconProps) => ReactNode> = {
   system: IconSystem,
   sites: IconSites,
   orphans: IconOrphans,
   tenancy: IconTenancy,
   "front-panel": IconFrontPanel,
+  "app-stores": IconAppStores,
 };
 
 function statusTone(status: string): string {
@@ -470,6 +482,8 @@ export function SettingsPage() {
       {tab === "tenancy" ? <TenancySettings /> : null}
 
       {tab === "front-panel" ? <FrontPanelSettings /> : null}
+
+      {tab === "app-stores" ? <AppStoreSettings /> : null}
     </div>
   );
 }

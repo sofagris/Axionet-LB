@@ -88,6 +88,16 @@ export function CatalogAppStore({ onOpenDetails }: Props) {
                       ? t("catalog.appStore.statusInstalled")
                       : t("catalog.appStore.statusAvailable")}
                   </span>
+                  {pkg.storeName ? (
+                    <span className="font-mono text-[10px] text-ink-muted">
+                      {t("catalog.appStore.fromStore", { name: pkg.storeName })}
+                    </span>
+                  ) : null}
+                  <span className="font-mono text-[10px] tracking-wide text-ink-muted uppercase">
+                    {pkg.archiveUrl
+                      ? t("catalog.appStore.signingRequired")
+                      : t("catalog.appStore.signingBundled")}
+                  </span>
                 </div>
                 <p className="mt-0.5 truncate text-xs text-ink-muted">{pkg.summary}</p>
               </div>

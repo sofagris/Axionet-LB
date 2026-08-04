@@ -20,7 +20,7 @@ def test_store_index_lists_varnish_installed(monkeypatch) -> None:
     by_id = {item["id"]: item for item in payload["packages"]}
     assert "varnish" in by_id
     assert by_id["varnish"]["installed"] is True
-    assert by_id["varnish"]["installedVersion"] == "0.2.0"
+    assert by_id["varnish"]["installedVersion"] == "0.2.1"
 
 
 def test_store_prefers_remote_index(monkeypatch) -> None:

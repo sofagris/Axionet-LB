@@ -83,9 +83,23 @@ class AppStorePackage(BaseModel):
     source: Literal["bundled", "github"]
     path: str | None = None
     archiveUrl: str | None = None
+    signatureUrl: str | None = None
     repository: str | None = None
+    storeId: str | None = None
+    storeName: str | None = None
     installed: bool = False
     installedVersion: str | None = None
+    signing: Literal["required", "not_applicable", "signed", "unsigned"] | None = None
+
+
+class AppStoreSourceMeta(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    name: str
+    indexUrl: str | None = None
+    indexSource: Literal["remote", "bundled"] = "bundled"
+    priority: int = 0
 
 
 class AppStoreIndexRead(BaseModel):
@@ -95,6 +109,7 @@ class AppStoreIndexRead(BaseModel):
     name: str
     indexSource: Literal["remote", "bundled"] = "bundled"
     indexUrl: str | None = None
+    sources: list[AppStoreSourceMeta] = Field(default_factory=list)
     packages: list[AppStorePackage] = Field(default_factory=list)
 
 
@@ -103,6 +118,7 @@ class AppPackageInstallRequest(BaseModel):
 
     packageId: str | None = None
     archiveUrl: str | None = None
+    signatureUrl: str | None = None
 
 
 class AppPackageInstallResult(BaseModel):
@@ -111,3 +127,59 @@ class AppPackageInstallResult(BaseModel):
     id: str
     version: str
     status: Literal["installed", "already_installed"]
+
+
+class AppStoreSource(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    name: str
+    indexUrl: str
+    enabled: bool = True
+    priority: int = 0
+
+
+class AppStoreSourcesReplace(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    sources: list[AppStoreSource] = Field(default_factory=list)
+
+
+class AppStoreSourceCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str | None = None
+    name: str
+    indexUrl: str
+    enabled: bool = True
+    priority: int = 0
+
+
+class AppStoreTrustKey(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    name: str
+    publicKey: str
+
+
+class AppStoreTrustRead(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    allowUnsignedPackages: bool = True
+    keys: list[AppStoreTrustKey] = Field(default_factory=list)
+
+
+class AppStoreTrustUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    allowUnsignedPackages: bool
+    keys: list[AppStoreTrustKey] | None = None
+
+
+class AppStoreTrustKeyCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str | None = None
+    name: str
+    publicKey: str

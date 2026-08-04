@@ -63,6 +63,44 @@
         "desiredStateExample": { "type": "string", "minLength": 1 },
         "icon": { "type": "string", "minLength": 1 }
       }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["image", "defaultVersion", "configBind"],
+      "description": "Declarative container runtime for GenericPackagePlugin (named plugins still win).",
+      "properties": {
+        "image": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Container image repository without tag"
+        },
+        "defaultVersion": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Default image tag"
+        },
+        "configBind": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Container path for config volume mount"
+        },
+        "volumeMode": {
+          "type": "string",
+          "enum": ["ro", "rw"],
+          "default": "ro"
+        },
+        "entrypoint": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Optional entrypoint; {field} placeholders from instance configuration"
+        },
+        "command": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Optional command; {field} placeholders from instance configuration"
+        }
+      }
     }
   }
 }

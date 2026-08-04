@@ -4,7 +4,7 @@
   "packages": [
     {
       "id": "varnish",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "name": "Varnish",
       "summary": "HTTP reverse proxy cache with control-plane adapter.",
       "source": "bundled",
