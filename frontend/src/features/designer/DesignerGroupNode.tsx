@@ -1,12 +1,14 @@
 import { memo } from "react";
 import { NodeResizer, type NodeProps } from "@xyflow/react";
 import { CatalogBrandIcon } from "../catalog/CatalogBrandIcon";
+import { useDesignerDropTargetId } from "./DesignerDropTargetContext";
 import { nodeFillBackground } from "./nodeAppearance";
 import type { DesignerNode } from "./types";
 
-function DesignerGroupNodeComponent({ data, selected }: NodeProps<DesignerNode>) {
+function DesignerGroupNodeComponent({ id, data, selected }: NodeProps<DesignerNode>) {
   const fill = nodeFillBackground(data);
   const hasCustomFill = Boolean(fill.backgroundColor);
+  const isDropTarget = useDesignerDropTargetId() === id;
 
   return (
     <>
@@ -22,7 +24,11 @@ function DesignerGroupNodeComponent({ data, selected }: NodeProps<DesignerNode>)
         className={[
           "pointer-events-none box-border h-full w-full rounded-md border-2 border-dashed",
           hasCustomFill ? "" : "bg-paper/30",
-          selected ? "border-accent" : "border-line",
+          isDropTarget
+            ? "designer-drop-target border-accent"
+            : selected
+              ? "border-accent"
+              : "border-line",
         ].join(" ")}
         style={fill}
       >

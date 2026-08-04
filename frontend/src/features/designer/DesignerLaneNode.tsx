@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { NodeResizer, type NodeProps } from "@xyflow/react";
+import { useDesignerDropTargetId } from "./DesignerDropTargetContext";
 import { nodeFillBackground } from "./nodeAppearance";
 import type { DesignerNode } from "./types";
 
@@ -22,12 +23,13 @@ function LaneIcon({ kind }: { kind?: string }) {
   );
 }
 
-function DesignerLaneNodeComponent({ data, selected }: NodeProps<DesignerNode>) {
+function DesignerLaneNodeComponent({ id, data, selected }: NodeProps<DesignerNode>) {
   const { t } = useTranslation();
   const kind = data.placementKind ?? (/shared/i.test(data.label) ? "shared" : "site");
   const description = data.placementDescription ?? "";
   const fill = nodeFillBackground(data);
   const hasCustomFill = Boolean(fill.backgroundColor);
+  const isDropTarget = useDesignerDropTargetId() === id;
 
   return (
     <>
@@ -42,7 +44,11 @@ function DesignerLaneNodeComponent({ data, selected }: NodeProps<DesignerNode>) 
         className={[
           "pointer-events-none box-border flex h-full w-full overflow-hidden rounded-md border",
           hasCustomFill ? "" : "bg-paper/50",
-          selected ? "border-accent" : "border-line/70",
+          isDropTarget
+            ? "designer-drop-target border-accent"
+            : selected
+              ? "border-accent"
+              : "border-line/70",
         ].join(" ")}
         style={fill}
       >

@@ -12,6 +12,7 @@ import {
   DESIGNER_DND_MIME,
   type PaletteDragPayload,
 } from "./types";
+import { setActivePaletteDrag } from "./paletteDrag";
 
 type Props = {
   instances: Instance[];
@@ -19,8 +20,13 @@ type Props = {
 };
 
 function setDragData(event: DragEvent, payload: PaletteDragPayload) {
+  setActivePaletteDrag(payload);
   event.dataTransfer.setData(DESIGNER_DND_MIME, JSON.stringify(payload));
   event.dataTransfer.effectAllowed = "copy";
+}
+
+function clearDragData() {
+  setActivePaletteDrag(null);
 }
 
 export function CatalogPalette({ instances, vips }: Props) {
@@ -94,6 +100,7 @@ export function CatalogPalette({ instances, vips }: Props) {
                     <button
                       type="button"
                       draggable
+                      onDragEnd={clearDragData}
                       onDragStart={(event) =>
                         setDragData(event, {
                           source: "catalog",
@@ -148,6 +155,7 @@ export function CatalogPalette({ instances, vips }: Props) {
                           <button
                             type="button"
                             draggable
+                            onDragEnd={clearDragData}
                             onDragStart={(event) =>
                               setDragData(event, {
                                 source: "catalog.component",
@@ -211,6 +219,7 @@ export function CatalogPalette({ instances, vips }: Props) {
                       <button
                         type="button"
                         draggable
+                        onDragEnd={clearDragData}
                         onDragStart={(event) =>
                           setDragData(event, {
                             source: "instance",
@@ -256,6 +265,7 @@ export function CatalogPalette({ instances, vips }: Props) {
                             <button
                               type="button"
                               draggable
+                              onDragEnd={clearDragData}
                               onDragStart={(event) =>
                                 setDragData(event, {
                                   source: "instance.component",
@@ -302,6 +312,7 @@ export function CatalogPalette({ instances, vips }: Props) {
                   <button
                     type="button"
                     draggable
+                    onDragEnd={clearDragData}
                     onDragStart={(event) =>
                       setDragData(event, {
                         source: "vip",

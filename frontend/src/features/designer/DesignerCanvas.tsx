@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type DragEvent, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent } from "react";
 import {
   Background,
   Controls,
@@ -21,6 +21,7 @@ import { useTranslation } from "react-i18next";
 import { DesignerFlowNode } from "./DesignerNode";
 import { DesignerGroupNode } from "./DesignerGroupNode";
 import { DesignerLaneNode } from "./DesignerLaneNode";
+import { DesignerDropTargetContext } from "./DesignerDropTargetContext";
 import { buildDropGraph } from "./buildDropGraph";
 import {
   addGroupToLane,
@@ -33,6 +34,8 @@ import {
   removeGroupFromLane,
   removeNodeFromGroup,
 } from "./grouping";
+import { getActivePaletteDrag, setActivePaletteDrag } from "./paletteDrag";
+import { resolvePaletteDropTarget } from "./paletteDropTarget";
 import {
   DESIGNER_DND_MIME,
   newEdgeId,
@@ -96,11 +99,34 @@ function DesignerCanvasInner({
   const { t } = useTranslation();
   const { screenToFlowPosition, fitView } = useReactFlow();
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const nodesRef = useRef(nodes);
+  const dragPointerRef = useRef({ x: 0, y: 0 });
+  const dragRafRef = useRef(0);
+
+  useEffect(() => {
+    nodesRef.current = nodes;
+  }, [nodes]);
 
   useEffect(() => {
     if (!fitViewNonce) return;
     void fitView({ padding: 0.15, duration: 200 });
   }, [fitViewNonce, fitView]);
+
+  const clearDropHighlight = useCallback(() => {
+    setDropTargetId(null);
+    setActivePaletteDrag(null);
+    if (dragRafRef.current) {
+      cancelAnimationFrame(dragRafRef.current);
+      dragRafRef.current = 0;
+    }
+  }, []);
+
+  useEffect(() => {
+    const onDragEnd = () => clearDropHighlight();
+    window.addEventListener("dragend", onDragEnd);
+    return () => window.removeEventListener("dragend", onDragEnd);
+  }, [clearDropHighlight]);
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -130,16 +156,41 @@ function DesignerCanvasInner({
     [onSelectionChange],
   );
 
-  const onDragOver = useCallback((event: DragEvent) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "copy";
+  const onDragOver = useCallback(
+    (event: DragEvent) => {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "copy";
+      dragPointerRef.current = { x: event.clientX, y: event.clientY };
+      if (dragRafRef.current) return;
+      dragRafRef.current = requestAnimationFrame(() => {
+        dragRafRef.current = 0;
+        const payload = getActivePaletteDrag();
+        if (!payload) {
+          setDropTargetId(null);
+          return;
+        }
+        const flowPos = screenToFlowPosition(dragPointerRef.current);
+        const target = resolvePaletteDropTarget(nodesRef.current, flowPos, payload);
+        setDropTargetId(target?.id ?? null);
+      });
+    },
+    [screenToFlowPosition],
+  );
+
+  const onDragLeave = useCallback((event: DragEvent) => {
+    // Leaving the canvas wrapper (not entering a child) clears the highlight.
+    const related = event.relatedTarget;
+    if (related instanceof globalThis.Node && event.currentTarget.contains(related)) return;
+    setDropTargetId(null);
   }, []);
 
   const onDrop = useCallback(
     (event: DragEvent) => {
       event.preventDefault();
       setContextMenu(null);
+      setDropTargetId(null);
       const raw = event.dataTransfer.getData(DESIGNER_DND_MIME);
+      setActivePaletteDrag(null);
       if (!raw) return;
       let payload: PaletteDragPayload;
       try {
@@ -232,138 +283,145 @@ function DesignerCanvasInner({
   );
 
   return (
-    <div className="relative h-full w-full" onDragOver={onDragOver} onDrop={onDrop}>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges as Edge[]}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onSelectionChange={onSelectionChangeInternal}
-        onNodeContextMenu={onNodeContextMenu}
-        onPaneClick={closeMenu}
-        onMoveStart={closeMenu}
-        onMoveEnd={(_, vp) => onViewportChange(vp)}
-        nodeTypes={nodeTypes}
-        fitView
-        multiSelectionKeyCode={["Meta", "Control", "Shift"]}
-        edgesFocusable
-        elementsSelectable
-        snapToGrid={snapToGrid}
-        snapGrid={[16, 16]}
-        defaultEdgeOptions={defaultEdgeOptions}
-        proOptions={{ hideAttribution: true }}
-        deleteKeyCode={null}
-        className="designer-flow"
+    <DesignerDropTargetContext.Provider value={dropTargetId}>
+      <div
+        className="relative h-full w-full"
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
       >
-        <Background gap={16} size={1} />
-        <Controls />
-        <MiniMap pannable zoomable />
-      </ReactFlow>
-
-      {contextMenu && menuNode ? (
-        <div
-          className="fixed z-[2000] min-w-[11rem] border border-line bg-paper-elevated py-1 text-sm shadow-lg"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
-          role="menu"
+        <ReactFlow
+          nodes={nodes}
+          edges={edges as Edge[]}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onSelectionChange={onSelectionChangeInternal}
+          onNodeContextMenu={onNodeContextMenu}
+          onPaneClick={closeMenu}
+          onMoveStart={closeMenu}
+          onMoveEnd={(_, vp) => onViewportChange(vp)}
+          nodeTypes={nodeTypes}
+          fitView
+          multiSelectionKeyCode={["Meta", "Control", "Shift"]}
+          edgesFocusable
+          elementsSelectable
+          snapToGrid={snapToGrid}
+          snapGrid={[16, 16]}
+          defaultEdgeOptions={defaultEdgeOptions}
+          proOptions={{ hideAttribution: true }}
+          deleteKeyCode={null}
+          className="designer-flow"
         >
-          {canPin ? (
-            <button
-              type="button"
-              role="menuitem"
-              className="block w-full px-3 py-1.5 text-left text-ink hover:bg-paper"
-              onClick={() => {
-                onNodes((nds) =>
-                  nds.map((n) =>
-                    n.id === menuNode.id
-                      ? { ...n, data: { ...n.data, pinned: !n.data.pinned } }
-                      : n,
-                  ),
-                );
-                closeMenu();
-              }}
-            >
-              {isPinned ? t("designer.context.unpin") : t("designer.context.pin")}
-            </button>
-          ) : null}
-          {canAddToGroup ? (
-            <div className="border-b border-line px-1 pb-1 mb-1">
-              <p className="px-2 py-1 font-mono text-[10px] tracking-wide text-ink-muted uppercase">
-                {t("designer.context.addToGroup")}
-              </p>
-              {groups.map((g) => (
-                <button
-                  key={g.id}
-                  type="button"
-                  role="menuitem"
-                  className="block w-full px-3 py-1.5 text-left text-ink hover:bg-paper"
-                  onClick={() => {
-                    onNodes((nds) => addNodeToGroup(nds, menuNode.id, g.id));
-                    closeMenu();
-                  }}
-                >
-                  {g.data.label}
-                </button>
-              ))}
-            </div>
-          ) : null}
-          {canRemoveFromGroup ? (
-            <button
-              type="button"
-              role="menuitem"
-              className="block w-full px-3 py-1.5 text-left text-ink hover:bg-paper"
-              onClick={() => {
-                onNodes((nds) => removeNodeFromGroup(nds, menuNode.id));
-                closeMenu();
-              }}
-            >
-              {t("designer.context.removeFromGroup")}
-            </button>
-          ) : null}
-          {canAddToLane ? (
-            <div className="border-b border-line px-1 pb-1 mb-1">
-              <p className="px-2 py-1 font-mono text-[10px] tracking-wide text-ink-muted uppercase">
-                {t("designer.context.addToLane")}
-              </p>
-              {lanes.map((lane) => (
-                <button
-                  key={lane.id}
-                  type="button"
-                  role="menuitem"
-                  className="block w-full px-3 py-1.5 text-left text-ink hover:bg-paper"
-                  onClick={() => {
-                    onNodes((nds) => addGroupToLane(nds, menuNode.id, lane.id));
-                    closeMenu();
-                  }}
-                >
-                  {lane.data.label}
-                </button>
-              ))}
-            </div>
-          ) : null}
-          {canRemoveFromLane ? (
-            <button
-              type="button"
-              role="menuitem"
-              className="block w-full px-3 py-1.5 text-left text-ink hover:bg-paper"
-              onClick={() => {
-                onNodes((nds) => removeGroupFromLane(nds, menuNode.id));
-                closeMenu();
-              }}
-            >
-              {t("designer.context.removeFromLane")}
-            </button>
-          ) : null}
-          {!canPin &&
-          !canAddToGroup &&
-          !canRemoveFromGroup &&
-          !canAddToLane &&
-          !canRemoveFromLane ? (
-            <p className="px-3 py-2 text-xs text-ink-muted">{t("designer.context.noActions")}</p>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
+          <Background gap={16} size={1} />
+          <Controls />
+          <MiniMap pannable zoomable />
+        </ReactFlow>
+
+        {contextMenu && menuNode ? (
+          <div
+            className="fixed z-[2000] min-w-[11rem] border border-line bg-paper-elevated py-1 text-sm shadow-lg"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+            role="menu"
+          >
+            {canPin ? (
+              <button
+                type="button"
+                role="menuitem"
+                className="block w-full px-3 py-1.5 text-left text-ink hover:bg-paper"
+                onClick={() => {
+                  onNodes((nds) =>
+                    nds.map((n) =>
+                      n.id === menuNode.id
+                        ? { ...n, data: { ...n.data, pinned: !n.data.pinned } }
+                        : n,
+                    ),
+                  );
+                  closeMenu();
+                }}
+              >
+                {isPinned ? t("designer.context.unpin") : t("designer.context.pin")}
+              </button>
+            ) : null}
+            {canAddToGroup ? (
+              <div className="border-b border-line px-1 pb-1 mb-1">
+                <p className="px-2 py-1 font-mono text-[10px] tracking-wide text-ink-muted uppercase">
+                  {t("designer.context.addToGroup")}
+                </p>
+                {groups.map((g) => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    role="menuitem"
+                    className="block w-full px-3 py-1.5 text-left text-ink hover:bg-paper"
+                    onClick={() => {
+                      onNodes((nds) => addNodeToGroup(nds, menuNode.id, g.id));
+                      closeMenu();
+                    }}
+                  >
+                    {g.data.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {canRemoveFromGroup ? (
+              <button
+                type="button"
+                role="menuitem"
+                className="block w-full px-3 py-1.5 text-left text-ink hover:bg-paper"
+                onClick={() => {
+                  onNodes((nds) => removeNodeFromGroup(nds, menuNode.id));
+                  closeMenu();
+                }}
+              >
+                {t("designer.context.removeFromGroup")}
+              </button>
+            ) : null}
+            {canAddToLane ? (
+              <div className="border-b border-line px-1 pb-1 mb-1">
+                <p className="px-2 py-1 font-mono text-[10px] tracking-wide text-ink-muted uppercase">
+                  {t("designer.context.addToLane")}
+                </p>
+                {lanes.map((lane) => (
+                  <button
+                    key={lane.id}
+                    type="button"
+                    role="menuitem"
+                    className="block w-full px-3 py-1.5 text-left text-ink hover:bg-paper"
+                    onClick={() => {
+                      onNodes((nds) => addGroupToLane(nds, menuNode.id, lane.id));
+                      closeMenu();
+                    }}
+                  >
+                    {lane.data.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {canRemoveFromLane ? (
+              <button
+                type="button"
+                role="menuitem"
+                className="block w-full px-3 py-1.5 text-left text-ink hover:bg-paper"
+                onClick={() => {
+                  onNodes((nds) => removeGroupFromLane(nds, menuNode.id));
+                  closeMenu();
+                }}
+              >
+                {t("designer.context.removeFromLane")}
+              </button>
+            ) : null}
+            {!canPin &&
+            !canAddToGroup &&
+            !canRemoveFromGroup &&
+            !canAddToLane &&
+            !canRemoveFromLane ? (
+              <p className="px-3 py-2 text-xs text-ink-muted">{t("designer.context.noActions")}</p>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </DesignerDropTargetContext.Provider>
   );
 }
 

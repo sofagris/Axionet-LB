@@ -132,3 +132,22 @@ html[data-theme="dark"] {
 .designer-flow .react-flow__resize-control {
   pointer-events: all;
 }
+
+@keyframes designer-drop-target-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 color-mix(in srgb, var(--ax-accent) 45%, transparent),
+      inset 0 0 0 1px color-mix(in srgb, var(--ax-accent) 35%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 6px color-mix(in srgb, var(--ax-accent) 18%, transparent),
+      inset 0 0 0 1px color-mix(in srgb, var(--ax-accent) 55%, transparent);
+  }
+}
+
+.designer-drop-target {
+  animation: designer-drop-target-pulse 1.1s ease-in-out infinite;
+  border-style: solid !important;
+}
