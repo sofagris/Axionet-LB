@@ -1,0 +1,107 @@
+{
+  "catalogId": "varnish",
+  "serviceType": "varnish",
+  "hydrate": "none",
+  "detailPathTemplate": "/instances/{serviceId}/{serviceType}",
+  "applySteps": {
+    "createUnbound": {
+      "hrefTemplate": "/instances/new?type={serviceType}",
+      "messageKey": "designer.applySteps.createInstance"
+    },
+    "openBound": {
+      "hrefTemplate": "/instances/{serviceId}/{serviceType}",
+      "messageKey": "designer.applySteps.openInstance"
+    }
+  },
+  "components": [
+    {
+      "id": "listen",
+      "label": "Listen",
+      "role": "varnish-listen"
+    },
+    {
+      "id": "cache",
+      "label": "Cache",
+      "role": "varnish-cache"
+    },
+    {
+      "id": "origin",
+      "label": "Origin",
+      "role": "varnish-origin"
+    }
+  ],
+  "chain": [
+    {
+      "from": "listen",
+      "to": "cache",
+      "label": "vcl"
+    },
+    {
+      "from": "cache",
+      "to": "origin",
+      "label": "fetch"
+    }
+  ],
+  "roles": {
+    "varnish-listen": {
+      "props": [
+        {
+          "key": "name",
+          "labelKey": "designer.props.name",
+          "placeholder": "fe_cache",
+          "default": "fe_cache"
+        },
+        {
+          "key": "bind",
+          "labelKey": "designer.props.bind",
+          "placeholder": "*:6081",
+          "default": "*:6081"
+        }
+      ]
+    },
+    "varnish-cache": {
+      "props": [
+        {
+          "key": "storage_size",
+          "labelKey": "designer.props.storageSize",
+          "placeholder": "256m",
+          "default": "256m"
+        },
+        {
+          "key": "ttl_default",
+          "labelKey": "designer.props.ttl",
+          "placeholder": "120s",
+          "default": "120s"
+        }
+      ]
+    },
+    "varnish-origin": {
+      "props": [
+        {
+          "key": "name",
+          "labelKey": "designer.props.name",
+          "placeholder": "origin",
+          "default": "origin"
+        },
+        {
+          "key": "address",
+          "labelKey": "designer.props.address",
+          "placeholder": "10.0.0.20",
+          "default": ""
+        },
+        {
+          "key": "port",
+          "labelKey": "designer.props.port",
+          "placeholder": "80",
+          "default": "80"
+        },
+        {
+          "key": "host_header",
+          "labelKey": "designer.props.hostHeader",
+          "placeholder": "app.example.com",
+          "default": ""
+        }
+      ]
+    }
+  }
+}

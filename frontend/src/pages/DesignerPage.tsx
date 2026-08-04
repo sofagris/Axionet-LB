@@ -154,7 +154,7 @@ export function DesignerPage() {
   const flowId = searchParams.get("flow");
 
   const flowsQuery = useDesignFlows();
-  useRemoteDesignerManifests();
+  const remoteManifests = useRemoteDesignerManifests();
   const flowQuery = useDesignFlow(flowId);
   const createMutation = useCreateDesignFlow();
   const updateMutation = useUpdateDesignFlow(flowId);
@@ -1066,7 +1066,11 @@ export function DesignerPage() {
                 </div>
               </div>
             )}
-            <CatalogPalette instances={instances} vips={vips} />
+            <CatalogPalette
+              key={remoteManifests.registryRevision}
+              instances={instances}
+              vips={vips}
+            />
             <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-paper">
               <MutationGate hide className="w-full shrink-0">
                 <DesignerToolbar

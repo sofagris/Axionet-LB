@@ -82,7 +82,21 @@ export const CATALOG_ITEMS: CatalogItem[] = [
     capabilities: ["HTTP cache", "reverse proxy", "edge caching"],
     tags: ["cache", "http"],
     primaryAction: "create-service",
+    deployableServiceType: "varnish",
     brand: { monogram: "VA", accent: "traffic" },
+    notes: [
+      "Designer tree is published from packages/apps/varnish (axionet.app/v1).",
+      "Runtime adapter not enabled yet (service definition remains disabled).",
+    ],
+    flowNodes: [
+      { id: "listen", label: "Listen", role: "varnish-listen" },
+      { id: "cache", label: "Cache", role: "varnish-cache" },
+      { id: "origin", label: "Origin", role: "varnish-origin" },
+    ],
+    flowEdges: [
+      { from: "listen", to: "cache", label: "vcl" },
+      { from: "cache", to: "origin", label: "fetch" },
+    ],
   },
   {
     id: "nginx",

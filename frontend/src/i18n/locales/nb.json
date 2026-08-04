@@ -395,7 +395,10 @@
       "routerId": "Router ID",
       "prefix": "Prefix",
       "realm": "Realm",
-      "group": "Gruppe"
+      "group": "Gruppe",
+      "storageSize": "Lagringsstørrelse",
+      "ttl": "Standard-TTL",
+      "hostHeader": "Host-header"
     },
     "palette": {
       "title": "Palett",

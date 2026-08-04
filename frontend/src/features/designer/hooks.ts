@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchDesignerManifests } from "../../api/appPackages";
 import {
@@ -16,6 +16,7 @@ import type {
 
 /** Load package designer manifests from the API into the local registry. */
 export function useRemoteDesignerManifests(includeReference = false) {
+  const [registryRevision, setRegistryRevision] = useState(0);
   const query = useQuery({
     queryKey: ["app-packages", "designer-manifests", includeReference],
     queryFn: () => fetchDesignerManifests({ includeReference }),
@@ -23,12 +24,12 @@ export function useRemoteDesignerManifests(includeReference = false) {
   });
 
   useEffect(() => {
-    if (query.data) {
-      setRemoteDesignerManifests(query.data);
-    }
+    if (!query.data) return;
+    setRemoteDesignerManifests(query.data);
+    setRegistryRevision((value) => value + 1);
   }, [query.data]);
 
-  return query;
+  return { ...query, registryRevision };
 }
 
 export function useDesignFlows() {

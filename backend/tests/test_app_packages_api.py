@@ -1,10 +1,14 @@
-def test_app_packages_list_empty_without_reference(client) -> None:
+def test_app_packages_list_includes_varnish(client) -> None:
     response = client.get("/api/v1/app-packages")
     assert response.status_code == 200, response.text
     body = response.json()
     assert isinstance(body, list)
     assert all(not item.get("reference") for item in body)
     assert all(item["id"] != "example" for item in body)
+    by_id = {item["id"]: item for item in body}
+    assert "varnish" in by_id
+    assert by_id["varnish"]["serviceType"] == "varnish"
+    assert by_id["varnish"]["hydrate"] == "none"
 
 
 def test_app_packages_designer_manifests_with_reference(client) -> None:

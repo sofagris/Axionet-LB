@@ -1,0 +1,11 @@
+{
+  "name": "varnish-edge",
+  "bind": "*:6081",
+  "storage_size": "256m",
+  "ttl_default": "120s",
+  "origin": {
+    "address": "10.0.0.20",
+    "port": 80,
+    "host_header": "app.example.com"
+  }
+}

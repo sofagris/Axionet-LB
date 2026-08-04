@@ -23,8 +23,8 @@ describe("designerCapabilities", () => {
   });
 
   it("treats unknown service types as not known", () => {
-    expect(designerCapabilities("varnish")).toEqual({
-      serviceType: "varnish",
+    expect(designerCapabilities("not-a-service")).toEqual({
+      serviceType: "not-a-service",
       known: false,
       canHydrate: false,
       canLiveSync: false,
@@ -40,6 +40,6 @@ describe("designerInstanceDetailPath", () => {
   });
 
   it("falls back for unknown types", () => {
-    expect(designerInstanceDetailPath("varnish", "x")).toBe("/instances");
+    expect(designerInstanceDetailPath("not-a-service", "x")).toBe("/instances");
   });
 });

@@ -18,6 +18,10 @@ def test_list_loaded_skips_reference_by_default() -> None:
     packages = list_loaded_packages(repo_root=repo_root_from_backend())
     assert all(not package.reference for package in packages)
     assert all(not package.directory_name.startswith("_") for package in packages)
+    by_id = {package.id: package for package in packages}
+    assert "varnish" in by_id
+    assert by_id["varnish"].service_type == "varnish"
+    assert by_id["varnish"].designer["components"][0]["role"] == "varnish-listen"
 
 
 def test_list_loaded_include_reference_example() -> None:

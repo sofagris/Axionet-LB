@@ -1,0 +1,19 @@
+{
+  "name": "Varnish",
+  "summary": "HTTP reverse proxy cache.",
+  "description": "Edge HTTP caching and reverse proxy for accelerating web content. Declarative Designer package; runtime adapter not enabled yet.",
+  "kind": "service",
+  "category": "traffic",
+  "brand": {
+    "monogram": "VA",
+    "accent": "traffic"
+  },
+  "tags": ["cache", "http", "proxy"],
+  "capabilities": ["HTTP cache", "reverse proxy", "edge caching"],
+  "primaryAction": "create-service",
+  "implementationHint": "Package-driven Designer tree. Control-plane adapter TBD; stub service_type remains enabled=false.",
+  "notes": [
+    "axionet.app/v1 pilot package under packages/apps/varnish.",
+    "No live hydrate/reconcile until a Varnish adapter is registered."
+  ]
+}

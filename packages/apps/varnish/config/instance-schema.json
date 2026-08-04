@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axionet.local/packages/varnish/instance-schema.json",
+  "title": "Varnish instance desired state",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "bind", "storage_size", "origin"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Instance display name"
+    },
+    "bind": {
+      "type": "string",
+      "minLength": 1,
+      "description": "HTTP listen address, e.g. *:6081"
+    },
+    "storage_size": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Cache storage size (Varnish -s malloc,SIZE)"
+    },
+    "ttl_default": {
+      "type": "string",
+      "description": "Default TTL for cacheable responses"
+    },
+    "origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["address", "port"],
+      "properties": {
+        "address": { "type": "string", "minLength": 1 },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "host_header": { "type": "string" }
+      }
+    }
+  }
+}
