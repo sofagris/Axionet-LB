@@ -1,5 +1,10 @@
 import type { Instance } from "../../types/instances";
 import type { Vip } from "../../types/vips";
+import {
+  DESIGNER_CROSS_GUIDANCE,
+  designerManifestByServiceType,
+  expandDesignerPathTemplate,
+} from "../catalog/designerManifests";
 import type { DesignerEdge, DesignerNode } from "./types";
 
 export type ValidationIssue = {
@@ -120,44 +125,61 @@ export function buildApplySuggestions(
   const suggestions: ApplySuggestion[] = [];
   const instanceById = new Map(instances.map((i) => [i.id, i]));
   const opened = new Set<string>();
-  const errorPagesOpened = new Set<string>();
+  const componentExtraOpened = new Set<string>();
 
   for (const node of nodes) {
     const data = node.data;
     if (data.comingSoon) continue;
     if (data.kind === "visual.annotation" || data.kind === "placement.lane") continue;
 
+    const serviceType = data.serviceType;
+    const manifest = serviceType ? designerManifestByServiceType(serviceType) : undefined;
+
     if (
       data.kind === "catalog.component" &&
-      data.componentRole === "error-page" &&
+      data.componentRole &&
       data.serviceId &&
-      !errorPagesOpened.has(data.serviceId)
+      serviceType &&
+      manifest?.applySteps?.componentExtras
     ) {
-      errorPagesOpened.add(data.serviceId);
-      suggestions.push({
-        id: `errors-${data.serviceId}`,
-        kind: "open-instance",
-        label: data.label,
-        href: `/instances/${data.serviceId}/haproxy?tab=errors`,
-        messageKey: "designer.applySteps.openErrorPages",
-        messageParams: { label: data.label },
-      });
+      for (const extra of manifest.applySteps.componentExtras) {
+        if (extra.whenRole !== data.componentRole) continue;
+        const key = `${extra.whenRole}:${data.serviceId}`;
+        if (componentExtraOpened.has(key)) continue;
+        componentExtraOpened.add(key);
+        suggestions.push({
+          id: `extra-${key}`,
+          kind: "open-instance",
+          label: data.label,
+          href: expandDesignerPathTemplate(extra.hrefTemplate, {
+            serviceId: data.serviceId,
+            serviceType,
+          }),
+          messageKey: extra.messageKey,
+          messageParams: { label: data.label },
+        });
+      }
     }
 
     if (data.kind === "catalog.component") continue;
 
     if (
       (data.kind === "catalog.service" || data.kind === "group.frame") &&
-      data.serviceType &&
+      serviceType &&
       !data.serviceId
     ) {
+      const create =
+        manifest?.applySteps?.createUnbound ?? {
+          hrefTemplate: "/instances/new?type={serviceType}",
+          messageKey: "designer.applySteps.createInstance",
+        };
       suggestions.push({
         id: `create-${node.id}`,
         kind: "create-instance",
         label: data.label,
-        href: `/instances/new?type=${encodeURIComponent(data.serviceType)}`,
-        messageKey: "designer.applySteps.createInstance",
-        messageParams: { label: data.label, type: data.serviceType },
+        href: expandDesignerPathTemplate(create.hrefTemplate, { serviceType }),
+        messageKey: create.messageKey,
+        messageParams: { label: data.label, type: serviceType },
       });
       continue;
     }
@@ -166,17 +188,24 @@ export function buildApplySuggestions(
     if (serviceId && !opened.has(serviceId)) {
       opened.add(serviceId);
       const inst = instanceById.get(serviceId);
-      const serviceType = data.serviceType ?? inst?.service_type;
-      if (serviceType) {
-        const known = ["haproxy", "frr", "keycloak-mgmt", "keycloak-apps", "auth-gateway"];
+      const resolvedType = serviceType ?? inst?.service_type;
+      if (resolvedType) {
+        const open =
+          designerManifestByServiceType(resolvedType)?.applySteps?.openBound ?? {
+            hrefTemplate: "/instances/{serviceId}/{serviceType}",
+            messageKey: "designer.applySteps.openInstance",
+          };
         suggestions.push({
           id: `open-${serviceId}`,
           kind: "open-instance",
           label: data.label,
-          href: known.includes(serviceType)
-            ? `/instances/${serviceId}/${serviceType}`
+          href: designerManifestByServiceType(resolvedType)
+            ? expandDesignerPathTemplate(open.hrefTemplate, {
+                serviceId,
+                serviceType: resolvedType,
+              })
             : "/instances",
-          messageKey: "designer.applySteps.openInstance",
+          messageKey: open.messageKey,
           messageParams: { label: data.label },
         });
       }
@@ -197,13 +226,15 @@ export function buildApplySuggestions(
   const types = new Set(
     nodes.map((n) => n.data.serviceType).filter((t): t is string => Boolean(t)),
   );
-  if (types.has("haproxy") && types.has("auth-gateway")) {
-    suggestions.push({
-      id: "guidance-ag-hap",
-      kind: "guidance",
-      label: "HAProxy ↔ Auth Gateway",
-      messageKey: "designer.applySteps.guidanceAuthGateway",
-    });
+  for (const rule of DESIGNER_CROSS_GUIDANCE) {
+    if (rule.whenAll.every((t) => types.has(t))) {
+      suggestions.push({
+        id: rule.id,
+        kind: "guidance",
+        label: rule.label,
+        messageKey: rule.messageKey,
+      });
+    }
   }
 
   return suggestions;

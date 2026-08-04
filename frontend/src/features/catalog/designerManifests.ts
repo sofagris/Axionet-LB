@@ -32,6 +32,26 @@ export type DesignerRoleSchema = {
   props: DesignerPropField[];
 };
 
+export type DesignerApplyComponentExtra = {
+  whenRole: string;
+  hrefTemplate: string;
+  messageKey: string;
+};
+
+export type DesignerApplySteps = {
+  createUnbound?: { hrefTemplate: string; messageKey: string };
+  openBound?: { hrefTemplate: string; messageKey: string };
+  componentExtras?: DesignerApplyComponentExtra[];
+};
+
+export type DesignerCrossGuidance = {
+  id: string;
+  /** All of these serviceTypes must be present on the canvas. */
+  whenAll: string[];
+  label: string;
+  messageKey: string;
+};
+
 export type DesignerManifest = {
   catalogId: string;
   serviceType: string;
@@ -40,10 +60,16 @@ export type DesignerManifest = {
   /** Prop schemas keyed by component role (shared across components with that role). */
   roles: Record<string, DesignerRoleSchema>;
   /**
-   * Future: none | onDrop | poll — only "haproxy" uses a code adapter today.
-   * Kept here so App Store packages can declare intent without canvas branches.
+   * none | onDrop | poll — only "haproxy" uses a code adapter today.
+   * poll implies on-drop hydrate + live sync capability.
    */
   hydrate?: "none" | "onDrop" | "poll";
+  /**
+   * Path template for instance detail. Tokens: {serviceId}, {serviceType}.
+   * Default: /instances/{serviceId}/{serviceType}
+   */
+  detailPathTemplate?: string;
+  applySteps?: DesignerApplySteps;
 };
 
 function role(
@@ -59,12 +85,36 @@ function role(
   };
 }
 
+const DEFAULT_APPLY: DesignerApplySteps = {
+  createUnbound: {
+    hrefTemplate: "/instances/new?type={serviceType}",
+    messageKey: "designer.applySteps.createInstance",
+  },
+  openBound: {
+    hrefTemplate: "/instances/{serviceId}/{serviceType}",
+    messageKey: "designer.applySteps.openInstance",
+  },
+};
+
+const DEFAULT_DETAIL = "/instances/{serviceId}/{serviceType}";
+
 /** Single source for Designer trees + editable props (step 1 of App Store readiness). */
 export const DESIGNER_MANIFESTS: DesignerManifest[] = [
   {
     catalogId: "haproxy",
     serviceType: "haproxy",
     hydrate: "poll",
+    detailPathTemplate: DEFAULT_DETAIL,
+    applySteps: {
+      ...DEFAULT_APPLY,
+      componentExtras: [
+        {
+          whenRole: "error-page",
+          hrefTemplate: "/instances/{serviceId}/{serviceType}?tab=errors",
+          messageKey: "designer.applySteps.openErrorPages",
+        },
+      ],
+    },
     components: [
       { id: "frontend", label: "Frontend", role: "frontend" },
       { id: "backend", label: "Backend", role: "backend" },
@@ -109,6 +159,8 @@ export const DESIGNER_MANIFESTS: DesignerManifest[] = [
     catalogId: "frr",
     serviceType: "frr",
     hydrate: "none",
+    detailPathTemplate: DEFAULT_DETAIL,
+    applySteps: DEFAULT_APPLY,
     components: [
       { id: "peer", label: "BGP peer", role: "external" },
       { id: "daemon", label: "FRR daemon", role: "service" },
@@ -131,6 +183,8 @@ export const DESIGNER_MANIFESTS: DesignerManifest[] = [
     catalogId: "auth-gateway",
     serviceType: "auth-gateway",
     hydrate: "none",
+    detailPathTemplate: DEFAULT_DETAIL,
+    applySteps: DEFAULT_APPLY,
     components: [
       { id: "listen", label: "Listen :4180", role: "listen" },
       { id: "oidc", label: "OIDC", role: "oidc" },
@@ -154,6 +208,8 @@ export const DESIGNER_MANIFESTS: DesignerManifest[] = [
     catalogId: "keycloak-mgmt",
     serviceType: "keycloak-mgmt",
     hydrate: "none",
+    detailPathTemplate: DEFAULT_DETAIL,
+    applySteps: DEFAULT_APPLY,
     components: [
       { id: "realm", label: "Realm", role: "realm" },
       { id: "clients", label: "Clients", role: "clients" },
@@ -173,6 +229,8 @@ export const DESIGNER_MANIFESTS: DesignerManifest[] = [
     catalogId: "keycloak-apps",
     serviceType: "keycloak-apps",
     hydrate: "none",
+    detailPathTemplate: DEFAULT_DETAIL,
+    applySteps: DEFAULT_APPLY,
     components: [
       { id: "realm", label: "Realm", role: "realm" },
       { id: "clients", label: "Clients", role: "clients" },
@@ -219,3 +277,29 @@ export function designerServiceTrees(): DesignerServiceTree[] {
     chain,
   }));
 }
+
+/** Expand {serviceId} / {serviceType} (and optional extras) in a path template. */
+export function expandDesignerPathTemplate(
+  template: string,
+  vars: Record<string, string>,
+): string {
+  let out = template;
+  for (const [key, value] of Object.entries(vars)) {
+    out = out.split(`{${key}}`).join(encodeURIComponent(value));
+  }
+  return out;
+}
+
+/**
+ * Cross-service Apply guidance (not owned by a single package).
+ * Keep small; prefer per-manifest applySteps for single-service hints.
+ */
+export const DESIGNER_CROSS_GUIDANCE: DesignerCrossGuidance[] = [
+  {
+    id: "guidance-ag-hap",
+    whenAll: ["haproxy", "auth-gateway"],
+    label: "HAProxy ↔ Auth Gateway",
+    messageKey: "designer.applySteps.guidanceAuthGateway",
+  },
+];
+

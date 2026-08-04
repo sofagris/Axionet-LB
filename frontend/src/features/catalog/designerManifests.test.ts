@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  DESIGNER_CROSS_GUIDANCE,
   DESIGNER_MANIFESTS,
   designerManifestByCatalogId,
   designerRoleSchema,
@@ -39,5 +40,12 @@ describe("designerManifests", () => {
   it("marks haproxy hydrate capability for future adapter registry", () => {
     expect(DESIGNER_MANIFESTS.find((m) => m.catalogId === "haproxy")?.hydrate).toBe("poll");
     expect(DESIGNER_MANIFESTS.find((m) => m.catalogId === "frr")?.hydrate).toBe("none");
+  });
+
+  it("declares detail and apply templates for deployable services", () => {
+    const hap = designerManifestByCatalogId("haproxy");
+    expect(hap?.detailPathTemplate).toContain("{serviceId}");
+    expect(hap?.applySteps?.componentExtras?.[0]?.whenRole).toBe("error-page");
+    expect(DESIGNER_CROSS_GUIDANCE[0]?.whenAll).toEqual(["haproxy", "auth-gateway"]);
   });
 });

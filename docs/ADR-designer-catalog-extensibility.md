@@ -29,8 +29,9 @@ HAProxy fetch, fingerprint, poll, and graph↔config mapping. These are domain-r
 
 ## Consequences
 
-- Step 1 (this change): consolidate trees + role props into `catalog/designerManifests.ts`; Designer modules become thin readers.
-- Later: capability registry, declarative applySteps/detailPath, backend-published manifests for App Store plugins without GUI redeploy.
+- Step 1: consolidate trees + role props into `catalog/designerManifests.ts`; Designer modules become thin readers.
+- Step 2–3: canvas uses `designerCapabilities(serviceType)` instead of `=== "haproxy"`; apply/detail paths come from manifest templates (`detailPathTemplate`, `applySteps`).
+- Later: backend-published manifests for App Store plugins without GUI redeploy; additional hydrate adapters register beside HAProxy.
 - Catalog `flowNodes` / `flowEdges` remain marketing/blueprint previews until they are derived from or replaced by the designer manifest.
 
 ## References

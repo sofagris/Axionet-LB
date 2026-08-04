@@ -10,6 +10,7 @@ import {
   type HaproxyConfigSnapshot,
 } from "./haproxyConfigFingerprint";
 import { applyHydratedGroup, hydrateHaproxyGraph } from "./haproxyGraphMapper";
+import { designerCapabilities } from "./serviceCapabilities";
 import type { DesignerEdge, DesignerNode } from "./types";
 
 export type LinkedHaproxyGroup = {
@@ -20,13 +21,13 @@ export type LinkedHaproxyGroup = {
   brand?: CatalogBrand;
 };
 
-/** HAProxy group.frames on the canvas that are linked to a live instance. */
+/** Linked groups whose service adapter supports live sync (manifest hydrate: poll). */
 export function linkedHaproxyGroups(nodes: DesignerNode[]): LinkedHaproxyGroup[] {
   const out: LinkedHaproxyGroup[] = [];
   for (const n of nodes) {
     if (n.data.kind !== "group.frame") continue;
-    if (n.data.serviceType !== "haproxy") continue;
-    if (!n.data.serviceId) continue;
+    if (!n.data.serviceId || !n.data.serviceType) continue;
+    if (!designerCapabilities(n.data.serviceType).canLiveSync) continue;
     out.push({
       groupId: n.id,
       serviceId: n.data.serviceId,

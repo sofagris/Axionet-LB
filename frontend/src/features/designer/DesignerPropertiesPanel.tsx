@@ -5,6 +5,7 @@ import type { Vip } from "../../types/vips";
 import { componentPropFields } from "./componentProps";
 import { FillAppearanceFields } from "./FillAppearanceFields";
 import { createPlacementDomain } from "./placementDomains";
+import { designerCapabilities } from "./serviceCapabilities";
 import {
   createWizardPath,
   instanceDetailPath,
@@ -429,7 +430,7 @@ export function DesignerPropertiesPanel({
           ) : null}
           {data.kind === "group.frame" &&
           data.serviceId &&
-          data.serviceType === "haproxy" &&
+          designerCapabilities(data.serviceType).canHydrate &&
           onRefreshFromInstance ? (
             <button
               type="button"

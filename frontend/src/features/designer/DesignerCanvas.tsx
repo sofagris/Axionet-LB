@@ -37,6 +37,7 @@ import {
 } from "./grouping";
 import { getActivePaletteDrag, setActivePaletteDrag } from "./paletteDrag";
 import { resolvePaletteDropTarget } from "./paletteDropTarget";
+import { designerCapabilities } from "./serviceCapabilities";
 import {
   DESIGNER_DND_MIME,
   newEdgeId,
@@ -82,10 +83,11 @@ type Props = {
   snapToGrid?: boolean;
   /** Increment to trigger fitView after layout. */
   fitViewNonce?: number;
-  /** Fired after a HAProxy instance tree skeleton is placed — parent should hydrate from API. */
-  onHaproxyInstanceDropped?: (info: {
+  /** Fired after a hydratable instance tree skeleton is placed — parent should hydrate from API. */
+  onHydratableInstanceDropped?: (info: {
     groupId: string;
     serviceId: string;
+    serviceType: string;
     label: string;
     catalogSlug?: string;
     brand?: DesignerNodeData["brand"];
@@ -103,7 +105,7 @@ function DesignerCanvasInner({
   onSelectionChange,
   snapToGrid = false,
   fitViewNonce = 0,
-  onHaproxyInstanceDropped,
+  onHydratableInstanceDropped,
 }: Props) {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -211,13 +213,17 @@ function DesignerCanvasInner({
       const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
       const drop = buildDropGraph(position, payload);
       let placedGroupId: string | null = null;
+      const dropServiceType =
+        payload.source === "instance" ? payload.serviceType : undefined;
+      const shouldHydrate =
+        Boolean(dropServiceType) &&
+        designerCapabilities(dropServiceType).canHydrate &&
+        (payload.source === "instance"
+          ? (payload.dropMode ?? "tree") === "tree"
+          : false);
       onNodes((current) => {
         let next = placeDropNodes(current, drop.nodes, position);
-        if (
-          payload.source === "instance" &&
-          payload.serviceType === "haproxy" &&
-          (payload.dropMode ?? "tree") === "tree"
-        ) {
+        if (shouldHydrate && payload.source === "instance") {
           const group = next.find(
             (n) =>
               n.data.kind === "group.frame" &&
@@ -239,20 +245,21 @@ function DesignerCanvasInner({
 
       if (
         placedGroupId &&
+        shouldHydrate &&
         payload.source === "instance" &&
-        payload.serviceType === "haproxy" &&
-        onHaproxyInstanceDropped
+        onHydratableInstanceDropped
       ) {
-        onHaproxyInstanceDropped({
+        onHydratableInstanceDropped({
           groupId: placedGroupId,
           serviceId: payload.serviceId,
+          serviceType: payload.serviceType,
           label: payload.label,
           catalogSlug: payload.catalogSlug,
           brand: payload.brand,
         });
       }
     },
-    [onEdges, onHaproxyInstanceDropped, onNodes, screenToFlowPosition],
+    [onEdges, onHydratableInstanceDropped, onNodes, screenToFlowPosition],
   );
 
   const onNodeContextMenu = useCallback((event: MouseEvent, node: Node) => {

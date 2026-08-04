@@ -210,6 +210,8 @@ function shortId(): string {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 }
 
+import { designerInstanceDetailPath } from "./serviceCapabilities";
+
 export function newNodeId(): string {
   return `n_${shortId()}`;
 }
@@ -218,12 +220,9 @@ export function newEdgeId(): string {
   return `e_${shortId()}`;
 }
 
+/** Instance detail path from Catalog designer manifest (unknown → /instances). */
 export function instanceDetailPath(serviceType: string, serviceId: string): string {
-  const known = ["haproxy", "frr", "keycloak-mgmt", "keycloak-apps", "auth-gateway"];
-  if (known.includes(serviceType)) {
-    return `/instances/${serviceId}/${serviceType}`;
-  }
-  return `/instances`;
+  return designerInstanceDetailPath(serviceType, serviceId);
 }
 
 export function createWizardPath(serviceType: string): string {

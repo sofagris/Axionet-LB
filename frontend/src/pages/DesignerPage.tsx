@@ -71,6 +71,7 @@ import {
 } from "../features/designer/haproxyRehydrate";
 import type { HaproxyConfigSnapshot } from "../features/designer/haproxyConfigFingerprint";
 import { useLinkedHaproxySync } from "../features/designer/useLinkedHaproxySync";
+import { designerCapabilities } from "../features/designer/serviceCapabilities";
 import {
   attachGroupsToMatchingLanes,
   deleteGroups,
@@ -634,8 +635,17 @@ export function DesignerPage() {
     ],
   );
 
-  const onHaproxyInstanceDropped = useCallback(
-    (info: LinkedHaproxyGroup) => {
+  const onHydratableInstanceDropped = useCallback(
+    (info: {
+      groupId: string;
+      serviceId: string;
+      serviceType: string;
+      label: string;
+      catalogSlug?: string;
+      brand?: LinkedHaproxyGroup["brand"];
+    }) => {
+      if (!designerCapabilities(info.serviceType).canHydrate) return;
+      // HAProxy is the only hydrate adapter registered today.
       applyDomainFromLocalLb(info.groupId);
       void rehydrateHaproxyGroup(info, { waitRaf: true });
     },
@@ -644,9 +654,8 @@ export function DesignerPage() {
 
   const onRefreshFromInstance = useCallback(() => {
     if (!selectedNode || selectedNode.data.kind !== "group.frame") return;
-    if (!selectedNode.data.serviceId || selectedNode.data.serviceType !== "haproxy") {
-      return;
-    }
+    if (!selectedNode.data.serviceId) return;
+    if (!designerCapabilities(selectedNode.data.serviceType).canHydrate) return;
     void rehydrateHaproxyGroup(
       {
         groupId: selectedNode.id,
@@ -1094,7 +1103,7 @@ export function DesignerPage() {
                   onSelectionChange={onSelectionChange}
                   snapToGrid={layoutPrefs.snapToGrid}
                   fitViewNonce={fitViewNonce}
-                  onHaproxyInstanceDropped={(info) => onHaproxyInstanceDropped(info)}
+                  onHydratableInstanceDropped={(info) => onHydratableInstanceDropped(info)}
                 />
               </div>
             </div>
