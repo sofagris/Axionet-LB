@@ -13,6 +13,16 @@ import type { DesignerNode } from "./types";
 
 const SYNC_INTERVAL_MS = 8_000;
 
+/** Decide how a polled live-config fingerprint should be handled. */
+export function linkedSyncAction(
+  previous: string | undefined,
+  next: string,
+): "skip" | "baseline" | "rehydrate" {
+  if (previous === next) return "skip";
+  if (previous === undefined) return "baseline";
+  return "rehydrate";
+}
+
 type Options = {
   nodes: DesignerNode[];
   /** Last applied fingerprint per serviceId (shared with drop/manual refresh). */
@@ -29,7 +39,9 @@ type Options = {
 
 /**
  * Poll live HAProxy config for linked instance groups on the Designer canvas.
- * Triggers onConfigChanged only when the fingerprint changes.
+ * Triggers onConfigChanged only when the fingerprint changes from a previously
+ * recorded baseline (first observation after load only seeds the map so opening
+ * a design does not clobber the saved canvas).
  */
 export function useLinkedHaproxySync({
   nodes,
@@ -82,7 +94,13 @@ export function useLinkedHaproxySync({
       if (!q?.isSuccess || !q.data) continue;
 
       const fp = fingerprintHaproxyConfig(q.data);
-      if (fingerprintsRef.current.get(serviceId) === fp) continue;
+      const previous = fingerprintsRef.current.get(serviceId);
+      const action = linkedSyncAction(previous, fp);
+      if (action === "skip") continue;
+      if (action === "baseline") {
+        fingerprintsRef.current.set(serviceId, fp);
+        continue;
+      }
 
       const groupLinks = linksByServiceRef.current.get(serviceId) ?? [];
       for (const link of groupLinks) {

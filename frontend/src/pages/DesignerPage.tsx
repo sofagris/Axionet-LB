@@ -193,6 +193,12 @@ export function DesignerPage() {
   const inFlightRef = useRef(new Set<string>());
   /** When true, next flow stamp change from our own save must not remount/rehydrate. */
   const preserveLocalGraphRef = useRef(false);
+  /** Gate live HAProxy sync until domain remap after load has finished. */
+  const [haproxySyncReady, setHaproxySyncReady] = useState(false);
+  const graphRef = useRef({ nodes, edges });
+  useEffect(() => {
+    graphRef.current = { nodes, edges };
+  }, [nodes, edges]);
 
   useEffect(() => {
     const sync = () => setFullWidth(readDesignerFullWidth());
@@ -244,6 +250,7 @@ export function DesignerPage() {
       inFlightRef.current.clear();
       preserveLocalGraphRef.current = false;
       setSavedFingerprint(null);
+      setHaproxySyncReady(false);
       return;
     }
     if (!flowQuery.data || flowQuery.data.id !== flowId) return;
@@ -258,6 +265,7 @@ export function DesignerPage() {
     loadedStampRef.current = stamp;
     fingerprintsRef.current.clear();
     inFlightRef.current.clear();
+    setHaproxySyncReady(false);
     const doc = parseGraphDocument(flowQuery.data.graph_json);
     const migrated = migratePlacementDomains(doc.nodes, doc.placementDomains ?? []);
     const loadedName = flowQuery.data.name;
@@ -294,13 +302,15 @@ export function DesignerPage() {
           });
         }
         platform = (await platformDomainsQuery.refetch()).data?.map(fromPlatformRecord) ?? [];
-        const remapped = attachGroupsToMatchingLanes(
-          remapNodesToPlatformDomains(loadedNodes, platform),
-        );
         setPlacementDomains(platform);
+        // Remap whatever is currently on the canvas (never clobber a concurrent hydrate).
+        const { nodes: currentNodes, edges: currentEdges } = graphRef.current;
+        const remapped = attachGroupsToMatchingLanes(
+          remapNodesToPlatformDomains(currentNodes, platform),
+        );
         setNodes(remapped);
         setSavedFingerprint(
-          designFingerprint(loadedName, remapped, loadedEdges, platform),
+          designFingerprint(loadedName, remapped, currentEdges, platform),
         );
       } catch {
         // Keep design-local registry if platform sync fails.
@@ -313,6 +323,8 @@ export function DesignerPage() {
             migrated.placementDomains,
           ),
         );
+      } finally {
+        setHaproxySyncReady(true);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run on flow stamp change
@@ -533,11 +545,6 @@ export function DesignerPage() {
     [placementDomains, nodes],
   );
 
-  const graphRef = useRef({ nodes, edges });
-  useEffect(() => {
-    graphRef.current = { nodes, edges };
-  }, [nodes, edges]);
-
   const rehydrateHaproxyGroup = useCallback(
     async (
       link: LinkedHaproxyGroup,
@@ -665,7 +672,7 @@ export function DesignerPage() {
     fingerprintsRef,
     inFlightRef,
     onConfigChanged: onLinkedConfigChanged,
-    enabled: Boolean(flowId),
+    enabled: Boolean(flowId) && haproxySyncReady,
   });
 
   const applyNodeDeletion = useCallback(
