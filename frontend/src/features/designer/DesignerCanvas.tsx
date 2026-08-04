@@ -18,6 +18,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { useReactFlow } from "@xyflow/react";
 import { useTranslation } from "react-i18next";
+import { useTheme } from "../theme/ThemeProvider";
 import { DesignerFlowNode } from "./DesignerNode";
 import { DesignerGroupNode } from "./DesignerGroupNode";
 import { DesignerLaneNode } from "./DesignerLaneNode";
@@ -44,6 +45,14 @@ import {
   type DesignerNodeData,
   type PaletteDragPayload,
 } from "./types";
+
+function minimapNodeColor(node: Node): string {
+  const data = (node as DesignerNode).data;
+  if (data?.fillColor) return data.fillColor;
+  if (node.type === "designerLane") return "var(--ax-line)";
+  if (node.type === "designerGroup") return "var(--ax-accent)";
+  return "var(--ax-ink-muted)";
+}
 
 const nodeTypes: NodeTypes = {
   designer: DesignerFlowNode,
@@ -97,6 +106,7 @@ function DesignerCanvasInner({
   onHaproxyInstanceDropped,
 }: Props) {
   const { t } = useTranslation();
+  const { theme } = useTheme();
   const { screenToFlowPosition, fitView } = useReactFlow();
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
@@ -303,6 +313,7 @@ function DesignerCanvasInner({
           onMoveEnd={(_, vp) => onViewportChange(vp)}
           nodeTypes={nodeTypes}
           fitView
+          colorMode={theme}
           multiSelectionKeyCode={["Meta", "Control", "Shift"]}
           edgesFocusable
           elementsSelectable
@@ -313,9 +324,17 @@ function DesignerCanvasInner({
           deleteKeyCode={null}
           className="designer-flow"
         >
-          <Background gap={16} size={1} />
-          <Controls />
-          <MiniMap pannable zoomable />
+          <Background gap={16} size={1} color="var(--ax-line)" />
+          <Controls showInteractive={false} />
+          <MiniMap
+            pannable
+            zoomable
+            bgColor="var(--ax-paper-elevated)"
+            maskColor="color-mix(in srgb, var(--ax-ink) 28%, transparent)"
+            nodeColor={minimapNodeColor}
+            nodeStrokeColor="var(--ax-line)"
+            nodeBorderRadius={2}
+          />
         </ReactFlow>
 
         {contextMenu && menuNode ? (

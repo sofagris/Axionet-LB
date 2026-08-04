@@ -133,6 +133,53 @@ html[data-theme="dark"] {
   pointer-events: all;
 }
 
+/* Align React Flow chrome with Axionet paper/ink tokens (light + dark). */
+.designer-flow {
+  --xy-controls-button-background-color-default: var(--ax-paper-elevated);
+  --xy-controls-button-background-color-hover-default: var(--ax-paper);
+  --xy-controls-button-color-default: var(--ax-ink);
+  --xy-controls-button-color-hover-default: var(--ax-ink);
+  --xy-controls-button-border-color-default: var(--ax-line);
+  --xy-controls-box-shadow-default: none;
+  --xy-minimap-background-color-default: var(--ax-paper-elevated);
+  --xy-background-pattern-dots-color-default: var(--ax-line);
+  --xy-background-pattern-lines-color-default: var(--ax-line);
+  --xy-background-pattern-cross-color-default: var(--ax-line);
+}
+
+.designer-flow .react-flow__controls {
+  overflow: hidden;
+  border: 1px solid var(--ax-line);
+  border-radius: 0.375rem;
+  box-shadow: none;
+}
+
+.designer-flow .react-flow__controls-button {
+  background: var(--ax-paper-elevated);
+  border-bottom: 1px solid var(--ax-line);
+  fill: var(--ax-ink);
+}
+
+.designer-flow .react-flow__controls-button:hover {
+  background: var(--ax-paper);
+}
+
+.designer-flow .react-flow__controls-button svg {
+  fill: currentColor;
+  color: var(--ax-ink);
+}
+
+.designer-flow .react-flow__minimap {
+  overflow: hidden;
+  border: 1px solid var(--ax-line);
+  border-radius: 0.375rem;
+  background: var(--ax-paper-elevated);
+}
+
+.designer-flow .react-flow__minimap-svg {
+  background: var(--ax-paper-elevated);
+}
+
 @keyframes designer-drop-target-pulse {
   0%,
   100% {
