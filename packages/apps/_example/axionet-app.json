@@ -1,0 +1,10 @@
+{
+  "apiVersion": "axionet.app/v1",
+  "id": "example",
+  "serviceType": "example",
+  "version": "0.1.0",
+  "capabilities": {
+    "hydrate": "none",
+    "actions": ["start", "stop", "logs"]
+  }
+}

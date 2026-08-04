@@ -1,0 +1,8 @@
+{
+  "name": "example-demo",
+  "bind": "*:8080",
+  "upstream": {
+    "address": "10.0.0.10",
+    "port": 80
+  }
+}

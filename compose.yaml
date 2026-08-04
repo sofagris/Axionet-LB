@@ -1,6 +1,8 @@
 services:
   api:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: ax-api
     restart: unless-stopped
     pid: host
@@ -17,6 +19,8 @@ services:
       HOST_SYSFS_ROOT: /host/sys
       HOST_PROC_ROOT: /host/proc
       HOST_NET_NSENTER: "true"
+      AXIONET_APPS_DIR: /opt/axionet/packages/apps
+      AXIONET_SCHEMAS_DIR: /opt/axionet/docs/schemas
       AX_GUI_PUBLIC_URL: ${AX_GUI_PUBLIC_URL:-http://192.168.50.195}
       AX_AUTH_SECRET_KEY: ${AX_AUTH_SECRET_KEY:-axionet-lb-dev-secret-change-me}
       AX_AUTH_TOKEN_EXPIRE_HOURS: ${AX_AUTH_TOKEN_EXPIRE_HOURS:-12}

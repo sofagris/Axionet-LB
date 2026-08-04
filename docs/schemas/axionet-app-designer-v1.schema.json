@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axionet.local/schemas/axionet-app-designer-v1.schema.json",
+  "title": "Axionet app designer.json",
+  "description": "DesignerManifest shape for an axionet.app/v1 package.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["catalogId", "serviceType", "components", "chain", "roles"],
+  "properties": {
+    "catalogId": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "serviceType": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "components": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "role"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "label": { "type": "string", "minLength": 1 },
+          "role": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "chain": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from", "to"],
+        "properties": {
+          "from": { "type": "string", "minLength": 1 },
+          "to": { "type": "string", "minLength": 1 },
+          "label": { "type": "string" }
+        }
+      }
+    },
+    "roles": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["props"],
+        "properties": {
+          "props": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["key", "labelKey"],
+              "properties": {
+                "key": { "type": "string", "minLength": 1 },
+                "labelKey": { "type": "string", "minLength": 1 },
+                "placeholder": { "type": "string" },
+                "default": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "hydrate": {
+      "type": "string",
+      "enum": ["none", "onDrop", "poll"]
+    },
+    "detailPathTemplate": { "type": "string", "minLength": 1 },
+    "applySteps": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "createUnbound": { "$ref": "#/$defs/applyLink" },
+        "openBound": { "$ref": "#/$defs/applyLink" },
+        "componentExtras": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["whenRole", "hrefTemplate", "messageKey"],
+            "properties": {
+              "whenRole": { "type": "string", "minLength": 1 },
+              "hrefTemplate": { "type": "string", "minLength": 1 },
+              "messageKey": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "applyLink": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hrefTemplate", "messageKey"],
+      "properties": {
+        "hrefTemplate": { "type": "string", "minLength": 1 },
+        "messageKey": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

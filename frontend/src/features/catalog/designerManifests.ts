@@ -248,21 +248,41 @@ export const DESIGNER_MANIFESTS: DesignerManifest[] = [
   },
 ];
 
+/** Package manifests published by GET /api/v1/app-packages/designer-manifests. */
+let remoteDesignerManifests: DesignerManifest[] = [];
+
+/**
+ * Merge API package manifests into the in-memory registry.
+ * Built-in DESIGNER_MANIFESTS win on catalogId / serviceType conflicts.
+ */
+export function setRemoteDesignerManifests(manifests: DesignerManifest[]): void {
+  remoteDesignerManifests = manifests;
+}
+
+export function allDesignerManifests(): DesignerManifest[] {
+  const builtInIds = new Set(DESIGNER_MANIFESTS.map((m) => m.catalogId));
+  const builtInTypes = new Set(DESIGNER_MANIFESTS.map((m) => m.serviceType));
+  const extras = remoteDesignerManifests.filter(
+    (m) => !builtInIds.has(m.catalogId) && !builtInTypes.has(m.serviceType),
+  );
+  return [...DESIGNER_MANIFESTS, ...extras];
+}
+
 export function designerManifestByCatalogId(
   catalogId: string,
 ): DesignerManifest | undefined {
-  return DESIGNER_MANIFESTS.find((m) => m.catalogId === catalogId);
+  return allDesignerManifests().find((m) => m.catalogId === catalogId);
 }
 
 export function designerManifestByServiceType(
   serviceType: string,
 ): DesignerManifest | undefined {
-  return DESIGNER_MANIFESTS.find((m) => m.serviceType === serviceType);
+  return allDesignerManifests().find((m) => m.serviceType === serviceType);
 }
 
 /** First matching role schema across manifests (roles are unique by convention today). */
 export function designerRoleSchema(role: string): DesignerRoleSchema | undefined {
-  for (const manifest of DESIGNER_MANIFESTS) {
+  for (const manifest of allDesignerManifests()) {
     const schema = manifest.roles[role];
     if (schema) return schema;
   }
@@ -270,7 +290,7 @@ export function designerRoleSchema(role: string): DesignerRoleSchema | undefined
 }
 
 export function designerServiceTrees(): DesignerServiceTree[] {
-  return DESIGNER_MANIFESTS.map(({ catalogId, serviceType, components, chain }) => ({
+  return allDesignerManifests().map(({ catalogId, serviceType, components, chain }) => ({
     catalogId,
     serviceType,
     components,

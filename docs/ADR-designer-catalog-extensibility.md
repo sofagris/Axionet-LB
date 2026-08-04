@@ -31,10 +31,13 @@ HAProxy fetch, fingerprint, poll, and graph↔config mapping. These are domain-r
 
 - Step 1: consolidate trees + role props into `catalog/designerManifests.ts`; Designer modules become thin readers.
 - Step 2–3: canvas uses `designerCapabilities(serviceType)` instead of `=== "haproxy"`; apply/detail paths come from manifest templates (`detailPathTemplate`, `applySteps`).
-- Later: backend-published manifests for App Store plugins without GUI redeploy; additional hydrate adapters register beside HAProxy.
-- Catalog `flowNodes` / `flowEdges` remain marketing/blueprint previews until they are derived from or replaced by the designer manifest.
+- Package contract (v1): declarative on-disk layout under `packages/apps/<id>/` — see [ADR-app-package-contract.md](ADR-app-package-contract.md).
+- Backend publishes package designer/catalog payloads via `/api/v1/app-packages` (GUI merges remote designer manifests without redeploy for new package dirs).
+- Additional hydrate adapters register beside HAProxy when a package needs live sync.
+- Catalog `flowNodes` / `flowEdges` remain marketing/blueprint previews until they are derived from the package `designer.json` (API already derives them on package read).
 
 ## References
 
 - Frontend: `features/catalog/designerManifests.ts`, `features/designer/*`
+- Package contract: [ADR-app-package-contract.md](ADR-app-package-contract.md), `docs/schemas/`, `packages/apps/_example/`
 - Backend today: `plugins/catalog.py` service definitions (no designer fields yet)

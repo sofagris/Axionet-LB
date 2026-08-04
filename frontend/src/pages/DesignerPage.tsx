@@ -16,6 +16,7 @@ import {
   useDeleteDesignFlow,
   useDesignFlow,
   useDesignFlows,
+  useRemoteDesignerManifests,
   useUpdateDesignFlow,
 } from "../features/designer/hooks";
 import { CatalogPalette } from "../features/designer/CatalogPalette";
@@ -153,6 +154,7 @@ export function DesignerPage() {
   const flowId = searchParams.get("flow");
 
   const flowsQuery = useDesignFlows();
+  useRemoteDesignerManifests();
   const flowQuery = useDesignFlow(flowId);
   const createMutation = useCreateDesignFlow();
   const updateMutation = useUpdateDesignFlow(flowId);

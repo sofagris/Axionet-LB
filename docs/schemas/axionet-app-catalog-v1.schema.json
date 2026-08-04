@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axionet.local/schemas/axionet-app-catalog-v1.schema.json",
+  "title": "Axionet app catalog.json",
+  "description": "Catalog listing card for an axionet.app/v1 package. flowNodes/flowEdges are derived from designer.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "summary",
+    "description",
+    "kind",
+    "category",
+    "brand",
+    "tags",
+    "capabilities"
+  ],
+  "properties": {
+    "name": { "type": "string", "minLength": 1 },
+    "summary": { "type": "string", "minLength": 1 },
+    "description": { "type": "string", "minLength": 1 },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "service",
+        "core-service",
+        "stack",
+        "blueprint",
+        "integration",
+        "provider"
+      ]
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "traffic",
+        "core",
+        "security",
+        "observability",
+        "blueprints",
+        "providers"
+      ]
+    },
+    "brand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["monogram", "accent"],
+      "properties": {
+        "monogram": { "type": "string", "minLength": 1, "maxLength": 4 },
+        "accent": {
+          "type": "string",
+          "enum": [
+            "traffic",
+            "routing",
+            "core",
+            "security",
+            "observe",
+            "provider",
+            "blueprint"
+          ]
+        }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "capabilities": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1
+    },
+    "dependencies": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "requirements": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "primaryAction": {
+      "type": "string",
+      "enum": [
+        "create-instance",
+        "create-service",
+        "deploy-stack",
+        "start-wizard",
+        "configure-integration",
+        "connect-provider",
+        "manage-provider"
+      ]
+    },
+    "implementationHint": { "type": "string" },
+    "notes": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

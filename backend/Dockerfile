@@ -3,7 +3,9 @@ FROM python:3.12.11-slim-bookworm
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    AX_LB_DATA_DIR=/var/lib/ax-lb
+    AX_LB_DATA_DIR=/var/lib/ax-lb \
+    AXIONET_APPS_DIR=/opt/axionet/packages/apps \
+    AXIONET_SCHEMAS_DIR=/opt/axionet/docs/schemas
 
 WORKDIR /app
 
@@ -11,10 +13,12 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends curl iproute2 util-linux ethtool \
     && rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml ./
-COPY app ./app
-COPY alembic.ini ./
-COPY alembic ./alembic
+COPY backend/pyproject.toml ./
+COPY backend/app ./app
+COPY backend/alembic.ini ./
+COPY backend/alembic ./alembic
+COPY packages/apps /opt/axionet/packages/apps
+COPY docs/schemas /opt/axionet/docs/schemas
 
 RUN pip install --upgrade pip \
     && pip install .

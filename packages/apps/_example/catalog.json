@@ -1,0 +1,16 @@
+{
+  "name": "Example App",
+  "summary": "Minimal reference package for the axionet.app/v1 contract.",
+  "description": "Skeleton used to freeze and validate the App Store package layout. Not a deployable runtime service.",
+  "kind": "service",
+  "category": "traffic",
+  "brand": {
+    "monogram": "EX",
+    "accent": "traffic"
+  },
+  "tags": ["example", "contract", "skeleton"],
+  "capabilities": ["designer-palette", "instance-schema"],
+  "primaryAction": "create-instance",
+  "implementationHint": "Declarative package only; no control-plane adapter.",
+  "notes": ["Reference package for CI schema validation."]
+}

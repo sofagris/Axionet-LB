@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axionet.local/schemas/axionet-app-v1.schema.json",
+  "title": "Axionet app root manifest",
+  "description": "Root axionet-app.json for packages/apps/<id>/ (apiVersion axionet.app/v1).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "id", "serviceType", "version", "capabilities"],
+  "properties": {
+    "apiVersion": {
+      "type": "string",
+      "const": "axionet.app/v1"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "serviceType": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+([.-][A-Za-z0-9.-]+)?$"
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hydrate", "actions"],
+      "properties": {
+        "hydrate": {
+          "type": "string",
+          "enum": ["none", "onDrop", "poll"]
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "start",
+              "stop",
+              "restart",
+              "reload",
+              "validate",
+              "reconcile",
+              "logs"
+            ]
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "files": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "catalog": { "type": "string", "minLength": 1 },
+        "designer": { "type": "string", "minLength": 1 },
+        "instanceSchema": { "type": "string", "minLength": 1 },
+        "desiredStateExample": { "type": "string", "minLength": 1 },
+        "icon": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

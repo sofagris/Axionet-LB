@@ -1,0 +1,63 @@
+{
+  "catalogId": "example",
+  "serviceType": "example",
+  "hydrate": "none",
+  "detailPathTemplate": "/instances/{serviceId}/{serviceType}",
+  "applySteps": {
+    "createUnbound": {
+      "hrefTemplate": "/instances/new?type={serviceType}",
+      "messageKey": "designer.applySteps.createInstance"
+    },
+    "openBound": {
+      "hrefTemplate": "/instances/{serviceId}/{serviceType}",
+      "messageKey": "designer.applySteps.openInstance"
+    }
+  },
+  "components": [
+    {
+      "id": "listener",
+      "label": "Listener",
+      "role": "listener"
+    },
+    {
+      "id": "upstream",
+      "label": "Upstream",
+      "role": "upstream"
+    }
+  ],
+  "chain": [
+    {
+      "from": "listener",
+      "to": "upstream",
+      "label": "forward"
+    }
+  ],
+  "roles": {
+    "listener": {
+      "props": [
+        {
+          "key": "bind",
+          "labelKey": "designer.props.bind",
+          "placeholder": "*:8080",
+          "default": "*:8080"
+        }
+      ]
+    },
+    "upstream": {
+      "props": [
+        {
+          "key": "address",
+          "labelKey": "designer.props.address",
+          "placeholder": "10.0.0.10",
+          "default": ""
+        },
+        {
+          "key": "port",
+          "labelKey": "designer.props.port",
+          "placeholder": "80",
+          "default": "80"
+        }
+      ]
+    }
+  }
+}

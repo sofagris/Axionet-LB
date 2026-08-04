@@ -82,6 +82,16 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("AX_AUTH_PUBLIC_BASE_URL", "AUTH_PUBLIC_BASE_URL"),
         description="Public API base for OIDC redirect_uri. Empty = derive from request.",
     )
+    axionet_apps_dir: str = Field(
+        default="",
+        validation_alias=AliasChoices("AXIONET_APPS_DIR"),
+        description="Directory of axionet.app/v1 packages (packages/apps). Empty = resolve from repo.",
+    )
+    axionet_schemas_dir: str = Field(
+        default="",
+        validation_alias=AliasChoices("AXIONET_SCHEMAS_DIR"),
+        description="Directory of axionet.app JSON schemas. Empty = resolve from repo.",
+    )
 
 
 @lru_cache
