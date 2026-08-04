@@ -218,7 +218,9 @@ export function addNodeToGroup(
 ): DesignerNode[] {
   const group = allNodes.find((n) => n.id === groupId);
   const node = allNodes.find((n) => n.id === nodeId);
-  if (!group || !node || !isGroupNode(group) || isGroupNode(node)) return allNodes;
+  if (!group || !node || !isGroupNode(group) || isGroupNode(node) || isLaneNode(node)) {
+    return allNodes;
+  }
   if (node.parentId === groupId) return allNodes;
 
   const byId = new Map(allNodes.map((n) => [n.id, n]));

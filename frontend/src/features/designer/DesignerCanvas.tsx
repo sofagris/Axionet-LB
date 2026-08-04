@@ -257,6 +257,8 @@ function DesignerCanvasInner({
 
   const onNodeContextMenu = useCallback((event: MouseEvent, node: Node) => {
     event.preventDefault();
+    // Lanes are containers only — no group membership actions apply.
+    if (isLaneNode(node as DesignerNode)) return;
     setContextMenu({
       x: event.clientX,
       y: event.clientY,
@@ -269,9 +271,15 @@ function DesignerCanvasInner({
   const groups = useMemo(() => listGroups(nodes), [nodes]);
   const lanes = useMemo(() => listLanes(nodes), [nodes]);
   const menuNode = contextMenu?.node;
-  const canRemoveFromGroup = Boolean(menuNode && !isGroupNode(menuNode) && menuNode.parentId);
+  const canRemoveFromGroup = Boolean(
+    menuNode && !isGroupNode(menuNode) && !isLaneNode(menuNode) && menuNode.parentId,
+  );
   const canAddToGroup = Boolean(
-    menuNode && !isGroupNode(menuNode) && !menuNode.parentId && groups.length > 0,
+    menuNode &&
+      !isGroupNode(menuNode) &&
+      !isLaneNode(menuNode) &&
+      !menuNode.parentId &&
+      groups.length > 0,
   );
   const menuParentIsLane = Boolean(
     menuNode?.parentId && nodes.some((n) => n.id === menuNode.parentId && isLaneNode(n)),
