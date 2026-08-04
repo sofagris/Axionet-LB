@@ -325,7 +325,7 @@ function DesignerCanvasInner({
           className="designer-flow"
         >
           <Background gap={16} size={1} color="var(--ax-line)" />
-          <Controls showInteractive={false} />
+          <Controls />
           <MiniMap
             pannable
             zoomable
