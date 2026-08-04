@@ -11,7 +11,12 @@ from app.app_packages.loader import (
     list_loaded_packages,
 )
 from app.core.config import get_settings
-from app.schemas.app_packages import AppPackageRead, AppPackageSummary, DesignerManifestRead
+from app.schemas.app_packages import (
+    AppPackageCatalogCard,
+    AppPackageRead,
+    AppPackageSummary,
+    DesignerManifestRead,
+)
 
 router = APIRouter(prefix="/app-packages", tags=["app-packages"])
 
@@ -55,12 +60,44 @@ def _to_read(package: LoadedAppPackage) -> AppPackageRead:
     )
 
 
+def _to_catalog_card(package: LoadedAppPackage) -> AppPackageCatalogCard:
+    catalog = package.catalog
+    flow_nodes, flow_edges = derive_flow_from_designer(package.designer)
+    return AppPackageCatalogCard(
+        id=package.id,
+        serviceType=package.service_type,
+        version=package.version,
+        reference=package.reference,
+        name=str(catalog.get("name") or package.id),
+        summary=str(catalog.get("summary") or ""),
+        description=str(catalog.get("description") or catalog.get("summary") or ""),
+        kind=str(catalog.get("kind") or "service"),
+        category=str(catalog.get("category") or "traffic"),
+        brand=dict(catalog.get("brand") or {"monogram": package.id[:2].upper(), "accent": "traffic"}),
+        tags=list(catalog.get("tags") or []),
+        capabilities=list(catalog.get("capabilities") or []),
+        primaryAction=catalog.get("primaryAction"),
+        implementationHint=catalog.get("implementationHint"),
+        notes=list(catalog.get("notes") or []),
+        flowNodes=flow_nodes,
+        flowEdges=flow_edges,
+    )
+
+
 @router.get("", response_model=list[AppPackageSummary])
 def list_app_packages(
     include_reference: bool = Query(False, alias="includeReference"),
 ) -> list[AppPackageSummary]:
     packages = list_loaded_packages(include_reference=include_reference, **_path_kwargs())
     return [_to_summary(package) for package in packages]
+
+
+@router.get("/catalog", response_model=list[AppPackageCatalogCard])
+def list_app_package_catalog_cards(
+    include_reference: bool = Query(False, alias="includeReference"),
+) -> list[AppPackageCatalogCard]:
+    packages = list_loaded_packages(include_reference=include_reference, **_path_kwargs())
+    return [_to_catalog_card(package) for package in packages]
 
 
 @router.get("/designer-manifests", response_model=list[DesignerManifestRead])

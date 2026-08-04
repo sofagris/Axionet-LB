@@ -47,3 +47,27 @@ class DesignerManifestRead(BaseModel):
     hydrate: Literal["none", "onDrop", "poll"] | None = None
     detailPathTemplate: str | None = None
     applySteps: dict[str, Any] | None = None
+
+
+class AppPackageCatalogCard(BaseModel):
+    """Catalog-ready overlay card derived from package catalog.json + designer flow."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    serviceType: str
+    version: str
+    reference: bool = False
+    name: str
+    summary: str
+    description: str
+    kind: str
+    category: str
+    brand: dict[str, Any]
+    tags: list[str] = Field(default_factory=list)
+    capabilities: list[str] = Field(default_factory=list)
+    primaryAction: str | None = None
+    implementationHint: str | None = None
+    notes: list[str] = Field(default_factory=list)
+    flowNodes: list[dict[str, Any]] = Field(default_factory=list)
+    flowEdges: list[dict[str, Any]] = Field(default_factory=list)

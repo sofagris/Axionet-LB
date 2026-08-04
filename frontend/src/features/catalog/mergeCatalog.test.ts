@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { CATALOG_ITEMS } from "./catalogData";
 import { filterCatalogItems } from "./filterCatalog";
-import { createInstancePath, isRealCreateAction, mergeCatalogWithApi } from "./mergeCatalog";
+import {
+  createInstancePath,
+  isRealCreateAction,
+  mergeCatalogWithApi,
+  mergeCatalogWithPackages,
+} from "./mergeCatalog";
 
 describe("mergeCatalogWithApi", () => {
   it("overlays HAProxy version and enabled from API", () => {
@@ -37,6 +42,61 @@ describe("mergeCatalogWithApi", () => {
     ]);
     const hap = merged.find((i) => i.id === "haproxy");
     expect(isRealCreateAction(hap!)).toBe(false);
+  });
+});
+
+describe("mergeCatalogWithPackages", () => {
+  it("overlays package catalog and derived flow onto matching items", () => {
+    const merged = mergeCatalogWithPackages(CATALOG_ITEMS, [
+      {
+        id: "varnish",
+        serviceType: "varnish",
+        version: "0.1.0",
+        name: "Varnish",
+        summary: "HTTP reverse proxy cache.",
+        description: "From package",
+        kind: "service",
+        category: "traffic",
+        brand: { monogram: "VA", accent: "traffic" },
+        tags: ["cache"],
+        capabilities: ["HTTP cache"],
+        primaryAction: "create-service",
+        notes: ["from package"],
+        flowNodes: [
+          { id: "listen", label: "Listen", role: "varnish-listen" },
+          { id: "cache", label: "Cache", role: "varnish-cache" },
+        ],
+        flowEdges: [{ from: "listen", to: "cache", label: "vcl" }],
+      },
+    ]);
+    const varnish = merged.find((i) => i.id === "varnish");
+    expect(varnish?.description).toBe("From package");
+    expect(varnish?.notes).toEqual(["from package"]);
+    expect(varnish?.flowNodes?.map((n) => n.id)).toEqual(["listen", "cache"]);
+    expect(varnish?.deployableServiceType).toBe("varnish");
+  });
+
+  it("appends unknown non-reference packages", () => {
+    const merged = mergeCatalogWithPackages(CATALOG_ITEMS, [
+      {
+        id: "brand-new",
+        serviceType: "brand-new",
+        version: "1.0.0",
+        name: "Brand New",
+        summary: "New",
+        description: "Only in packages",
+        kind: "service",
+        category: "traffic",
+        brand: { monogram: "BN", accent: "traffic" },
+        tags: [],
+        capabilities: ["x"],
+        primaryAction: "create-service",
+        notes: [],
+        flowNodes: [],
+        flowEdges: [],
+      },
+    ]);
+    expect(merged.some((i) => i.id === "brand-new")).toBe(true);
   });
 });
 

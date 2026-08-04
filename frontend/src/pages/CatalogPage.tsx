@@ -1,13 +1,13 @@
 import { useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useServiceDefinitions } from "../features/catalog/hooks";
+import { useServiceDefinitions, useAppPackageCatalog } from "../features/catalog/hooks";
 import { CatalogDetailDrawer } from "../features/catalog/CatalogDetailDrawer";
 import { CatalogFeatured } from "../features/catalog/CatalogFeatured";
 import { CatalogFilters, parseCategoryParam, parseKindParam } from "../features/catalog/CatalogFilters";
 import { CatalogGrid } from "../features/catalog/CatalogGrid";
 import { filterCatalogItems } from "../features/catalog/filterCatalog";
-import { mergeCatalogWithApi } from "../features/catalog/mergeCatalog";
+import { mergeCatalogWithApi, mergeCatalogWithPackages } from "../features/catalog/mergeCatalog";
 import { MockActionDialog } from "../features/catalog/MockActionDialog";
 import type { CatalogItem } from "../features/catalog/catalogTypes";
 
@@ -15,6 +15,7 @@ export function CatalogPage() {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const catalogQuery = useServiceDefinitions();
+  const packagesQuery = useAppPackageCatalog();
   const [mockItem, setMockItem] = useState<CatalogItem | null>(null);
 
   const filters = useMemo(
@@ -28,10 +29,10 @@ export function CatalogPage() {
 
   const selectedSlug = searchParams.get("item");
 
-  const items = useMemo(
-    () => mergeCatalogWithApi(undefined, catalogQuery.data),
-    [catalogQuery.data],
-  );
+  const items = useMemo(() => {
+    const withPackages = mergeCatalogWithPackages(undefined, packagesQuery.data);
+    return mergeCatalogWithApi(withPackages, catalogQuery.data);
+  }, [packagesQuery.data, catalogQuery.data]);
 
   const filtered = useMemo(() => filterCatalogItems(items, filters), [items, filters]);
 

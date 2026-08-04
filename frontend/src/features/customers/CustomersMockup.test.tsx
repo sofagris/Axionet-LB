@@ -13,6 +13,12 @@ vi.mock("../../api/serviceDefinitions", () => ({
   fetchServiceDefinition: vi.fn(),
 }));
 
+vi.mock("../../api/appPackages", () => ({
+  fetchAppPackageCatalog: vi.fn(async () => []),
+  fetchAppPackages: vi.fn(async () => []),
+  fetchDesignerManifests: vi.fn(async () => []),
+}));
+
 vi.mock("../../api/networks", () => ({
   fetchNetworks: vi.fn(async () => []),
   createNetwork: vi.fn(),

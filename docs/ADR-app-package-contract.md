@@ -85,8 +85,9 @@ The same directory layout is the release artifact. A future index repo or org ma
 - Schemas live in `docs/schemas/`; reference package in `packages/apps/_example/`.
 - Backend publishes packages via `/api/v1/app-packages` and `/api/v1/app-packages/designer-manifests` (reference dirs prefixed with `_` excluded unless `includeReference=true`).
 - Frontend merges remote designer manifests into the local registry (`setRemoteDesignerManifests`); built-in manifests win on id conflicts.
+- Catalog overlays package cards from `GET /api/v1/app-packages/catalog` (`mergeCatalogWithPackages`) so listing/detail flow comes from the package.
 - First real package: `packages/apps/varnish` (Designer + schema only; runtime still stub/`enabled: false`).
-- Next: Catalog install-from-store UI; optional Varnish control-plane adapter; GitHub App Store mirror of the same layout.
+- Next: Catalog install-from-store UI (GitHub fetch); optional Varnish control-plane adapter; GitHub App Store mirror of the same layout.
 
 ## References
 

@@ -69,6 +69,44 @@ const AppPackageSummarySchema = z.object({
 
 export type AppPackageSummary = z.infer<typeof AppPackageSummarySchema>;
 
+const AppPackageCatalogCardSchema = z.object({
+  id: z.string(),
+  serviceType: z.string(),
+  version: z.string(),
+  reference: z.boolean().optional(),
+  name: z.string(),
+  summary: z.string(),
+  description: z.string(),
+  kind: z.string(),
+  category: z.string(),
+  brand: z.record(z.string(), z.unknown()),
+  tags: z.array(z.string()).default([]),
+  capabilities: z.array(z.string()).default([]),
+  primaryAction: z.string().nullable().optional(),
+  implementationHint: z.string().nullable().optional(),
+  notes: z.array(z.string()).default([]),
+  flowNodes: z
+    .array(
+      z.object({
+        id: z.string(),
+        label: z.string(),
+        role: z.string(),
+      }),
+    )
+    .default([]),
+  flowEdges: z
+    .array(
+      z.object({
+        from: z.string(),
+        to: z.string(),
+        label: z.string().optional(),
+      }),
+    )
+    .default([]),
+});
+
+export type AppPackageCatalogCard = z.infer<typeof AppPackageCatalogCardSchema>;
+
 export function fetchDesignerManifests(options?: {
   includeReference?: boolean;
 }): Promise<ApiDesignerManifest[]> {
@@ -89,5 +127,16 @@ export function fetchAppPackages(options?: {
   const qs = params.toString();
   return apiFetch(`/api/v1/app-packages${qs ? `?${qs}` : ""}`, (data) =>
     z.array(AppPackageSummarySchema).parse(data),
+  );
+}
+
+export function fetchAppPackageCatalog(options?: {
+  includeReference?: boolean;
+}): Promise<AppPackageCatalogCard[]> {
+  const params = new URLSearchParams();
+  if (options?.includeReference) params.set("includeReference", "true");
+  const qs = params.toString();
+  return apiFetch(`/api/v1/app-packages/catalog${qs ? `?${qs}` : ""}`, (data) =>
+    z.array(AppPackageCatalogCardSchema).parse(data),
   );
 }

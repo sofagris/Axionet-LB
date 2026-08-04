@@ -11,6 +11,19 @@ def test_app_packages_list_includes_varnish(client) -> None:
     assert by_id["varnish"]["hydrate"] == "none"
 
 
+def test_app_packages_catalog_cards(client) -> None:
+    response = client.get("/api/v1/app-packages/catalog")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    by_id = {item["id"]: item for item in body}
+    assert "varnish" in by_id
+    varnish = by_id["varnish"]
+    assert varnish["name"] == "Varnish"
+    assert varnish["flowNodes"][0]["id"] == "listen"
+    assert varnish["flowEdges"][0]["from"] == "listen"
+    assert "example" not in by_id
+
+
 def test_app_packages_designer_manifests_with_reference(client) -> None:
     response = client.get("/api/v1/app-packages/designer-manifests?includeReference=true")
     assert response.status_code == 200, response.text
